@@ -1,0 +1,101 @@
+
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Clinical Synthetic Data Generation - Report</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 40px; background-color: #f8f9fa; }
+            .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 0 20px rgba(0,0,0,0.1); }
+            h1 { color: #2c3e50; border-bottom: 3px solid #3498db; padding-bottom: 10px; }
+            .summary { background: #e8f4f8; padding: 20px; margin: 20px 0; border-radius: 8px; }
+            .metric-box { display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px; margin: 10px; border-radius: 8px; text-align: center; min-width: 120px; }
+            table { border-collapse: collapse; width: 100%; margin: 20px 0; }
+            th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+            th { background-color: #3498db; color: white; }
+            .best { background-color: #d5f4e6 !important; font-weight: bold; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🏥 Clinical Synthetic Data Generation - Model Comparison Report</h1>
+
+            <div class="summary">
+                <h2>📊 Dataset Summary</h2>
+                <div class="metric-box">
+                    <div><strong>Dataset Shape</strong></div>
+                    <div>(30691, 11)</div>
+                </div>
+                <div class="metric-box">
+                    <div><strong>Target Column</strong></div>
+                    <div>Result</div>
+                </div>
+                <div class="metric-box">
+                    <div><strong>Models Compared</strong></div>
+                    <div>4</div>
+                </div>
+            </div>
+
+            <h2>🏆 Model Performance Ranking</h2>
+            <table>
+                <tr>
+                    <th>Rank</th>
+                    <th>Model</th>
+                    <th>Combined Score</th>
+                    <th>Overall Similarity</th>
+                    <th>Average Utility</th>
+                    <th>Training Time</th>
+                </tr>
+    
+                <tr class="best">
+                    <td>1</td>
+                    <td><strong>GANerAid</strong></td>
+                    <td>0.9075</td>
+                    <td>0.9352</td>
+                    <td>0.8658</td>
+                    <td>3.15s</td>
+                </tr>
+        
+                <tr class="">
+                    <td>2</td>
+                    <td><strong>TVAE</strong></td>
+                    <td>0.8103</td>
+                    <td>0.8043</td>
+                    <td>0.8194</td>
+                    <td>7.93s</td>
+                </tr>
+        
+                <tr class="">
+                    <td>3</td>
+                    <td><strong>CTGAN</strong></td>
+                    <td>0.7954</td>
+                    <td>0.7997</td>
+                    <td>0.7889</td>
+                    <td>4.36s</td>
+                </tr>
+        
+                <tr class="">
+                    <td>4</td>
+                    <td><strong>CopulaGAN</strong></td>
+                    <td>0.7285</td>
+                    <td>0.7568</td>
+                    <td>0.6860</td>
+                    <td>3.59s</td>
+                </tr>
+        
+            </table>
+
+            <div class="summary">
+                <h2>🔍 Key Findings</h2>
+                <ul>
+                    <li><strong>🏆 Best Overall Model:</strong> GANerAid (Score: 0.9075)</li>
+                    <li><strong>📊 Best Similarity:</strong> GANerAid (0.9352)</li>
+                    <li><strong>🎯 Best Utility:</strong> GANerAid (0.8658)</li>
+                    <li><strong>⚡ Fastest Training:</strong> GANerAid (3.2s)</li>
+                </ul>
+            </div>
+
+            <p><em>Report generated on 2025-07-24 13:52:44</em></p>
+        </div>
+    </body>
+    </html>
+    
