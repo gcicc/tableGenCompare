@@ -4,7 +4,7 @@
 
 This guide outlines a multi-agent approach to building a comprehensive Jupyter notebook for clinical synthetic data generation, using the liver disease dataset as an example. The framework will compare multiple models including CTGAN, TVAE, CopulaGAN, and GANerAid.
 Critical: Read what is here first to understand what is intended. 
-Create a github branch.  Agents can review what's hear and make changes for improvement so long as agents are working together.  
+Create a github branch.  Agents can review what's here and make changes for improvement so long as agents are working together.  
 In first phase, let's use the liver dataset as input to assess initial visualizations, create mock results from models and let's see what output visualizations and tables look like.
 In next phase, we will work on running small tests on each of the models.
 
