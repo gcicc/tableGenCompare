@@ -14,5 +14,6 @@ Phase 0:  Outline tasks needed to complete. Deliver to user the complement of vi
 Phase 1: Create a .ipynb file to work with Breast_cancer_data (essentially providing an update to GANerAid_Demo_Notebook.ipynb) 
 Phase 2: Tailor changes and create a new .ipynb file for Pakistani_Diabetes_Dataset
 Phase 3: Read C:\ForGit\PyTorchUltimateMaterial\GC-conditionalGAN\LiverCode2.ipynb with emphasis on preprocessing steps through One-Hot encoding of categorical data + MICE.  Build a new .ipynb file along the lines of our update to GANerAid_Demo_Notebook.ipynb, adding a section to address the pre-processing step
+Phase 4: Read compareModels.py and the file built in Phase 3.  Our next step is to create an .ipynb file to compare CTGAN, TVAE (Tabular VAE), CopulaGAN, TableGAN, GANerAid.  The code in compareModels.py is just a guide.  The final .ipynb file should be user freindly.  Also, if large blocks of code could be sources from elsewhere this would be preferable. Focus should be on EDA, simulation setup (let there be a table summarizing simulation plan), sections detailing the best of each tuned model, section contrasting model similarity and performance metrics, etc.
 
 
