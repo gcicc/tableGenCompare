@@ -1,0 +1,9 @@
+Metric,Value
+Training Start,2025-07-29 11:15:24
+Training End,2025-07-29 11:20:21
+Duration (seconds),296.53
+Duration (minutes),4.9
+Epochs,"5,000"
+Samples,569
+Features,6
+Device Used,cpu

@@ -1,0 +1,20 @@
+Column,Data_Type,Unique_Values,Missing_Count,Missing_Percent,Min_Value,Max_Value,Clinical_Description
+Age,float64,54,0,0.00%,12.0,70.0,Patient age in years
+Gender,int64,2,0,0.00%,0.0,1.0,"Patient gender (0=Female, 1=Male)"
+Rgn ,int64,2,0,0.00%,0.0,1.0,Region/location indicator
+wt,float64,69,0,0.00%,30.0,110.0,Weight in kg
+BMI,float64,370,0,0.00%,2.84,233.79,Body Mass Index
+wst,float64,93,0,0.00%,24.0,67.0,Waist circumference
+sys,int64,76,0,0.00%,90.0,245.0,Systolic blood pressure
+dia,int64,44,0,0.00%,20.0,115.0,Diastolic blood pressure
+his,int64,2,0,0.00%,0.0,1.0,Medical history indicator
+A1c,float64,106,0,0.00%,0.1,14.0,Hemoglobin A1c level
+B.S.R,int64,213,0,0.00%,70.0,464.0,Blood sugar reading
+vision,int64,2,0,0.00%,0.0,1.0,Vision problems indicator
+Exr,int64,13,0,0.00%,0.0,120.0,Exercise indicator
+dipsia,int64,2,0,0.00%,0.0,1.0,Polydipsia (excessive thirst)
+uria,int64,2,0,0.00%,0.0,1.0,Polyuria (frequent urination)
+Dur,float64,26,0,0.00%,0.0,25.0,Duration of symptoms
+neph,int64,2,0,0.00%,0.0,1.0,Nephropathy indicator
+HDL,int64,30,0,0.00%,30.0,62.0,HDL cholesterol level
+Outcome,int64,2,0,0.00%,0.0,1.0,"Diabetes diagnosis (0=No, 1=Yes)"

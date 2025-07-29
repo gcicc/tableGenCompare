@@ -1,0 +1,8 @@
+Parameter,Value
+Learning Rate (Discriminator),0.0005
+Learning Rate (Generator),0.0005
+Hidden Feature Space,200
+Batch Size,100
+Number of Rows,25
+Binary Noise,0.2
+Device,cpu

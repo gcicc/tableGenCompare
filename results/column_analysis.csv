@@ -1,0 +1,7 @@
+Column,Data_Type,Unique_Values,Missing_Count,Missing_Percent,Min_Value,Max_Value
+mean_radius,float64,456,0,0.00%,6.981,28.11
+mean_texture,float64,479,0,0.00%,9.71,39.28
+mean_perimeter,float64,522,0,0.00%,43.79,188.5
+mean_area,float64,539,0,0.00%,143.5,2501.0
+mean_smoothness,float64,474,0,0.00%,0.05263,0.1634
+diagnosis,int64,2,0,0.00%,0.0,1.0
