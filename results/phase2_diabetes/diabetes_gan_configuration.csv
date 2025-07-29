@@ -1,0 +1,13 @@
+Parameter,Value
+Dataset,Pakistani Diabetes Dataset
+Learning Rate (Discriminator),0.0005
+Learning Rate (Generator),0.0005
+Hidden Feature Space,200
+Batch Size,100
+Number of Rows,25
+Binary Noise,0.2
+Device,cpu
+Input Features,19
+Training Samples,910
+Categorical Variables,7
+Continuous Variables,11

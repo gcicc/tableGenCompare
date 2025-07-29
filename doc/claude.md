@@ -12,8 +12,9 @@ Goal: Create a new ipynb along the lines of doc/GANerAid_Demo_Notebook.ipynb tha
 
 Phase 0:  Outline tasks needed to complete. Deliver to user the complement of visualizations and tables to be produced - broken down by EDA, similarity, accuracy, classification metrics etc.
 Phase 1: Create a .ipynb file to work with Breast_cancer_data (essentially providing an update to GANerAid_Demo_Notebook.ipynb) 
-Phase 2: Tailor changes and create a new .ipynb file for Pakistani_Diabetes_Dataset
-Phase 3: Read C:\ForGit\PyTorchUltimateMaterial\GC-conditionalGAN\LiverCode2.ipynb with emphasis on preprocessing steps through One-Hot encoding of categorical data + MICE.  Build a new .ipynb file along the lines of our update to GANerAid_Demo_Notebook.ipynb, adding a section to address the pre-processing step
+Phase 2: Tailor changes and create a new .ipynb file for Pakistani_Diabetes_Dataset.  In this version, focus on making call out for where user must note location of file - we'll want to generalize this.
+Phase 3: Read C:\Users\gcicc\claudeproj\tableGenCompare\notebooks\Phase2_Pakistani_Diabetes_Enhanced_GANerAid.ipynb
+Brainstorm how we can generalize the initial bit where user loads and pre-processes files. Let's think about the steps needed - like renaming columns, etc. Again, add call outs for the user and prompt the user for background information and reference on their incoming data set.  In this way, the next version of .ipynb file should be setting agnostic.  (However, for purpose of demo, let us use C:\Users\gcicc\claudeproj\tableGenCompare\doc\liver_train.csv)
 Phase 4: Read compareModels.py and the file built in Phase 3.  Our next step is to create an .ipynb file to compare CTGAN, TVAE (Tabular VAE), CopulaGAN, TableGAN, GANerAid.  The code in compareModels.py is just a guide.  The final .ipynb file should be user freindly.  Also, if large blocks of code could be sources from elsewhere this would be preferable. Focus should be on EDA, simulation setup (let there be a table summarizing simulation plan), sections detailing the best of each tuned model, section contrasting model similarity and performance metrics, etc.
 
 

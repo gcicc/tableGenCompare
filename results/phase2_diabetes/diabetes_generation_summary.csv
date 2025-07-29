@@ -1,0 +1,8 @@
+Metric,Value
+Generation Time (seconds),0.223
+Patients Generated,910
+Clinical Features,19
+Generation Rate (patients/sec),4075
+Memory Usage (MB),0.07
+Diabetes Prevalence (Real),53.4%
+Diabetes Prevalence (Synthetic),54.0%
