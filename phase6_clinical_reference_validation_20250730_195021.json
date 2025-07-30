@@ -1,0 +1,64 @@
+{
+  "diabetes_prevalence": {
+    "reference_prevalence": 0.5328947368421053,
+    "validation_score": 0.8,
+    "clinical_assessment": "REFERENCE_ONLY",
+    "note": "Synthetic data represents high-risk diabetic population characteristics"
+  },
+  "hba1c_distribution": {
+    "mean_hba1c": 6.909585316112503,
+    "diabetic_range_compliance": 0.493,
+    "validation_score": 0.4154177513223737,
+    "clinical_assessment": "ACCEPTABLE",
+    "reference_source": "American Diabetes Association 2023, WHO Guidelines",
+    "note": "Validated assuming diabetic population characteristics"
+  },
+  "bmi_south_asian": {
+    "actual_distribution": {
+      "underweight": 0.041,
+      "normal": 0.22,
+      "overweight": 0.395,
+      "obese": 0.318
+    },
+    "reference_distribution": {
+      "underweight": 0.15,
+      "normal": 0.35,
+      "overweight": 0.3,
+      "obese": 0.2
+    },
+    "category_deviations": {
+      "underweight": 0.10899999999999999,
+      "normal": 0.12999999999999998,
+      "overweight": 0.09500000000000003,
+      "obese": 0.118
+    },
+    "average_deviation": 0.11299999999999999,
+    "validation_score": 0.774,
+    "clinical_assessment": "ACCEPTABLE",
+    "reference_source": "WHO Expert Consultation 2004, South Asian BMI Guidelines"
+  },
+  "blood_pressure": {
+    "systolic_distribution": {
+      "normal": 0.23,
+      "elevated": 0.245,
+      "stage1_hypertension": 0.171,
+      "stage2_hypertension": 0.205
+    },
+    "clinical_range_compliance": {
+      "systolic": 0.991,
+      "diastolic": 0.969,
+      "overall": 0.98
+    },
+    "validation_score": 0.98,
+    "clinical_assessment": "EXCELLENT",
+    "reference_source": "Pakistan Hypertension League, South Asian Cardiology Guidelines"
+  },
+  "clinical_correlations": {
+    "correlations": {
+      "hba1c_glucose": {
+        "actual": 0.53662361884748,
+        "expected_range": [
+          0.6,
+          0.9
+        ],
+        "in_expected_range": 

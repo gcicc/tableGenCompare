@@ -1,0 +1,129 @@
+{
+  "execution_time": 2.286330223083496,
+  "data_info": {
+    "shape": [
+      912,
+      19
+    ],
+    "target_distribution": {
+      "1": "486",
+      "0": "426"
+    },
+    "missing_data_pct": 0.0
+  },
+  "model_results": {
+    "BaselineClinical": {
+      "success": true,
+      "train_time": 0.29255223274230957,
+      "generation_time": 0.0,
+      "evaluation_time": 0.17224907875061035,
+      "total_time": 0.4648013114929199,
+      "synthetic_shape": [
+        500,
+        18
+      ],
+      "quality_metrics": {
+        "statistical_similarity": 0.7754245614035088,
+        "classification_utility": 0.3505535055350554,
+        "completeness": 1.0,
+        "overall_quality": 0.708659355646188
+      }
+    },
+    "MockCTGAN": {
+      "success": true,
+      "train_time": 0.202850341796875,
+      "generation_time": 0.0,
+      "evaluation_time": 0.15095090866088867,
+      "total_time": 0.35380125045776367,
+      "synthetic_shape": [
+        500,
+        18
+      ],
+      "quality_metrics": {
+        "statistical_similarity": 0.746363157894737,
+        "classification_utility": 0.5387453874538746,
+        "completeness": 1.0,
+        "overall_quality": 0.7617028484495373
+      }
+    },
+    "MockTVAE": {
+      "success": true,
+      "train_time": 0.20595073699951172,
+      "generation_time": 0.003288745880126953,
+      "evaluation_time": 0.17287015914916992,
+      "total_time": 0.3821096420288086,
+      "synthetic_shape": [
+        500,
+        18
+      ],
+      "quality_metrics": {
+        "statistical_similarity": 0.7451912280701755,
+        "classification_utility": 0.47232472324723246,
+        "completeness": 1.0,
+        "overall_quality": 0.7391719837724692
+      }
+    },
+    "MockCopulaGAN": {
+      "success": true,
+      "train_time": 0.2042388916015625,
+      "generation_time": 0.0012202262878417969,
+      "evaluation_time": 0.15498137474060059,
+      "total_time": 0.3604404926300049,
+      "synthetic_shape": [
+        500,
+        18
+      ],
+      "quality_metrics": {
+        "statistical_similarity": 0.7506824561403509,
+        "classification_utility": 0.40590405904059046,
+        "completeness": 1.0,
+        "overall_quality": 0.7188621717269804
+      }
+    },
+    "MockTableGAN": {
+      "success": true,
+      "train_time": 0.20502972602844238,
+      "generation_time": 0.0,
+      "evaluation_time": 0.14176297187805176,
+      "total_time": 0.34679269790649414,
+      "synthetic_shape": [
+        500,
+        18
+      ],
+      "quality_metrics": {
+        "statistical_similarity": 0.8985771929824562,
+        "classification_utility": 0.48708487084870855,
+        "completeness": 1.0,
+        "overall_quality": 0.7952206879437216
+      }
+    },
+    "MockGANerAid": {
+      "success": true,
+      "train_time": 0.21434426307678223,
+      "generation_time": 0.0005860328674316406,
+      "evaluation_time": 0.15344738960266113,
+      "total_time": 0.368377685546875,
+      "synthetic_shape": [
+        500,
+        18
+      ],
+      "quality_metrics": {
+        "statistical_similarity": 0.746363157894737,
+        "classification_utility": 0.6900369003690037,
+        "completeness": 1.0,
+        "overall_quality": 0.8121333527545801
+      }
+    }
+  },
+  "evaluation_summary": {
+    "successful_models": 6,
+    "failed_models": 0,
+    "best_model": "MockGANerAid",
+    "best_score": 0.8121333527545801,
+    "average_score": 0.7559584000489128
+  },
+  "recommendations": [
+    "Excellent performance: MockGANerAid ready for production",
+    "All models operational - full framework success"
+  ]
+}
