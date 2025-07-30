@@ -1,0 +1,97 @@
+{
+  "execution_timestamp": "20250730_191041",
+  "configuration": {
+    "n_optimization_trials": 30,
+    "optimization_timeout": 1800,
+    "n_synthetic_samples": 750,
+    "validation_splits": 3,
+    "enable_pruning": true,
+    "random_state": 42
+  },
+  "total_optimization_time": 64.82098007202148,
+  "optimization_results": {
+    "EnhancedMockGANerAid": {
+      "model_name": "EnhancedMockGANerAid",
+      "best_score": 0.8888245979687617,
+      "best_params": {
+        "epochs": 494,
+        "batch_size": 750,
+        "learning_rate": 0.008691089486124973,
+        "generator_dim": 128,
+        "discriminator_dim": 256,
+        "clinical_weight": 0.31936259998059147,
+        "noise_level": 0.19396561189181305,
+        "dropout_rate": 0.12054397380683121
+      },
+      "optimization_time": 14.057255744934082,
+      "n_trials_completed": 30,
+      "best_quality_score": 0.8669969339843895,
+      "best_efficiency_score": 0.97613525390625,
+      "best_training_time": 0.2386474609375,
+      "best_generation_time": 0.0,
+      "detailed_metrics": {
+        "statistical_similarity": 0.8923072341900977,
+        "classification_utility": 0.7011070110701108,
+        "clinical_validity": 0.9726666666666667
+      }
+    },
+    "EnhancedMockTableGAN": {
+      "model_name": "EnhancedMockTableGAN",
+      "best_score": 0.0,
+      "best_params": {
+        "epochs": 312,
+        "batch_size": 250,
+        "learning_rate": 0.0002051338263087451,
+        "generator_dim": 512,
+        "pac": 14,
+        "noise_dim": 200,
+        "dropout_rate": 0.052058449429580246
+      },
+      "optimization_time": 13.116698503494263,
+      "n_trials_completed": 30,
+      "best_quality_score": 0,
+      "best_efficiency_score": 0,
+      "best_training_time": 0,
+      "best_generation_time": 0,
+      "detailed_metrics": {
+        "statistical_similarity": 0,
+        "classification_utility": 0,
+        "clinical_validity": 0
+      }
+    },
+    "EnhancedMockCTGAN": {
+      "model_name": "EnhancedMockCTGAN",
+      "best_score": 0.8588259169984203,
+      "best_params": {
+        "epochs": 200,
+        "batch_size": 750,
+        "generator_lr": 0.0001454533575594287,
+        "discriminator_lr": 0.00013620658630643658,
+        "generator_dim": 256,
+        "discriminator_dim": 128,
+        "embedding_dim": 64
+      },
+      "optimization_time": 37.6408748626709,
+      "n_trials_completed": 30,
+      "best_quality_score": 0.8312837955266661,
+      "best_efficiency_score": 0.968994402885437,
+      "best_training_time": 0.3022348880767822,
+      "best_generation_time": 0.007821083068847656,
+      "detailed_metrics": {
+        "statistical_similarity": 0.9411756746811285,
+        "classification_utility": 0.5756457564575646,
+        "clinical_validity": 0.9993333333333334
+      }
+    }
+  },
+  "data_info": {
+    "shape": [
+      912,
+      19
+    ],
+    "target_distribution": {
+      "1": "486",
+      "0": "426"
+    }
+  }
+}

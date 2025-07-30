@@ -10,7 +10,13 @@
       "Bash(pip install:*)",
       "Bash(python:*)",
       "Bash(git rebase:*)",
-      "Bash(set CLAUDE_CODE_MAX_OUTPUT_TOKENS=50000)"
+      "Bash(set CLAUDE_CODE_MAX_OUTPUT_TOKENS=50000)",
+      "Bash(git commit:*)",
+      "Bash(find:*)",
+      "Bash(rm:*)",
+      "Bash(dir test_data_pipeline.py dataset_config_helper.py comprehensive_pipeline_test.py)",
+      "Bash(ls:*)",
+      "Bash(dir:*)"
     ],
     "deny": []
   }
