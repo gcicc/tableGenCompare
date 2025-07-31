@@ -1,0 +1,22 @@
+{
+  "Model Information": {
+    "Model Name": "Enhanced_GANerAid_BreastCancer_20250731_084549.gan",
+    "Save Date": "2025-07-31 08:45:49",
+    "Framework Version": "Enhanced GANerAid v1.0",
+    "Dataset": "Breast Cancer Wisconsin (Diagnostic)",
+    "Device Used": "cpu"
+  },
+  "Training Configuration": {
+    "Epochs": 5000,
+    "Training Duration (seconds)": "305.22",
+    "Learning Rate (D)": "0.0005",
+    "Learning Rate (G)": "0.0005",
+    "Batch Size": "100",
+    "Hidden Features": "200"
+  },
+  "Dataset Information": {
+    "Original Samples": 569,
+    "Processed Samples": 569,
+    "Features": 6,
+    "Target Column": "diagnosis",
+    "Missing Values Handled": 
