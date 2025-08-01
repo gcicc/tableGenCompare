@@ -1,6 +1,6 @@
 Metric,Value
-Generation Time (seconds),0.107
+Generation Time (seconds),0.132
 Samples Generated,569
 Features Generated,6
-Generation Rate (samples/sec),5295
+Generation Rate (samples/sec),4295
 Memory Usage (MB),0.01

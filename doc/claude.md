@@ -18,12 +18,14 @@ Brainstorm how we can generalize the initial bit where user loads and pre-proces
 Phase 4: Read compareModels.py and the file built in Phase 3.  Our next step is to create an .ipynb file to compare CTGAN, TVAE (Tabular VAE), CopulaGAN, TableGAN, GANerAid.  The code in compareModels.py is just a guide.  The final .ipynb file should be user freindly.  Also, if large blocks of code could be sources from elsewhere this would be preferable. Focus should be on EDA, simulation setup (let there be a table summarizing simulation plan), sections detailing the best of each tuned model, section contrasting model similarity and performance metrics, etc.  
 Phase 5: As you author this .ipynb employ multiple agents that will ensure some harmonization with previous version, that hyperparemter space is reasonably exhaustive (though offer suggestions on where to par back).  What is most important is the organization of the displays for review. You audience is a clinical development team looking to assess the value of synthetic data.
 Phase 6: .  Read Phase1_Breast_Cancer_Enhanced_GANerAid.ipynb.  In particular read section 4 which implements GANerAide. Review TRAINING HISTORY ANALYSIS and note that two graphs are produced - the second is empty. Fix this. Move section 5 to be section 4.1. Move section 6 to be section 4.2.   Note there are 2 blank graphs in GANERAID Correlation comparison.  Note # Enhanced performance visualization (NEW) produces errors.  Move section 7 to 4.3.  
-Phase 7. Build section 5.  Section 5.1 will set up the simulation. It will use optuna & employ bayesian optimization to explore hyperparameter space.  Let's use 50 trials to start. After the 50 trials, 5.2 will train a model with the best hyperparameter configuration and then reports of best model will follow along the lines of section 4 output.  In this way, section 5 simply adds the hypertuning step, finds the best model, and then provides same reports as before.  As you work on this keep in mind the next phases.
+Phase 7. Read Phase1_Breast_Cancer_Enhanced_GANerAid.ipynb. Author section 5 of this document first.   After I review we will then move to complete section 6.
+
 Phase 8.  Build a notebook along the lines of Phase1_Breast_Cancer_Enhanced_GANerAid.ipynb, but employ CTGAN. The only change should be associated with swapping GANerAid with CTGAN
-Phase 9. Build a notebook along the lines of Phase1_Breast_Cancer_Enhanced_GANerAid.ipynb, but employ CTGAN. The only change should be associated withs wapping GANerAid with TVAE
+Phase 9. Build a notebook along the lines of Phase1_Breast_Cancer_Enhanced_GANerAid.ipynb, but employ TVAE. The only change should be associated with swapping GANerAid with TVAE
 Phase 10. Build a notebook along the lines of Phase1_Breast_Cancer_Enhanced_GANerAid.ipynb, but employ CopulaGAN. The only change should be associated with swapping GANerAid with CopulaGAN
 Phase 11. Build a notebook along the lines of Phase1_Breast_Cancer_Enhanced_GANerAid.ipynb, but employ TableGAN. The only change should be associated with swapping GANerAid with TableGAN
 Phase 12.  Assume that notebooks from Phase 7-11 have been run.  Aggregate the results and create a report that identifies the best models/hyperparameters along with overall winner.
+
 
 
 

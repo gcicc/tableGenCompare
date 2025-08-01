@@ -1,8 +1,8 @@
 Metric,Value
-Training Start,2025-07-31 08:37:44
-Training End,2025-07-31 08:42:49
-Duration (seconds),305.22
-Duration (minutes),5.1
+Training Start,2025-08-01 14:56:09
+Training End,2025-08-01 15:03:00
+Duration (seconds),411.19
+Duration (minutes),6.9
 Epochs,"5,000"
 Samples,569
 Features,6
