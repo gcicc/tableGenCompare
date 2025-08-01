@@ -1,0 +1,36 @@
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Test outputs
+test_*_output/
+*_test_results*/
+
+# Temporary files
+*.tmp
+*.log
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Model checkpoints
+*.gan
+*.model
+*.pkl
+
+# Results and logs
+results/
+logs/
+model_tests.log
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# Environment files
+.env
