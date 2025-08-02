@@ -35,6 +35,8 @@ def test_optimization_imports():
     print("Testing optimization framework imports...")
     
     try:
+        import sys
+        sys.path.append('src')
         from optimization.optuna_optimizer import OptunaOptimizer
         from optimization.objective_functions import (
             TRTSObjective, SimilarityObjective, MultiObjective,
@@ -55,6 +57,8 @@ def test_objective_functions():
     print("Testing objective functions...")
     
     try:
+        import sys
+        sys.path.append('src')
         from optimization.objective_functions import (
             TRTSObjective, SimilarityObjective, DataQualityObjective,
             MultiObjective, CompositeObjective

@@ -1,0 +1,32 @@
+{
+  "evaluation_summary": {
+    "timestamp": "2025-08-01T19:37:15.421929",
+    "model": "GANerAidModel",
+    "dataset": "param_test_1"
+  },
+  "statistical_summary": {
+    "average_mean_error": 1665.4016752778523,
+    "similarity_percentage": 0.0,
+    "features_evaluated": 4
+  },
+  "trts_summary": {
+    "utility_score_percent": 86.11111111111113,
+    "quality_score_percent": 97.22222222222223,
+    "overall_score_percent": 91.66666666666669
+  },
+  "similarity_summary": {
+    "final_similarity": 0.8349904568855655,
+    "univariate_similarity": 0.8592456586377955,
+    "bivariate_similarity": 0.7783949861303627
+  },
+  "data_quality_summary": {
+    "data_type_consistency": 100.0,
+    "range_validity_percentage": 100.0,
+    "shape_match": true,
+    "column_match": true
+  },
+  "overall_assessment": {
+    "score": 87.58285617761162,
+    "assessment": "Good synthetic data quality"
+  }
+}

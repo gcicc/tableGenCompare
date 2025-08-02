@@ -18,8 +18,16 @@ import json
 from pathlib import Path
 import time
 
-from ..models.base_model import SyntheticDataModel
-from ..evaluation.unified_evaluator import UnifiedEvaluator
+try:
+    from ..models.base_model import SyntheticDataModel
+    from ..evaluation.unified_evaluator import UnifiedEvaluator
+except ImportError:
+    # Fallback for when running as standalone script
+    import sys
+    import os
+    sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+    from models.base_model import SyntheticDataModel
+    from evaluation.unified_evaluator import UnifiedEvaluator
 
 logger = logging.getLogger(__name__)
 

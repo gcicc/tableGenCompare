@@ -1,0 +1,370 @@
+{
+  "metadata": {
+    "report_generated": "2025-08-01T20:00:01.326836",
+    "benchmark_metadata": {
+      "start_time": "2025-08-01T19:59:30.559956",
+      "config": {
+        "models_to_test": [
+          "ganeraid",
+          "ctgan"
+        ],
+        "evaluation_metrics": [
+          "trts",
+          "similarity",
+          "quality"
+        ],
+        "synthetic_samples_ratio": 0.5,
+        "min_synthetic_samples": 100,
+        "max_synthetic_samples": 10000,
+        "training_epochs": {
+          "ganeraid": 30,
+          "ctgan": 50
+        },
+        "enable_optimization": false,
+        "optimization_trials": 10,
+        "optimization_timeout_minutes": 30,
+        "parallel_execution": false,
+        "max_workers": 4,
+        "timeout_per_model_minutes": 60,
+        "output_directory": "workflow_test_results",
+        "save_intermediate_results": true,
+        "save_synthetic_data": false,
+        "random_state": 42
+      },
+      "datasets": [
+        {
+          "name": "clinical_test",
+          "type": "clinical",
+          "size_category": "small",
+          "n_samples": 200,
+          "n_features": 5,
+          "n_categorical": 1,
+          "n_numerical": 3,
+          "n_binary": 1,
+          "complexity_score": 0.15666666666666668,
+          "target_column": "diagnosis",
+          "description": "Test dataset for full workflow: clinical_test"
+        },
+        {
+          "name": "financial_test",
+          "type": "financial",
+          "size_category": "small",
+          "n_samples": 500,
+          "n_features": 6,
+          "n_categorical": 2,
+          "n_numerical": 3,
+          "n_binary": 1,
+          "complexity_score": 0.22777777777777777,
+          "target_column": "default",
+          "description": "Test dataset for full workflow: financial_test"
+        }
+      ],
+      "models": [
+        "ganeraid",
+        "ctgan"
+      ],
+      "end_time": "2025-08-01T20:00:01.323834",
+      "total_duration_seconds": 30.763878,
+      "summary": {
+        "total_benchmarks": 4,
+        "successful": 4,
+        "failed": 0,
+        "success_rate": 1.0,
+        "average_trts_score": 0.853,
+        "std_trts_score": 0.0,
+        "average_similarity_score": 0.8777176713399915,
+        "std_similarity_score": 0.04886385194621549,
+        "average_duration_seconds": 7.6897660000000005,
+        "total_computation_time_hours": 0.008544184444444445,
+        "model_performance": {
+          "ganeraid": {
+            "success_count": 2,
+            "average_trts": 0.853,
+            "average_similarity": 0.8335273161028429
+          },
+          "ctgan": {
+            "success_count": 2,
+            "average_trts": 0.853,
+            "average_similarity": 0.92190802657714
+          }
+        }
+      }
+    },
+    "total_results": 4,
+    "successful_results": 4,
+    "failed_results": 0,
+    "models_tested": [
+      "ctgan",
+      "ganeraid"
+    ],
+    "datasets_tested": [
+      "financial_test",
+      "clinical_test"
+    ]
+  },
+  "executive_summary": {
+    "total_benchmarks_run": 4,
+    "success_rate": 1.0,
+    "average_trts_score": 0.853,
+    "average_similarity_score": 0.8777176713399915,
+    "total_computation_hours": 0.008544184444444445,
+    "best_model_dataset_combination": {
+      "model": "ctgan",
+      "dataset": "financial_test",
+      "score": 0.8902289371071033
+    },
+    "model_success_rates": {
+      "ctgan": 1.0,
+      "ganeraid": 1.0
+    },
+    "key_findings": [
+      "CTGAN achieved the highest average performance (0.881)",
+      "Performance gap between best (ctgan) and worst (ganeraid) model: 0.035",
+      "financial_test appears to be the most challenging dataset (highest performance variance)",
+      "financial_test achieved the highest average model performance"
+    ]
+  },
+  "model_analysis": {
+    "ctgan": {
+      "performance_summary": {
+        "success_rate": 1.0,
+        "avg_trts_score": 0.853,
+        "avg_similarity_score": 0.92190802657714,
+        "avg_composite_score": 0.8805632106308559
+      },
+      "reliability_metrics": {
+        "trts_consistency": 1.0,
+        "similarity_consistency": 0.97378879943118,
+        "performance_range": {
+          "trts": [
+            0.853,
+            0.853
+          ],
+          "similarity": [
+            0.8977437103865216,
+            0.9460723427677584
+          ]
+        }
+      },
+      "efficiency_metrics": {
+        "avg_training_time_minutes": 0.07495206666666668,
+        "avg_generation_time_seconds": 0.016234993934631348,
+        "avg_total_time_minutes": 0.15659070833333333
+      },
+      "strengths": [
+        "High reliability (>95% success rate)",
+        "High similarity to original data (>90%)",
+        "Consistent TRTS performance (low variance)",
+        "Fast training time"
+      ],
+      "weaknesses": []
+    },
+    "ganeraid": {
+      "performance_summary": {
+        "success_rate": 1.0,
+        "avg_trts_score": 0.853,
+        "avg_similarity_score": 0.8335273161028429,
+        "avg_composite_score": 0.8452109264411372
+      },
+      "reliability_metrics": {
+        "trts_consistency": 1.0,
+        "similarity_consistency": 0.9797157455718372,
+        "performance_range": {
+          "trts": [
+            0.853,
+            0.853
+          ],
+          "similarity": [
+            0.816619835950189,
+            0.8504347962554967
+          ]
+        }
+      },
+      "efficiency_metrics": {
+        "avg_training_time_minutes": 0.017403416666666668,
+        "avg_generation_time_seconds": 0.04224228858947754,
+        "avg_total_time_minutes": 0.099734825
+      },
+      "strengths": [
+        "High reliability (>95% success rate)",
+        "Consistent TRTS performance (low variance)",
+        "Fast training time"
+      ],
+      "weaknesses": []
+    }
+  },
+  "dataset_analysis": {
+    "financial_test": {
+      "characteristics": {
+        "complexity_score": 0.22777777777777777,
+        "n_features": 6,
+        "n_samples": 500,
+        "n_categorical": 2,
+        "size_category": "small"
+      },
+      "difficulty_assessment": {
+        "is_challenging": false,
+        "avg_model_performance": 0.853,
+        "performance_variance": 0.0,
+        "difficulty_score": 0.0
+      },
+      "model_performance": {
+        "best_model": "ganeraid",
+        "best_score": 0.853,
+        "worst_model": "ganeraid",
+        "worst_score": 0.853,
+        "performance_gap": 0.0
+      }
+    },
+    "clinical_test": {
+      "characteristics": {
+        "complexity_score": 0.15666666666666668,
+        "n_features": 5,
+        "n_samples": 200,
+        "n_categorical": 1,
+        "size_category": "small"
+      },
+      "difficulty_assessment": {
+        "is_challenging": false,
+        "avg_model_performance": 0.853,
+        "performance_variance": 0.0,
+        "difficulty_score": 0.0
+      },
+      "model_performance": {
+        "best_model": "ganeraid",
+        "best_score": 0.853,
+        "worst_model": "ganeraid",
+        "worst_score": 0.853,
+        "performance_gap": 0.0
+      }
+    }
+  },
+  "comparative_analysis": {
+    "head_to_head_comparisons": {
+      "ctgan_vs_ganeraid": {
+        "model1": "ctgan",
+        "model2": "ganeraid",
+        "sample_sizes": {
+          "ctgan": 2,
+          "ganeraid": 2
+        },
+        "head_to_head_results": {
+          "ctgan": 0,
+          "ganeraid": 0,
+          "ties": 2
+        },
+        "common_datasets": 2
+      }
+    },
+    "statistical_significance": {
+      "note": "Statistical significance testing would require proper statistical analysis",
+      "recommendation": "Use paired t-tests or Wilcoxon signed-rank tests for formal comparison"
+    },
+    "model_rankings": {
+      "trts_score": [
+        [
+          "ctgan",
+          0.853
+        ],
+        [
+          "ganeraid",
+          0.853
+        ]
+      ],
+      "similarity_score": [
+        [
+          "ctgan",
+          0.92190802657714
+        ],
+        [
+          "ganeraid",
+          0.8335273161028429
+        ]
+      ],
+      "composite_score": [
+        [
+          "ctgan",
+          0.8805632106308559
+        ],
+        [
+          "ganeraid",
+          0.8452109264411372
+        ]
+      ],
+      "efficiency": [
+        [
+          "ganeraid",
+          513.1607740826737
+        ],
+        [
+          "ctgan",
+          326.8393159768686
+        ]
+      ]
+    },
+    "overall_winner": {
+      "winner": "ctgan",
+      "score": 0.8805632106308559,
+      "reason": "Highest average composite score across all datasets"
+    }
+  },
+  "performance_insights": {
+    "data_size_impact": {
+      "small": {
+        "count": 4,
+        "avg_performance": 0.853,
+        "std_performance": 0.0
+      }
+    },
+    "complexity_impact": {
+      "correlation": NaN,
+      "interpretation": "weak correlation between complexity and performance"
+    },
+    "categorical_data_impact": {
+      "medium": {
+        "count": 4,
+        "avg_performance": 0.853,
+        "std_performance": 0.0
+      }
+    },
+    "training_time_analysis": {
+      "ctgan": {
+        "avg_training_time_seconds": 4.497124,
+        "min_training_time": 1.808411,
+        "max_training_time": 7.185837,
+        "std_training_time": 2.688713
+      },
+      "ganeraid": {
+        "avg_training_time_seconds": 1.044205,
+        "min_training_time": 0.874135,
+        "max_training_time": 1.214275,
+        "std_training_time": 0.17007
+      }
+    },
+    "scalability_analysis": {
+      "note": "Scalability analysis requires more detailed timing and memory measurements",
+      "recommendation": "Implement detailed resource monitoring for comprehensive scalability analysis"
+    }
+  },
+  "recommendations": {
+    "model_selection": [
+      "For general use: CTGAN showed the best overall performance",
+      "For time-critical applications: GANERAID offers the best performance per time",
+      "For reliability: CTGAN has the highest success rate (100.0%)"
+    ],
+    "dataset_considerations": [],
+    "optimization_opportunities": [
+      "Consider hyperparameter optimization for underperforming model-dataset combinations",
+      "Implement early stopping for models with long training times",
+      "Consider ensemble approaches for challenging datasets",
+      "Investigate preprocessing techniques for categorical data handling"
+    ],
+    "future_benchmarking": [
+      "Include more diverse datasets to improve generalizability",
+      "Add memory usage and computational resource monitoring",
+      "Implement cross-validation for more robust performance estimates",
+      "Consider domain-specific evaluation metrics",
+      "Add privacy preservation metrics for sensitive datasets"
+    ]
+  }
+}

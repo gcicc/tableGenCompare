@@ -1,0 +1,254 @@
+{
+  "metadata": {
+    "report_generated": "2025-08-01T19:58:57.065221",
+    "benchmark_metadata": {
+      "start_time": "2025-08-01T19:58:33.272988",
+      "config": {
+        "models_to_test": [
+          "ganeraid"
+        ],
+        "evaluation_metrics": [
+          "trts",
+          "similarity",
+          "quality"
+        ],
+        "synthetic_samples_ratio": 0.5,
+        "min_synthetic_samples": 100,
+        "max_synthetic_samples": 10000,
+        "training_epochs": {
+          "ganeraid": 30
+        },
+        "enable_optimization": false,
+        "optimization_trials": 10,
+        "optimization_timeout_minutes": 30,
+        "parallel_execution": false,
+        "max_workers": 4,
+        "timeout_per_model_minutes": 60,
+        "output_directory": "json_test_results",
+        "save_intermediate_results": true,
+        "save_synthetic_data": false,
+        "random_state": 42
+      },
+      "datasets": [
+        {
+          "name": "simple_test",
+          "type": "general",
+          "size_category": "small",
+          "n_samples": 150,
+          "n_features": 3,
+          "n_categorical": 0,
+          "n_numerical": 2,
+          "n_binary": 1,
+          "complexity_score": 0.05499999999999999,
+          "target_column": "target",
+          "description": "Simple numerical test dataset"
+        }
+      ],
+      "models": [
+        "ganeraid"
+      ],
+      "end_time": "2025-08-01T19:58:57.060654",
+      "total_duration_seconds": 23.787666,
+      "summary": {
+        "total_benchmarks": 1,
+        "successful": 1,
+        "failed": 0,
+        "success_rate": 1.0,
+        "average_trts_score": 1.1547619047619047,
+        "std_trts_score": 0.0,
+        "average_similarity_score": 0.854438516909336,
+        "std_similarity_score": 0.0,
+        "average_duration_seconds": 23.786664,
+        "total_computation_time_hours": 0.006607406666666666,
+        "model_performance": {
+          "ganeraid": {
+            "success_count": 1,
+            "average_trts": 1.1547619047619047,
+            "average_similarity": 0.854438516909336
+          }
+        }
+      }
+    },
+    "total_results": 1,
+    "successful_results": 1,
+    "failed_results": 0,
+    "models_tested": [
+      "ganeraid"
+    ],
+    "datasets_tested": [
+      "simple_test"
+    ]
+  },
+  "executive_summary": {
+    "total_benchmarks_run": 1,
+    "success_rate": 1.0,
+    "average_trts_score": 1.1547619047619047,
+    "average_similarity_score": 0.854438516909336,
+    "total_computation_hours": 0.006607406666666666,
+    "best_model_dataset_combination": {
+      "model": "ganeraid",
+      "dataset": "simple_test",
+      "score": 1.034632549620877
+    },
+    "model_success_rates": {
+      "ganeraid": 1.0
+    },
+    "key_findings": [
+      "GANERAID achieved the highest average performance (1.035)",
+      "simple_test appears to be the most challenging dataset (highest performance variance)",
+      "simple_test achieved the highest average model performance",
+      "1/1 results achieved >90% TRTS score"
+    ]
+  },
+  "model_analysis": {
+    "ganeraid": {
+      "performance_summary": {
+        "success_rate": 1.0,
+        "avg_trts_score": 1.1547619047619047,
+        "avg_similarity_score": 0.854438516909336,
+        "avg_composite_score": 1.034632549620877
+      },
+      "reliability_metrics": {
+        "trts_consistency": 1.0,
+        "similarity_consistency": 1.0,
+        "performance_range": {
+          "trts": [
+            1.1547619047619047,
+            1.1547619047619047
+          ],
+          "similarity": [
+            0.854438516909336,
+            0.854438516909336
+          ]
+        }
+      },
+      "efficiency_metrics": {
+        "avg_training_time_minutes": 0.03622548333333333,
+        "avg_generation_time_seconds": 0.031000137329101562,
+        "avg_total_time_minutes": 0.3964444
+      },
+      "strengths": [
+        "High reliability (>95% success rate)",
+        "Excellent TRTS performance (>90%)",
+        "Consistent TRTS performance (low variance)",
+        "Fast training time"
+      ],
+      "weaknesses": []
+    }
+  },
+  "dataset_analysis": {
+    "simple_test": {
+      "characteristics": {
+        "complexity_score": 0.05499999999999999,
+        "n_features": 3,
+        "n_samples": 150,
+        "n_categorical": 0,
+        "size_category": "small"
+      },
+      "difficulty_assessment": {
+        "is_challenging": false,
+        "avg_model_performance": 1.1547619047619047,
+        "performance_variance": 0.0,
+        "difficulty_score": 0.0
+      },
+      "model_performance": {
+        "best_model": "ganeraid",
+        "best_score": 1.1547619047619047,
+        "worst_model": "ganeraid",
+        "worst_score": 1.1547619047619047,
+        "performance_gap": 0.0
+      }
+    }
+  },
+  "comparative_analysis": {
+    "head_to_head_comparisons": {},
+    "statistical_significance": {
+      "note": "Statistical significance testing would require proper statistical analysis",
+      "recommendation": "Use paired t-tests or Wilcoxon signed-rank tests for formal comparison"
+    },
+    "model_rankings": {
+      "trts_score": [
+        [
+          "ganeraid",
+          1.1547619047619047
+        ]
+      ],
+      "similarity_score": [
+        [
+          "ganeraid",
+          0.854438516909336
+        ]
+      ],
+      "composite_score": [
+        [
+          "ganeraid",
+          1.034632549620877
+        ]
+      ],
+      "efficiency": [
+        [
+          "ganeraid",
+          174.76779665878567
+        ]
+      ]
+    },
+    "overall_winner": {
+      "winner": "ganeraid",
+      "score": 1.034632549620877,
+      "reason": "Highest average composite score across all datasets"
+    }
+  },
+  "performance_insights": {
+    "data_size_impact": {
+      "small": {
+        "count": 1,
+        "avg_performance": 1.1547619047619047,
+        "std_performance": 0.0
+      }
+    },
+    "complexity_impact": {
+      "correlation": null,
+      "interpretation": "Insufficient data for correlation analysis"
+    },
+    "categorical_data_impact": {
+      "low": {
+        "count": 1,
+        "avg_performance": 1.1547619047619047,
+        "std_performance": 0.0
+      }
+    },
+    "training_time_analysis": {
+      "ganeraid": {
+        "avg_training_time_seconds": 2.173529,
+        "min_training_time": 2.173529,
+        "max_training_time": 2.173529,
+        "std_training_time": 0.0
+      }
+    },
+    "scalability_analysis": {
+      "note": "Scalability analysis requires more detailed timing and memory measurements",
+      "recommendation": "Implement detailed resource monitoring for comprehensive scalability analysis"
+    }
+  },
+  "recommendations": {
+    "model_selection": [
+      "For general use: GANERAID showed the best overall performance",
+      "For time-critical applications: GANERAID offers the best performance per time",
+      "For reliability: GANERAID has the highest success rate (100.0%)"
+    ],
+    "dataset_considerations": [],
+    "optimization_opportunities": [
+      "Consider hyperparameter optimization for underperforming model-dataset combinations",
+      "Implement early stopping for models with long training times",
+      "Consider ensemble approaches for challenging datasets",
+      "Investigate preprocessing techniques for categorical data handling"
+    ],
+    "future_benchmarking": [
+      "Include more diverse datasets to improve generalizability",
+      "Add memory usage and computational resource monitoring",
+      "Implement cross-validation for more robust performance estimates",
+      "Consider domain-specific evaluation metrics",
+      "Add privacy preservation metrics for sensitive datasets"
+    ]
+  }
+}

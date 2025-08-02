@@ -5,7 +5,7 @@ This module wraps the GANerAid synthetic data generation model to work with
 the unified framework interface.
 """
 
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List, Tuple
 import pandas as pd
 import numpy as np
 import torch
@@ -13,6 +13,7 @@ from datetime import datetime
 from pathlib import Path
 import json
 import logging
+from sklearn.preprocessing import LabelEncoder
 
 from ..base_model import SyntheticDataModel, ModelNotTrainedError, DataValidationError
 
@@ -55,6 +56,12 @@ class GANerAidModel(SyntheticDataModel):
         self._ganeraid_model = None
         self._training_history = None
         
+        # Categorical preprocessing tracking
+        self._categorical_columns = []
+        self._categorical_mappings = {}
+        self._encoded_columns = []
+        self._original_columns = []
+        
         # Default GANerAid parameters
         self.default_config = {
             "lr_d": 0.0005,
@@ -68,6 +75,135 @@ class GANerAidModel(SyntheticDataModel):
         
         self.set_config(self.default_config)
     
+    def _detect_categorical_columns(self, data: pd.DataFrame) -> List[str]:
+        """
+        Detect categorical columns in the dataset.
+        
+        Args:
+            data: Input dataset
+            
+        Returns:
+            List of column names that should be treated as categorical
+        """
+        categorical_columns = []
+        
+        for column in data.columns:
+            # Check if column is object/string type
+            if data[column].dtype == 'object':
+                categorical_columns.append(column)
+            # Check if column is categorical dtype
+            elif data[column].dtype.name == 'category':
+                categorical_columns.append(column)
+            # Check for low-cardinality numeric columns that might be categorical
+            elif data[column].dtype in ['int64', 'int32'] and data[column].nunique() <= 10 and data[column].nunique() < len(data) * 0.1:
+                categorical_columns.append(column)
+        
+        return categorical_columns
+    
+    def _preprocess_categorical_data(self, data: pd.DataFrame) -> pd.DataFrame:
+        """
+        Apply one-hot encoding to categorical columns.
+        
+        Args:
+            data: Original dataset with mixed data types
+            
+        Returns:
+            Dataset with categorical columns one-hot encoded
+        """
+        processed_data = data.copy()
+        self._original_columns = list(data.columns)
+        
+        # Detect categorical columns
+        self._categorical_columns = self._detect_categorical_columns(data)
+        
+        if not self._categorical_columns:
+            logger.info("No categorical columns detected")
+            self._encoded_columns = list(processed_data.columns)
+            return processed_data
+        
+        logger.info(f"Detected categorical columns: {self._categorical_columns}")
+        
+        # Apply one-hot encoding to each categorical column
+        for col in self._categorical_columns:
+            # Store unique values for reverse mapping
+            unique_values = sorted(processed_data[col].unique())
+            self._categorical_mappings[col] = unique_values
+            
+            # Create one-hot encoded columns
+            one_hot = pd.get_dummies(processed_data[col], prefix=col)
+            
+            # Drop original categorical column
+            processed_data = processed_data.drop(columns=[col])
+            
+            # Add one-hot encoded columns
+            processed_data = pd.concat([processed_data, one_hot], axis=1)
+        
+        self._encoded_columns = list(processed_data.columns)
+        logger.info(f"One-hot encoding completed. Original columns: {len(self._original_columns)}, Encoded columns: {len(self._encoded_columns)}")
+        
+        return processed_data
+    
+    def _postprocess_categorical_data(self, synthetic_data: pd.DataFrame) -> pd.DataFrame:
+        """
+        Convert one-hot encoded columns back to categorical format.
+        
+        Args:
+            synthetic_data: Generated data with one-hot encoded categoricals
+            
+        Returns:
+            Data with categorical columns restored to original format
+        """
+        if not self._categorical_columns:
+            return synthetic_data
+        
+        processed_data = synthetic_data.copy()
+        
+        # Convert one-hot columns back to categorical for each original categorical column
+        for col in self._categorical_columns:
+            # Find all one-hot columns for this categorical variable
+            one_hot_cols = [c for c in processed_data.columns if c.startswith(f"{col}_")]
+            
+            if not one_hot_cols:
+                logger.warning(f"No one-hot columns found for {col}")
+                continue
+            
+            # Convert one-hot back to categorical
+            # Use argmax to find the most likely category
+            one_hot_data = processed_data[one_hot_cols].values
+            
+            # Handle edge cases where no category is clearly dominant
+            # Use argmax but handle ties by taking the first occurrence
+            category_indices = np.argmax(one_hot_data, axis=1)
+            
+            # Map indices back to category names
+            unique_values = self._categorical_mappings[col]
+            
+            # Handle case where we have more/fewer categories than expected
+            valid_indices = np.clip(category_indices, 0, len(unique_values) - 1)
+            categorical_values = [unique_values[i] for i in valid_indices]
+            
+            # Add the categorical column back
+            processed_data[col] = categorical_values
+            
+            # Remove one-hot columns
+            processed_data = processed_data.drop(columns=one_hot_cols)
+        
+        # Reorder columns to match original order
+        final_columns = []
+        for col in self._original_columns:
+            if col in processed_data.columns:
+                final_columns.append(col)
+        
+        # Add any remaining columns that weren't in original (shouldn't happen normally)
+        for col in processed_data.columns:
+            if col not in final_columns:
+                final_columns.append(col)
+        
+        processed_data = processed_data[final_columns]
+        
+        logger.info(f"Categorical postprocessing completed. Final columns: {list(processed_data.columns)}")
+        return processed_data
+
     def train(self, data: pd.DataFrame, **kwargs) -> Dict[str, Any]:
         """
         Train the GANerAid model on the provided dataset.
@@ -93,6 +229,10 @@ class GANerAidModel(SyntheticDataModel):
         training_start = datetime.now()
         
         try:
+            # Preprocess categorical data using one-hot encoding
+            processed_data = self._preprocess_categorical_data(data)
+            logger.info(f"Data preprocessing completed. Shape: {data.shape} -> {processed_data.shape}")
+            
             # Initialize GANerAid model with current configuration
             self._ganeraid_model = GANerAid(
                 device=self.device_obj,
@@ -104,9 +244,9 @@ class GANerAidModel(SyntheticDataModel):
                 binary_noise=self.model_config["binary_noise"]
             )
             
-            # Train the model
+            # Train the model on preprocessed data
             self._training_history = self._ganeraid_model.fit(
-                data, 
+                processed_data, 
                 epochs=epochs, 
                 verbose=verbose, 
                 aug_factor=aug_factor
@@ -121,8 +261,13 @@ class GANerAidModel(SyntheticDataModel):
                 "training_end": training_end.isoformat(),
                 "training_duration_seconds": training_duration,
                 "epochs": epochs,
-                "data_shape": data.shape,
-                "data_columns": list(data.columns),
+                "original_data_shape": data.shape,
+                "processed_data_shape": processed_data.shape,
+                "original_columns": self._original_columns,
+                "categorical_columns": self._categorical_columns,
+                "encoded_columns": self._encoded_columns,
+                "categorical_mappings": self._categorical_mappings,
+                "preprocessing_applied": len(self._categorical_columns) > 0,
                 "verbose": verbose,
                 "aug_factor": aug_factor,
                 "device": str(self.device_obj)
@@ -168,17 +313,25 @@ class GANerAidModel(SyntheticDataModel):
         generation_start = datetime.now()
         
         try:
-            synthetic_data = self._ganeraid_model.generate(n_samples)
+            # Generate synthetic data (in encoded format)
+            encoded_synthetic_data = self._ganeraid_model.generate(n_samples)
+            
+            # Apply postprocessing to convert back to original categorical format
+            synthetic_data = self._postprocess_categorical_data(encoded_synthetic_data)
             
             generation_end = datetime.now()
             generation_duration = (generation_end - generation_start).total_seconds()
+            
+            logger.info(f"Postprocessing completed. Shape: {encoded_synthetic_data.shape} -> {synthetic_data.shape}")
             
             # Update metadata with generation info
             generation_metadata = {
                 "generation_time_seconds": generation_duration,
                 "samples_generated": len(synthetic_data),
                 "generation_rate_samples_per_sec": len(synthetic_data) / generation_duration if generation_duration > 0 else float('inf'),
-                "synthetic_data_shape": synthetic_data.shape
+                "synthetic_data_shape": synthetic_data.shape,
+                "encoded_synthetic_shape": encoded_synthetic_data.shape,
+                "postprocessing_applied": len(self._categorical_columns) > 0
             }
             self.training_metadata.update(generation_metadata)
             

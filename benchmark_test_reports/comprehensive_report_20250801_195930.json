@@ -1,0 +1,427 @@
+{
+  "metadata": {
+    "report_generated": "2025-08-01T19:59:30.539738",
+    "benchmark_metadata": {
+      "start_time": "2025-08-01T19:59:08.967456",
+      "config": {
+        "models_to_test": [
+          "ganeraid",
+          "ctgan",
+          "tvae"
+        ],
+        "evaluation_metrics": [
+          "trts",
+          "similarity",
+          "quality"
+        ],
+        "synthetic_samples_ratio": 0.8,
+        "min_synthetic_samples": 100,
+        "max_synthetic_samples": 10000,
+        "training_epochs": {
+          "ganeraid": 50,
+          "ctgan": 100,
+          "tvae": 100
+        },
+        "enable_optimization": false,
+        "optimization_trials": 10,
+        "optimization_timeout_minutes": 30,
+        "parallel_execution": false,
+        "max_workers": 4,
+        "timeout_per_model_minutes": 60,
+        "output_directory": "benchmark_test_results",
+        "save_intermediate_results": true,
+        "save_synthetic_data": false,
+        "random_state": 42
+      },
+      "datasets": [
+        {
+          "name": "clinical_small",
+          "type": "clinical",
+          "size_category": "small",
+          "n_samples": 300,
+          "n_features": 5,
+          "n_categorical": 1,
+          "n_numerical": 3,
+          "n_binary": 1,
+          "complexity_score": 0.16,
+          "target_column": "diagnosis",
+          "description": "Test dataset: clinical_small"
+        }
+      ],
+      "models": [
+        "ganeraid",
+        "ctgan",
+        "tvae"
+      ],
+      "end_time": "2025-08-01T19:59:30.539738",
+      "total_duration_seconds": 21.572282,
+      "summary": {
+        "total_benchmarks": 3,
+        "successful": 3,
+        "failed": 0,
+        "success_rate": 1.0,
+        "average_trts_score": 0.8530000000000001,
+        "std_trts_score": 1.1102230246251565e-16,
+        "average_similarity_score": 0.8894853403733108,
+        "std_similarity_score": 0.042237663598628336,
+        "average_duration_seconds": 7.190760666666667,
+        "total_computation_time_hours": 0.005992300555555556,
+        "model_performance": {
+          "ganeraid": {
+            "success_count": 1,
+            "average_trts": 0.853,
+            "average_similarity": 0.8336373292032981
+          },
+          "ctgan": {
+            "success_count": 1,
+            "average_trts": 0.853,
+            "average_similarity": 0.8990577772059751
+          },
+          "tvae": {
+            "success_count": 1,
+            "average_trts": 0.853,
+            "average_similarity": 0.9357609147106594
+          }
+        }
+      }
+    },
+    "total_results": 3,
+    "successful_results": 3,
+    "failed_results": 0,
+    "models_tested": [
+      "tvae",
+      "ctgan",
+      "ganeraid"
+    ],
+    "datasets_tested": [
+      "clinical_small"
+    ]
+  },
+  "executive_summary": {
+    "total_benchmarks_run": 3,
+    "success_rate": 1.0,
+    "average_trts_score": 0.8530000000000001,
+    "average_similarity_score": 0.8894853403733108,
+    "total_computation_hours": 0.005992300555555556,
+    "best_model_dataset_combination": {
+      "model": "tvae",
+      "dataset": "clinical_small",
+      "score": 0.8861043658842637
+    },
+    "model_success_rates": {
+      "tvae": 1.0,
+      "ctgan": 1.0,
+      "ganeraid": 1.0
+    },
+    "key_findings": [
+      "TVAE achieved the highest average performance (0.886)",
+      "Performance gap between best (tvae) and worst (ganeraid) model: 0.041",
+      "clinical_small appears to be the most challenging dataset (highest performance variance)",
+      "clinical_small achieved the highest average model performance"
+    ]
+  },
+  "model_analysis": {
+    "tvae": {
+      "performance_summary": {
+        "success_rate": 1.0,
+        "avg_trts_score": 0.853,
+        "avg_similarity_score": 0.9357609147106594,
+        "avg_composite_score": 0.8861043658842637
+      },
+      "reliability_metrics": {
+        "trts_consistency": 1.0,
+        "similarity_consistency": 1.0,
+        "performance_range": {
+          "trts": [
+            0.853,
+            0.853
+          ],
+          "similarity": [
+            0.9357609147106594,
+            0.9357609147106594
+          ]
+        }
+      },
+      "efficiency_metrics": {
+        "avg_training_time_minutes": 0.0191237,
+        "avg_generation_time_seconds": 0.03673124313354492,
+        "avg_total_time_minutes": 0.09972648333333334
+      },
+      "strengths": [
+        "High reliability (>95% success rate)",
+        "High similarity to original data (>90%)",
+        "Consistent TRTS performance (low variance)",
+        "Fast training time"
+      ],
+      "weaknesses": []
+    },
+    "ctgan": {
+      "performance_summary": {
+        "success_rate": 1.0,
+        "avg_trts_score": 0.853,
+        "avg_similarity_score": 0.8990577772059751,
+        "avg_composite_score": 0.87142311088239
+      },
+      "reliability_metrics": {
+        "trts_consistency": 1.0,
+        "similarity_consistency": 1.0,
+        "performance_range": {
+          "trts": [
+            0.853,
+            0.853
+          ],
+          "similarity": [
+            0.8990577772059751,
+            0.8990577772059751
+          ]
+        }
+      },
+      "efficiency_metrics": {
+        "avg_training_time_minutes": 0.05534326666666667,
+        "avg_generation_time_seconds": 0.021648645401000977,
+        "avg_total_time_minutes": 0.13467096666666667
+      },
+      "strengths": [
+        "High reliability (>95% success rate)",
+        "Consistent TRTS performance (low variance)",
+        "Fast training time"
+      ],
+      "weaknesses": []
+    },
+    "ganeraid": {
+      "performance_summary": {
+        "success_rate": 1.0,
+        "avg_trts_score": 0.853,
+        "avg_similarity_score": 0.8336373292032981,
+        "avg_composite_score": 0.8452549316813192
+      },
+      "reliability_metrics": {
+        "trts_consistency": 1.0,
+        "similarity_consistency": 1.0,
+        "performance_range": {
+          "trts": [
+            0.853,
+            0.853
+          ],
+          "similarity": [
+            0.8336373292032981,
+            0.8336373292032981
+          ]
+        }
+      },
+      "efficiency_metrics": {
+        "avg_training_time_minutes": 0.04606415,
+        "avg_generation_time_seconds": 0.05033612251281738,
+        "avg_total_time_minutes": 0.12514058333333333
+      },
+      "strengths": [
+        "High reliability (>95% success rate)",
+        "Consistent TRTS performance (low variance)",
+        "Fast training time"
+      ],
+      "weaknesses": []
+    }
+  },
+  "dataset_analysis": {
+    "clinical_small": {
+      "characteristics": {
+        "complexity_score": 0.16,
+        "n_features": 5,
+        "n_samples": 300,
+        "n_categorical": 1,
+        "size_category": "small"
+      },
+      "difficulty_assessment": {
+        "is_challenging": false,
+        "avg_model_performance": 0.8530000000000001,
+        "performance_variance": 1.232595164407831e-32,
+        "difficulty_score": 1.4450119160701416e-32
+      },
+      "model_performance": {
+        "best_model": "ganeraid",
+        "best_score": 0.853,
+        "worst_model": "ganeraid",
+        "worst_score": 0.853,
+        "performance_gap": 0.0
+      }
+    }
+  },
+  "comparative_analysis": {
+    "head_to_head_comparisons": {
+      "tvae_vs_ctgan": {
+        "model1": "tvae",
+        "model2": "ctgan",
+        "sample_sizes": {
+          "tvae": 1,
+          "ctgan": 1
+        },
+        "head_to_head_results": {
+          "tvae": 0,
+          "ctgan": 0,
+          "ties": 1
+        },
+        "common_datasets": 1
+      },
+      "tvae_vs_ganeraid": {
+        "model1": "tvae",
+        "model2": "ganeraid",
+        "sample_sizes": {
+          "tvae": 1,
+          "ganeraid": 1
+        },
+        "head_to_head_results": {
+          "tvae": 0,
+          "ganeraid": 0,
+          "ties": 1
+        },
+        "common_datasets": 1
+      },
+      "ctgan_vs_ganeraid": {
+        "model1": "ctgan",
+        "model2": "ganeraid",
+        "sample_sizes": {
+          "ctgan": 1,
+          "ganeraid": 1
+        },
+        "head_to_head_results": {
+          "ctgan": 0,
+          "ganeraid": 0,
+          "ties": 1
+        },
+        "common_datasets": 1
+      }
+    },
+    "statistical_significance": {
+      "note": "Statistical significance testing would require proper statistical analysis",
+      "recommendation": "Use paired t-tests or Wilcoxon signed-rank tests for formal comparison"
+    },
+    "model_rankings": {
+      "trts_score": [
+        [
+          "tvae",
+          0.853
+        ],
+        [
+          "ctgan",
+          0.853
+        ],
+        [
+          "ganeraid",
+          0.853
+        ]
+      ],
+      "similarity_score": [
+        [
+          "tvae",
+          0.9357609147106594
+        ],
+        [
+          "ctgan",
+          0.8990577772059751
+        ],
+        [
+          "ganeraid",
+          0.8336373292032981
+        ]
+      ],
+      "composite_score": [
+        [
+          "tvae",
+          0.8861043658842637
+        ],
+        [
+          "ctgan",
+          0.87142311088239
+        ],
+        [
+          "ganeraid",
+          0.8452549316813192
+        ]
+      ],
+      "efficiency": [
+        [
+          "tvae",
+          513.2036976470141
+        ],
+        [
+          "ganeraid",
+          408.9800337886657
+        ],
+        [
+          "ctgan",
+          380.03737009387567
+        ]
+      ]
+    },
+    "overall_winner": {
+      "winner": "tvae",
+      "score": 0.8861043658842637,
+      "reason": "Highest average composite score across all datasets"
+    }
+  },
+  "performance_insights": {
+    "data_size_impact": {
+      "small": {
+        "count": 3,
+        "avg_performance": 0.8530000000000001,
+        "std_performance": 1.1102230246251565e-16
+      }
+    },
+    "complexity_impact": {
+      "correlation": NaN,
+      "interpretation": "weak correlation between complexity and performance"
+    },
+    "categorical_data_impact": {
+      "medium": {
+        "count": 3,
+        "avg_performance": 0.8530000000000001,
+        "std_performance": 1.1102230246251565e-16
+      }
+    },
+    "training_time_analysis": {
+      "tvae": {
+        "avg_training_time_seconds": 1.147422,
+        "min_training_time": 1.147422,
+        "max_training_time": 1.147422,
+        "std_training_time": 0.0
+      },
+      "ctgan": {
+        "avg_training_time_seconds": 3.320596,
+        "min_training_time": 3.320596,
+        "max_training_time": 3.320596,
+        "std_training_time": 0.0
+      },
+      "ganeraid": {
+        "avg_training_time_seconds": 2.763849,
+        "min_training_time": 2.763849,
+        "max_training_time": 2.763849,
+        "std_training_time": 0.0
+      }
+    },
+    "scalability_analysis": {
+      "note": "Scalability analysis requires more detailed timing and memory measurements",
+      "recommendation": "Implement detailed resource monitoring for comprehensive scalability analysis"
+    }
+  },
+  "recommendations": {
+    "model_selection": [
+      "For general use: TVAE showed the best overall performance",
+      "For time-critical applications: TVAE offers the best performance per time",
+      "For reliability: TVAE has the highest success rate (100.0%)"
+    ],
+    "dataset_considerations": [],
+    "optimization_opportunities": [
+      "Consider hyperparameter optimization for underperforming model-dataset combinations",
+      "Implement early stopping for models with long training times",
+      "Consider ensemble approaches for challenging datasets",
+      "Investigate preprocessing techniques for categorical data handling"
+    ],
+    "future_benchmarking": [
+      "Include more diverse datasets to improve generalizability",
+      "Add memory usage and computational resource monitoring",
+      "Implement cross-validation for more robust performance estimates",
+      "Consider domain-specific evaluation metrics",
+      "Add privacy preservation metrics for sensitive datasets"
+    ]
+  }
+}
