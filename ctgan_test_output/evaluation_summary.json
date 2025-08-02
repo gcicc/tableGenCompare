@@ -1,0 +1,32 @@
+{
+  "evaluation_summary": {
+    "timestamp": "2025-08-01T19:37:53.900071",
+    "model": "CTGANModel",
+    "dataset": "ctgan_test"
+  },
+  "statistical_summary": {
+    "average_mean_error": 0.6185860081325062,
+    "similarity_percentage": 66.66666666666666,
+    "features_evaluated": 3
+  },
+  "trts_summary": {
+    "utility_score_percent": 208.33333333333334,
+    "quality_score_percent": 262.5,
+    "overall_score_percent": 235.41666666666669
+  },
+  "similarity_summary": {
+    "final_similarity": 0.918336402365702,
+    "univariate_similarity": 0.9013667849288789,
+    "bivariate_similarity": 0.9579321763849561
+  },
+  "data_quality_summary": {
+    "data_type_consistency": 100.0,
+    "range_validity_percentage": 66.66666666666666,
+    "shape_match": false,
+    "column_match": true
+  },
+  "overall_assessment": {
+    "score": 163.62515345161844,
+    "assessment": "Excellent synthetic data quality"
+  }
+}

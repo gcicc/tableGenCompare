@@ -1,0 +1,19 @@
+BENCHMARK EXECUTIVE SUMMARY
+==================================================
+
+Total Benchmarks: 4
+Success Rate: 100.0%
+Average TRTS Score: 0.853
+Average Similarity Score: 0.878
+Total Computation Time: 0.01 hours
+
+Best Model-Dataset Combination:
+  Model: ctgan
+  Dataset: financial_test
+  Score: 0.890
+
+Key Findings:
+  1. CTGAN achieved the highest average performance (0.881)
+  2. Performance gap between best (ctgan) and worst (ganeraid) model: 0.035
+  3. financial_test appears to be the most challenging dataset (highest performance variance)
+  4. financial_test achieved the highest average model performance

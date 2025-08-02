@@ -1,0 +1,242 @@
+{
+  "evaluation_timestamp": "2025-08-01T19:37:15.421929",
+  "model_info": {
+    "model_type": "GANerAidModel",
+    "device": "cpu",
+    "random_state": 42,
+    "is_trained": true,
+    "config": {
+      "lr_d": 0.0008,
+      "lr_g": 0.001,
+      "hidden_feature_space": 200,
+      "batch_size": 100,
+      "nr_of_rows": 25,
+      "binary_noise": 0.2,
+      "epochs": 40
+    },
+    "training_metadata": {
+      "training_start": "2025-08-01T19:37:14.560037",
+      "training_end": "2025-08-01T19:37:15.391315",
+      "training_duration_seconds": 0.831278,
+      "epochs": 40,
+      "data_shape": [
+        200,
+        4
+      ],
+      "data_columns": [
+        "age",
+        "income",
+        "score",
+        "target"
+      ],
+      "verbose": false,
+      "aug_factor": 1,
+      "device": "cpu",
+      "generation_time_seconds": 0.030614,
+      "samples_generated": 200,
+      "generation_rate_samples_per_sec": 6532.958777030117,
+      "synthetic_data_shape": [
+        200,
+        4
+      ]
+    }
+  },
+  "dataset_info": {
+    "name": "param_test_1"
+  },
+  "target_column": "target",
+  "statistical_analysis": {
+    "stats_comparison_df": "  Feature  Original_Mean  ...  Original_Unique  Synthetic_Unique\n0     age      44.260000  ...               49                17\n1  income   50875.218476  ...              200               200\n2   score      53.499729  ...              200               200\n3  target       0.510000  ...                2                 2\n\n[4 rows x 19 columns]",
+    "summary_statistics": {
+      "average_mean_error": 1665.4016752778523,
+      "max_mean_error": 6658.4856642470695,
+      "average_std_error": 2381.874401470146,
+      "max_std_error": 9491.542188689931,
+      "statistically_similar_features": "0",
+      "total_features": 4,
+      "similarity_percentage": 0.0,
+      "full_range_overlap_count": "4",
+      "partial_range_overlap_count": "0",
+      "no_range_overlap_count": "0",
+      "total_original_missing": "0",
+      "total_synthetic_missing": "0"
+    }
+  },
+  "correlation_analysis": {
+    "original_correlation_matrix": "             age    income     score    target\nage     1.000000  0.027179  0.012479 -0.028553\nincome  0.027179  1.000000 -0.037686  0.011734\nscore   0.012479 -0.037686  1.000000  0.048700\ntarget -0.028553  0.011734  0.048700  1.000000",
+    "synthetic_correlation_matrix": "             age    income     score    target\nage     1.000000  0.020904 -0.501733 -0.253572\nincome  0.020904  1.000000  0.430719 -0.150045\nscore  -0.501733  0.430719  1.000000  0.267270\ntarget -0.253572 -0.150045  0.267270  1.000000",
+    "correlation_difference_matrix": "             age    income     score    target\nage     0.000000  0.006275  0.514211  0.225019\nincome  0.006275  0.000000  0.468405  0.161778\nscore   0.514211  0.468405  0.000000  0.218570\ntarget  0.225019  0.161778  0.218570  0.000000",
+    "average_correlation_difference": 0.26570983370411744,
+    "max_correlation_difference": 0.5142114948486597,
+    "correlation_preservation_score": 0.7342901662958825
+  },
+  "similarity_analysis": {
+    "final_similarity": 0.8349904568855655,
+    "univariate_similarity": 0.8592456586377955,
+    "bivariate_similarity": 0.7783949861303627,
+    "feature_similarities": {
+      "age": 0.8397600685518424,
+      "income": 0.9206421486038051,
+      "score": 0.8173347587577388
+    }
+  },
+  "trts_results": {
+    "trts_scores": {
+      "TRTR": 0.6,
+      "TSTS": 0.6333333333333333,
+      "TRTS": 0.5833333333333334,
+      "TSTR": 0.5166666666666667
+    },
+    "detailed_results": {
+      "TRTR": {
+        "accuracy": 0.6,
+        "classification_report": {
+          "0": {
+            "precision": 0.5806451612903226,
+            "recall": 0.6206896551724138,
+            "f1-score": 0.6,
+            "support": 29.0
+          },
+          "1": {
+            "precision": 0.6206896551724138,
+            "recall": 0.5806451612903226,
+            "f1-score": 0.6,
+            "support": 31.0
+          },
+          "accuracy": 0.6,
+          "macro avg": {
+            "precision": 0.6006674082313682,
+            "recall": 0.6006674082313682,
+            "f1-score": 0.6,
+            "support": 60.0
+          },
+          "weighted avg": {
+            "precision": 0.6013348164627365,
+            "recall": 0.6,
+            "f1-score": 0.6,
+            "support": 60.0
+          }
+        },
+        "description": "Train Real, Test Real (Baseline)"
+      },
+      "TSTS": {
+        "accuracy": 0.6333333333333333,
+        "classification_report": {
+          "0": {
+            "precision": 0.3888888888888889,
+            "recall": 0.3888888888888889,
+            "f1-score": 0.3888888888888889,
+            "support": 18.0
+          },
+          "1": {
+            "precision": 0.7380952380952381,
+            "recall": 0.7380952380952381,
+            "f1-score": 0.7380952380952381,
+            "support": 42.0
+          },
+          "accuracy": 0.6333333333333333,
+          "macro avg": {
+            "precision": 0.5634920634920635,
+            "recall": 0.5634920634920635,
+            "f1-score": 0.5634920634920635,
+            "support": 60.0
+          },
+          "weighted avg": {
+            "precision": 0.6333333333333333,
+            "recall": 0.6333333333333333,
+            "f1-score": 0.6333333333333333,
+            "support": 60.0
+          }
+        },
+        "description": "Train Synthetic, Test Synthetic (Internal Consistency)"
+      },
+      "TRTS": {
+        "accuracy": 0.5833333333333334,
+        "classification_report": {
+          "0": {
+            "precision": 0.3157894736842105,
+            "recall": 0.3333333333333333,
+            "f1-score": 0.32432432432432434,
+            "support": 18.0
+          },
+          "1": {
+            "precision": 0.7073170731707317,
+            "recall": 0.6904761904761905,
+            "f1-score": 0.6987951807228916,
+            "support": 42.0
+          },
+          "accuracy": 0.5833333333333334,
+          "macro avg": {
+            "precision": 0.511553273427471,
+            "recall": 0.5119047619047619,
+            "f1-score": 0.511559752523608,
+            "support": 60.0
+          },
+          "weighted avg": {
+            "precision": 0.5898587933247754,
+            "recall": 0.5833333333333334,
+            "f1-score": 0.5864539238033214,
+            "support": 60.0
+          }
+        },
+        "description": "Train Real, Test Synthetic (Synthetic Data Quality)"
+      },
+      "TSTR": {
+        "accuracy": 0.5166666666666667,
+        "classification_report": {
+          "0": {
+            "precision": 0.5,
+            "recall": 0.2413793103448276,
+            "f1-score": 0.32558139534883723,
+            "support": 29.0
+          },
+          "1": {
+            "precision": 0.5217391304347826,
+            "recall": 0.7741935483870968,
+            "f1-score": 0.6233766233766234,
+            "support": 31.0
+          },
+          "accuracy": 0.5166666666666667,
+          "macro avg": {
+            "precision": 0.5108695652173914,
+            "recall": 0.5077864293659622,
+            "f1-score": 0.4744790093627303,
+            "support": 60.0
+          },
+          "weighted avg": {
+            "precision": 0.511231884057971,
+            "recall": 0.5166666666666667,
+            "f1-score": 0.4794422631631934,
+            "support": 60.0
+          }
+        },
+        "description": "Train Synthetic, Test Real (Synthetic Data Utility)"
+      }
+    },
+    "utility_score_percent": 86.11111111111113,
+    "quality_score_percent": 97.22222222222223,
+    "overall_score_percent": 91.66666666666669,
+    "interpretation": {
+      "overall": "Good synthetic data quality and utility",
+      "recommendations": [
+        "TSTS > TRTR suggests potential overfitting in synthetic data"
+      ]
+    }
+  },
+  "data_quality": {
+    "shape_match": true,
+    "column_match": true,
+    "missing_values_original": "0",
+    "missing_values_synthetic": "0",
+    "data_type_consistency": 100.0,
+    "range_validity_percentage": 100.0,
+    "duplicates_original": "0",
+    "duplicates_synthetic": "0"
+  },
+  "plot_files": {
+    "distribution_comparison": "test_params_1\\distribution_comparison.png",
+    "evaluation_dashboard": "test_params_1\\evaluation_dashboard.png",
+    "correlation_analysis": "test_params_1\\correlation_analysis.png",
+    "statistical_comparison": "test_params_1\\statistical_comparison.png"
+  }
+}

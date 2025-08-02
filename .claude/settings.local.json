@@ -20,7 +20,12 @@
       "WebFetch(domain:docs.sdv.dev)",
       "WebFetch(domain:github.com)",
       "Bash(git checkout:*)",
-      "Bash(git ls-tree:*)"
+      "Bash(git ls-tree:*)",
+      "Bash(git clone:*)",
+      "Bash(cp:*)",
+      "Bash(git rm:*)",
+      "Bash(git reset:*)",
+      "Bash(touch:*)"
     ],
     "deny": []
   }

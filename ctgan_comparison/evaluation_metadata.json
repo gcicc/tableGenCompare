@@ -1,0 +1,140 @@
+{
+  "evaluation_timestamp": "2025-08-01T19:41:14.147910",
+  "model_info": {
+    "model_type": "CTGANModel",
+    "device": "cpu",
+    "random_state": 42,
+    "is_trained": true,
+    "config": {
+      "epochs": 300,
+      "batch_size": 500,
+      "generator_dim": [
+        256,
+        256
+      ],
+      "discriminator_dim": [
+        256,
+        256
+      ],
+      "generator_lr": 0.0002,
+      "discriminator_lr": 0.0002,
+      "discriminator_steps": 1,
+      "log_frequency": true,
+      "verbose": true,
+      "pac": 10
+    },
+    "training_metadata": {
+      "training_start": "2025-08-01T19:41:11.177541",
+      "training_end": "2025-08-01T19:41:14.130662",
+      "training_duration_seconds": 2.953121,
+      "epochs": 50,
+      "data_shape": [
+        300,
+        4
+      ],
+      "data_columns": [
+        "feature1",
+        "feature2",
+        "feature3",
+        "target"
+      ],
+      "discrete_columns": [
+        "feature2",
+        "feature3",
+        "target"
+      ],
+      "batch_size": 500,
+      "generator_dimensions": [
+        256,
+        256
+      ],
+      "discriminator_dimensions": [
+        256,
+        256
+      ],
+      "pac_size": 10,
+      "preprocessing_applied": true,
+      "generation_time_seconds": 0.015134,
+      "samples_generated": 200,
+      "generation_rate_samples_per_sec": 13215.276860050219,
+      "synthetic_data_shape": [
+        200,
+        4
+      ],
+      "postprocessing_applied": true
+    }
+  },
+  "dataset_info": {
+    "name": "multi_model_test"
+  },
+  "target_column": "target",
+  "statistical_analysis": {
+    "stats_comparison_df": "    Feature  Original_Mean  ...  Original_Unique  Synthetic_Unique\n0  feature1      49.944514  ...              300               200\n1  feature2            NaN  ...                3                 3\n2  feature3       0.503333  ...                2                 2\n3    target       0.463333  ...                2                 2\n\n[4 rows x 19 columns]",
+    "summary_statistics": {
+      "average_mean_error": 4.751463870601046,
+      "max_mean_error": 14.159391611803137,
+      "average_std_error": 0.19717849690675646,
+      "max_std_error": 0.5835122983122112,
+      "statistically_similar_features": "3",
+      "total_features": 4,
+      "similarity_percentage": 75.0,
+      "full_range_overlap_count": "3",
+      "partial_range_overlap_count": "1",
+      "no_range_overlap_count": "0",
+      "total_original_missing": "0",
+      "total_synthetic_missing": "0"
+    }
+  },
+  "correlation_analysis": {
+    "original_correlation_matrix": "          feature1  feature3    target\nfeature1  1.000000  0.112906 -0.058603\nfeature3  0.112906  1.000000 -0.066358\ntarget   -0.058603 -0.066358  1.000000",
+    "synthetic_correlation_matrix": "          feature1  feature3    target\nfeature1  1.000000  0.027097 -0.061754\nfeature3  0.027097  1.000000  0.047159\ntarget   -0.061754  0.047159  1.000000",
+    "correlation_difference_matrix": "          feature1  feature3    target\nfeature1  0.000000  0.085810  0.003151\nfeature3  0.085810  0.000000  0.113516\ntarget    0.003151  0.113516  0.000000",
+    "average_correlation_difference": 0.06749232707089574,
+    "max_correlation_difference": 0.11351643084087346,
+    "correlation_preservation_score": 0.9325076729291043
+  },
+  "similarity_analysis": {
+    "final_similarity": 0.9265005746244839,
+    "univariate_similarity": 0.9288701017590709,
+    "bivariate_similarity": 0.9209716779771141,
+    "feature_similarities": {
+      "feature1": 0.8336134572863678,
+      "feature2": 0.9929968479908446,
+      "feature3": 0.9600000000000002
+    }
+  },
+  "trts_results": {
+    "trts_scores": {
+      "TRTR": 0.85,
+      "TSTS": 0.8,
+      "TRTS": 0.75,
+      "TSTR": 0.7
+    },
+    "detailed_results": {},
+    "utility_score_percent": 82.4,
+    "quality_score_percent": 88.2,
+    "overall_score_percent": 85.3,
+    "interpretation": {
+      "overall": "Default fallback results - actual evaluation failed",
+      "recommendations": [
+        "Re-run evaluation with proper data and model setup"
+      ]
+    }
+  },
+  "data_quality": {
+    "shape_match": false,
+    "column_match": true,
+    "missing_values_original": "0",
+    "missing_values_synthetic": "0",
+    "data_type_consistency": 100.0,
+    "range_validity_percentage": 66.66666666666666,
+    "duplicates_original": "0",
+    "duplicates_synthetic": "0"
+  },
+  "plot_files": {
+    "distribution_comparison": "ctgan_comparison\\distribution_comparison.png",
+    "evaluation_dashboard": "ctgan_comparison\\evaluation_dashboard.png",
+    "correlation_analysis": "ctgan_comparison\\correlation_analysis.png",
+    "statistical_comparison": "ctgan_comparison\\statistical_comparison.png"
+  }
+}

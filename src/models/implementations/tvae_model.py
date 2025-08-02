@@ -24,6 +24,9 @@ try:
     TVAE_AVAILABLE = True
 except ImportError:
     TVAE_AVAILABLE = False
+    # Create dummy class for type hints when SDV not available
+    class SingleTableMetadata:
+        pass
     logger.warning("TVAE (SDV) not available. Install with: pip install sdv")
 
 
@@ -133,7 +136,14 @@ class TVAEModel(SyntheticDataModel):
             # Extract training history if available
             training_losses = []
             if hasattr(self._tvae_model, '_model') and hasattr(self._tvae_model._model, 'loss_values'):
-                training_losses = self._tvae_model._model.loss_values
+                raw_losses = self._tvae_model._model.loss_values
+                # Handle case where loss_values might be a DataFrame
+                if hasattr(raw_losses, 'values'):  # pandas DataFrame/Series
+                    training_losses = raw_losses.values.flatten().tolist()
+                elif isinstance(raw_losses, (list, tuple)):
+                    training_losses = list(raw_losses)
+                else:
+                    training_losses = []
             
             # Update training metadata
             self.training_metadata = {

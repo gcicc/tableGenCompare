@@ -1,0 +1,240 @@
+{
+  "evaluation_timestamp": "2025-08-01T19:40:15.627687",
+  "model_info": {
+    "model_type": "GANerAidModel",
+    "device": "cpu",
+    "random_state": 42,
+    "is_trained": true,
+    "config": {
+      "lr_d": 0.0008,
+      "lr_g": 0.001,
+      "hidden_feature_space": 200,
+      "batch_size": 100,
+      "nr_of_rows": 25,
+      "binary_noise": 0.2,
+      "epochs": 50
+    },
+    "training_metadata": {
+      "training_start": "2025-08-01T19:40:14.374215",
+      "training_end": "2025-08-01T19:40:15.588543",
+      "training_duration_seconds": 1.214328,
+      "epochs": 50,
+      "data_shape": [
+        200,
+        3
+      ],
+      "data_columns": [
+        "feature1",
+        "feature2",
+        "target"
+      ],
+      "verbose": false,
+      "aug_factor": 1,
+      "device": "cpu",
+      "generation_time_seconds": 0.038102,
+      "samples_generated": 200,
+      "generation_rate_samples_per_sec": 5249.068290378458,
+      "synthetic_data_shape": [
+        200,
+        3
+      ]
+    }
+  },
+  "dataset_info": {
+    "name": "manual_optimization"
+  },
+  "target_column": "target",
+  "statistical_analysis": {
+    "stats_comparison_df": "    Feature  Original_Mean  ...  Original_Unique  Synthetic_Unique\n0  feature1       9.918458  ...              200               200\n1  feature2       0.555000  ...                2                 2\n2    target       0.440000  ...                2                 2\n\n[3 rows x 19 columns]",
+    "summary_statistics": {
+      "average_mean_error": 0.14775864882387577,
+      "max_mean_error": 0.30999999999999994,
+      "average_std_error": 0.4103849866904572,
+      "max_std_error": 1.0749428716167535,
+      "statistically_similar_features": "1",
+      "total_features": 3,
+      "similarity_percentage": 33.33333333333333,
+      "full_range_overlap_count": "3",
+      "partial_range_overlap_count": "0",
+      "no_range_overlap_count": "0",
+      "total_original_missing": "0",
+      "total_synthetic_missing": "0"
+    }
+  },
+  "correlation_analysis": {
+    "original_correlation_matrix": "          feature1  feature2    target\nfeature1  1.000000  0.022646 -0.043595\nfeature2  0.022646  1.000000  0.064049\ntarget   -0.043595  0.064049  1.000000",
+    "synthetic_correlation_matrix": "          feature1  feature2    target\nfeature1  1.000000  0.344332 -0.201929\nfeature2  0.344332  1.000000  0.029000\ntarget   -0.201929  0.029000  1.000000",
+    "correlation_difference_matrix": "          feature1  feature2    target\nfeature1  0.000000  0.321686  0.158334\nfeature2  0.321686  0.000000  0.035048\ntarget    0.158334  0.035048  0.000000",
+    "average_correlation_difference": 0.17168938902330041,
+    "max_correlation_difference": 0.3216862434050676,
+    "correlation_preservation_score": 0.8283106109766996
+  },
+  "similarity_analysis": {
+    "final_similarity": 0.8181497626242873,
+    "univariate_similarity": 0.8445242801484505,
+    "bivariate_similarity": 0.7566092217345732,
+    "feature_similarities": {
+      "feature1": 0.9256897816709468,
+      "feature2": 0.7633587786259541
+    }
+  },
+  "trts_results": {
+    "trts_scores": {
+      "TRTR": 0.5,
+      "TSTS": 0.5333333333333333,
+      "TRTS": 0.38333333333333336,
+      "TSTR": 0.48333333333333334
+    },
+    "detailed_results": {
+      "TRTR": {
+        "accuracy": 0.5,
+        "classification_report": {
+          "0": {
+            "precision": 0.5625,
+            "recall": 0.5294117647058824,
+            "f1-score": 0.5454545454545454,
+            "support": 34.0
+          },
+          "1": {
+            "precision": 0.42857142857142855,
+            "recall": 0.46153846153846156,
+            "f1-score": 0.4444444444444444,
+            "support": 26.0
+          },
+          "accuracy": 0.5,
+          "macro avg": {
+            "precision": 0.4955357142857143,
+            "recall": 0.49547511312217196,
+            "f1-score": 0.4949494949494949,
+            "support": 60.0
+          },
+          "weighted avg": {
+            "precision": 0.5044642857142857,
+            "recall": 0.5,
+            "f1-score": 0.5016835016835016,
+            "support": 60.0
+          }
+        },
+        "description": "Train Real, Test Real (Baseline)"
+      },
+      "TSTS": {
+        "accuracy": 0.5333333333333333,
+        "classification_report": {
+          "0": {
+            "precision": 0.48484848484848486,
+            "recall": 0.5925925925925926,
+            "f1-score": 0.5333333333333333,
+            "support": 27.0
+          },
+          "1": {
+            "precision": 0.5925925925925926,
+            "recall": 0.48484848484848486,
+            "f1-score": 0.5333333333333333,
+            "support": 33.0
+          },
+          "accuracy": 0.5333333333333333,
+          "macro avg": {
+            "precision": 0.5387205387205387,
+            "recall": 0.5387205387205387,
+            "f1-score": 0.5333333333333333,
+            "support": 60.0
+          },
+          "weighted avg": {
+            "precision": 0.5441077441077441,
+            "recall": 0.5333333333333333,
+            "f1-score": 0.5333333333333333,
+            "support": 60.0
+          }
+        },
+        "description": "Train Synthetic, Test Synthetic (Internal Consistency)"
+      },
+      "TRTS": {
+        "accuracy": 0.38333333333333336,
+        "classification_report": {
+          "0": {
+            "precision": 0.391304347826087,
+            "recall": 0.6666666666666666,
+            "f1-score": 0.4931506849315068,
+            "support": 27.0
+          },
+          "1": {
+            "precision": 0.35714285714285715,
+            "recall": 0.15151515151515152,
+            "f1-score": 0.2127659574468085,
+            "support": 33.0
+          },
+          "accuracy": 0.38333333333333336,
+          "macro avg": {
+            "precision": 0.37422360248447206,
+            "recall": 0.40909090909090906,
+            "f1-score": 0.35295832118915765,
+            "support": 60.0
+          },
+          "weighted avg": {
+            "precision": 0.3725155279503106,
+            "recall": 0.38333333333333336,
+            "f1-score": 0.33893908481492274,
+            "support": 60.0
+          }
+        },
+        "description": "Train Real, Test Synthetic (Synthetic Data Quality)"
+      },
+      "TSTR": {
+        "accuracy": 0.48333333333333334,
+        "classification_report": {
+          "0": {
+            "precision": 0.5319148936170213,
+            "recall": 0.7352941176470589,
+            "f1-score": 0.6172839506172839,
+            "support": 34.0
+          },
+          "1": {
+            "precision": 0.3076923076923077,
+            "recall": 0.15384615384615385,
+            "f1-score": 0.20512820512820512,
+            "support": 26.0
+          },
+          "accuracy": 0.48333333333333334,
+          "macro avg": {
+            "precision": 0.4198036006546645,
+            "recall": 0.44457013574660637,
+            "f1-score": 0.41120607787274455,
+            "support": 60.0
+          },
+          "weighted avg": {
+            "precision": 0.43475177304964535,
+            "recall": 0.48333333333333334,
+            "f1-score": 0.4386831275720164,
+            "support": 60.0
+          }
+        },
+        "description": "Train Synthetic, Test Real (Synthetic Data Utility)"
+      }
+    },
+    "utility_score_percent": 96.66666666666667,
+    "quality_score_percent": 76.66666666666667,
+    "overall_score_percent": 86.66666666666667,
+    "interpretation": {
+      "overall": "Moderate synthetic data quality - some limitations",
+      "recommendations": [
+        "TSTS > TRTR suggests potential overfitting in synthetic data"
+      ]
+    }
+  },
+  "data_quality": {
+    "shape_match": true,
+    "column_match": true,
+    "missing_values_original": "0",
+    "missing_values_synthetic": "0",
+    "data_type_consistency": 100.0,
+    "range_validity_percentage": 100.0,
+    "duplicates_original": "0",
+    "duplicates_synthetic": "0"
+  },
+  "plot_files": {
+    "distribution_comparison": "manual_opt_1\\distribution_comparison.png",
+    "evaluation_dashboard": "manual_opt_1\\evaluation_dashboard.png",
+    "correlation_analysis": "manual_opt_1\\correlation_analysis.png",
+    "statistical_comparison": "manual_opt_1\\statistical_comparison.png"
+  }
+}

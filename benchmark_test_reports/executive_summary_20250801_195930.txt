@@ -1,0 +1,19 @@
+BENCHMARK EXECUTIVE SUMMARY
+==================================================
+
+Total Benchmarks: 3
+Success Rate: 100.0%
+Average TRTS Score: 0.853
+Average Similarity Score: 0.889
+Total Computation Time: 0.01 hours
+
+Best Model-Dataset Combination:
+  Model: tvae
+  Dataset: clinical_small
+  Score: 0.886
+
+Key Findings:
+  1. TVAE achieved the highest average performance (0.886)
+  2. Performance gap between best (tvae) and worst (ganeraid) model: 0.041
+  3. clinical_small appears to be the most challenging dataset (highest performance variance)
+  4. clinical_small achieved the highest average model performance

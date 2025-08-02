@@ -1,0 +1,32 @@
+{
+  "evaluation_summary": {
+    "timestamp": "2025-08-01T19:49:07.976420",
+    "model": "TVAEModel",
+    "dataset": "full_multi_model_test"
+  },
+  "statistical_summary": {
+    "average_mean_error": 5.8278241376345195,
+    "similarity_percentage": 40.0,
+    "features_evaluated": 5
+  },
+  "trts_summary": {
+    "utility_score_percent": 82.4,
+    "quality_score_percent": 88.2,
+    "overall_score_percent": 85.3
+  },
+  "similarity_summary": {
+    "final_similarity": 0.8882556379635792,
+    "univariate_similarity": 0.8655536430284336,
+    "bivariate_similarity": 0.9412269594789192
+  },
+  "data_quality_summary": {
+    "data_type_consistency": 100.0,
+    "range_validity_percentage": 100.0,
+    "shape_match": false,
+    "column_match": true
+  },
+  "overall_assessment": {
+    "score": 87.06278189817897,
+    "assessment": "Good synthetic data quality"
+  }
+}

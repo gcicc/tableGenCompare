@@ -1,0 +1,359 @@
+{
+  "evaluation_timestamp": "2025-08-01T19:38:14.762592",
+  "model_info": {
+    "model_type": "TVAEModel",
+    "device": "cpu",
+    "random_state": 42,
+    "is_trained": true,
+    "config": {
+      "epochs": 300,
+      "enforce_min_max_values": true,
+      "enforce_rounding": false,
+      "compress_dims": [
+        128,
+        128
+      ],
+      "decompress_dims": [
+        128,
+        128
+      ],
+      "l2scale": 1e-05,
+      "batch_size": 500,
+      "loss_factor": 2,
+      "cuda": false
+    },
+    "training_metadata": {
+      "training_start": "2025-08-01T19:38:14.161550",
+      "training_end": "2025-08-01T19:38:14.745401",
+      "training_duration_seconds": 0.583851,
+      "epochs": 50,
+      "data_shape": [
+        150,
+        3
+      ],
+      "data_columns": [
+        "feature1",
+        "feature2",
+        "target"
+      ],
+      "compress_dimensions": [
+        128,
+        128
+      ],
+      "decompress_dimensions": [
+        128,
+        128
+      ],
+      "l2_regularization": 1e-05,
+      "batch_size": 500,
+      "loss_factor": 2,
+      "enforce_min_max_values": true,
+      "enforce_rounding": false,
+      "cuda_enabled": false,
+      "training_losses": [
+        0.0,
+        0.0,
+        8.606083869934082,
+        1.0,
+        0.0,
+        7.293464183807373,
+        2.0,
+        0.0,
+        6.594370365142822,
+        3.0,
+        0.0,
+        6.663145542144775,
+        4.0,
+        0.0,
+        6.401806831359863,
+        5.0,
+        0.0,
+        5.897394180297852,
+        6.0,
+        0.0,
+        5.391345024108887,
+        7.0,
+        0.0,
+        5.8150715827941895,
+        8.0,
+        0.0,
+        5.285873889923096,
+        9.0,
+        0.0,
+        5.124125003814697,
+        10.0,
+        0.0,
+        5.172244548797607,
+        11.0,
+        0.0,
+        4.867130756378174,
+        12.0,
+        0.0,
+        4.798791885375977,
+        13.0,
+        0.0,
+        4.756707668304443,
+        14.0,
+        0.0,
+        4.724123477935791,
+        15.0,
+        0.0,
+        4.739363193511963,
+        16.0,
+        0.0,
+        4.474153518676758,
+        17.0,
+        0.0,
+        4.2086687088012695,
+        18.0,
+        0.0,
+        4.257108688354492,
+        19.0,
+        0.0,
+        4.163705825805664,
+        20.0,
+        0.0,
+        3.8860113620758057,
+        21.0,
+        0.0,
+        3.882009744644165,
+        22.0,
+        0.0,
+        3.885179042816162,
+        23.0,
+        0.0,
+        3.532132387161255,
+        24.0,
+        0.0,
+        3.4760146141052246,
+        25.0,
+        0.0,
+        3.497683525085449,
+        26.0,
+        0.0,
+        3.7965455055236816,
+        27.0,
+        0.0,
+        3.4161899089813232,
+        28.0,
+        0.0,
+        3.7018258571624756,
+        29.0,
+        0.0,
+        3.1863181591033936,
+        30.0,
+        0.0,
+        3.392606019973755,
+        31.0,
+        0.0,
+        3.309387445449829,
+        32.0,
+        0.0,
+        3.347461223602295,
+        33.0
+      ],
+      "final_loss": 2.128187894821167,
+      "convergence_achieved": false,
+      "generation_time_seconds": 0.017191,
+      "samples_generated": 100,
+      "generation_rate_samples_per_sec": 5816.997266011284,
+      "synthetic_data_shape": [
+        100,
+        3
+      ],
+      "postprocessing_applied": true
+    }
+  },
+  "dataset_info": {
+    "name": "tvae_test"
+  },
+  "target_column": "target",
+  "statistical_analysis": {
+    "stats_comparison_df": "    Feature  Original_Mean  ...  Original_Unique  Synthetic_Unique\n0  feature1       9.835346  ...              150               100\n1  feature2       0.546667  ...                2                 2\n2    target       0.560000  ...                2                 1\n\n[3 rows x 19 columns]",
+    "summary_statistics": {
+      "average_mean_error": 0.2872112526615375,
+      "max_mean_error": 0.43999999999999995,
+      "average_std_error": 0.41306677836734534,
+      "max_std_error": 0.49804988833968006,
+      "statistically_similar_features": "1",
+      "total_features": 3,
+      "similarity_percentage": 33.33333333333333,
+      "full_range_overlap_count": "3",
+      "partial_range_overlap_count": "0",
+      "no_range_overlap_count": "0",
+      "total_original_missing": "0",
+      "total_synthetic_missing": "0"
+    }
+  },
+  "correlation_analysis": {
+    "original_correlation_matrix": "          feature1  feature2    target\nfeature1  1.000000 -0.013990 -0.088769\nfeature2 -0.013990  1.000000  0.056115\ntarget   -0.088769  0.056115  1.000000",
+    "synthetic_correlation_matrix": "          feature1  feature2  target\nfeature1  1.000000 -0.271086     NaN\nfeature2 -0.271086  1.000000     NaN\ntarget         NaN       NaN     NaN",
+    "correlation_difference_matrix": "          feature1  feature2  target\nfeature1  0.000000  0.257096     NaN\nfeature2  0.257096  0.000000     NaN\ntarget         NaN       NaN     NaN",
+    "average_correlation_difference": NaN,
+    "max_correlation_difference": NaN,
+    "correlation_preservation_score": NaN
+  },
+  "similarity_analysis": {
+    "final_similarity": 0.8277458513457769,
+    "univariate_similarity": 0.8415721724377581,
+    "bivariate_similarity": 0.7954844354644879,
+    "feature_similarities": {
+      "feature1": 0.9654409955932194,
+      "feature2": 0.7177033492822966
+    }
+  },
+  "trts_results": {
+    "trts_scores": {
+      "TRTR": 0.26666666666666666,
+      "TSTS": 1.0,
+      "TRTS": 0.6666666666666666,
+      "TSTR": 0.5555555555555556
+    },
+    "detailed_results": {
+      "TRTR": {
+        "accuracy": 0.26666666666666666,
+        "classification_report": {
+          "0": {
+            "precision": 0.21739130434782608,
+            "recall": 0.25,
+            "f1-score": 0.23255813953488372,
+            "support": 20.0
+          },
+          "1": {
+            "precision": 0.3181818181818182,
+            "recall": 0.28,
+            "f1-score": 0.2978723404255319,
+            "support": 25.0
+          },
+          "accuracy": 0.26666666666666666,
+          "macro avg": {
+            "precision": 0.26778656126482214,
+            "recall": 0.265,
+            "f1-score": 0.2652152399802078,
+            "support": 45.0
+          },
+          "weighted avg": {
+            "precision": 0.2733860342555995,
+            "recall": 0.26666666666666666,
+            "f1-score": 0.26884380669635494,
+            "support": 45.0
+          }
+        },
+        "description": "Train Real, Test Real (Baseline)"
+      },
+      "TSTS": {
+        "accuracy": 1.0,
+        "classification_report": {
+          "1": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1-score": 1.0,
+            "support": 30.0
+          },
+          "accuracy": 1.0,
+          "macro avg": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1-score": 1.0,
+            "support": 30.0
+          },
+          "weighted avg": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1-score": 1.0,
+            "support": 30.0
+          }
+        },
+        "description": "Train Synthetic, Test Synthetic (Internal Consistency)"
+      },
+      "TRTS": {
+        "accuracy": 0.6666666666666666,
+        "classification_report": {
+          "0": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1-score": 0.0,
+            "support": 0.0
+          },
+          "1": {
+            "precision": 1.0,
+            "recall": 0.6666666666666666,
+            "f1-score": 0.8,
+            "support": 30.0
+          },
+          "accuracy": 0.6666666666666666,
+          "macro avg": {
+            "precision": 0.5,
+            "recall": 0.3333333333333333,
+            "f1-score": 0.4,
+            "support": 30.0
+          },
+          "weighted avg": {
+            "precision": 1.0,
+            "recall": 0.6666666666666666,
+            "f1-score": 0.8,
+            "support": 30.0
+          }
+        },
+        "description": "Train Real, Test Synthetic (Synthetic Data Quality)"
+      },
+      "TSTR": {
+        "accuracy": 0.5555555555555556,
+        "classification_report": {
+          "0": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1-score": 0.0,
+            "support": 20.0
+          },
+          "1": {
+            "precision": 0.5555555555555556,
+            "recall": 1.0,
+            "f1-score": 0.7142857142857143,
+            "support": 25.0
+          },
+          "accuracy": 0.5555555555555556,
+          "macro avg": {
+            "precision": 0.2777777777777778,
+            "recall": 0.5,
+            "f1-score": 0.35714285714285715,
+            "support": 45.0
+          },
+          "weighted avg": {
+            "precision": 0.30864197530864196,
+            "recall": 0.5555555555555556,
+            "f1-score": 0.39682539682539686,
+            "support": 45.0
+          }
+        },
+        "description": "Train Synthetic, Test Real (Synthetic Data Utility)"
+      }
+    },
+    "utility_score_percent": 208.33333333333334,
+    "quality_score_percent": 250.0,
+    "overall_score_percent": 229.16666666666669,
+    "interpretation": {
+      "overall": "Excellent synthetic data quality and utility",
+      "recommendations": [
+        "TSTS > TRTR suggests potential overfitting in synthetic data",
+        "Large TRTR-TRTS gap indicates synthetic data quality issues"
+      ]
+    }
+  },
+  "data_quality": {
+    "shape_match": false,
+    "column_match": true,
+    "missing_values_original": "0",
+    "missing_values_synthetic": "0",
+    "data_type_consistency": 100.0,
+    "range_validity_percentage": 100.0,
+    "duplicates_original": "0",
+    "duplicates_synthetic": "0"
+  },
+  "plot_files": {
+    "distribution_comparison": "tvae_test_output\\distribution_comparison.png",
+    "evaluation_dashboard": "tvae_test_output\\evaluation_dashboard.png",
+    "correlation_analysis": "tvae_test_output\\correlation_analysis.png",
+    "statistical_comparison": "tvae_test_output\\statistical_comparison.png"
+  }
+}
