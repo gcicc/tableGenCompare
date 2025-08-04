@@ -9,10 +9,23 @@ __version__ = "0.1.0"
 __author__ = "Clinical Research Team"
 
 # Core imports for easy access
-from .models import ModelFactory
-from .datasets import DatasetHandler
-from .evaluation import UnifiedEvaluator
-from .experiments import ExperimentRunner
+try:
+    from .models import ModelFactory
+except ImportError:
+    ModelFactory = None
+
+try:
+    from .datasets import DatasetHandler
+except ImportError:
+    DatasetHandler = None
+
+try:
+    from .evaluation import UnifiedEvaluator
+except ImportError:
+    UnifiedEvaluator = None
+
+# ExperimentRunner not yet implemented
+ExperimentRunner = None
 
 __all__ = [
     "ModelFactory",

@@ -35,9 +35,9 @@ except ImportError as e:
     class SingleTableMetadata:
         pass
 
-from ..base_model import BaseSyntheticModel
+from ..base_model import SyntheticDataModel
 
-class CopulaGANModel(BaseSyntheticModel):
+class CopulaGANModel(SyntheticDataModel):
     """
     CopulaGAN model wrapper for synthetic tabular data generation.
     
