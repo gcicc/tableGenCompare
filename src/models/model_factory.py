@@ -35,8 +35,7 @@ except ImportError:
     COPULAGAN_AVAILABLE = False
 
 try:
-    from .implementations.tablegan_model import TableGANModel
-    TABLEGAN_AVAILABLE = True
+    from .implementations.tablegan_model import TableGANModel, TABLEGAN_AVAILABLE
 except ImportError:
     TABLEGAN_AVAILABLE = False
 

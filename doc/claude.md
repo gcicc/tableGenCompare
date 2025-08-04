@@ -20,6 +20,10 @@ Phase 5: As you author this .ipynb employ multiple agents that will ensure some 
 Phase 6: .  Read Phase1_Breast_Cancer_Enhanced_GANerAid.ipynb.  In particular read section 4 which implements GANerAide. Review TRAINING HISTORY ANALYSIS and note that two graphs are produced - the second is empty. Fix this. Move section 5 to be section 4.1. Move section 6 to be section 4.2.   Note there are 2 blank graphs in GANERAID Correlation comparison.  Note # Enhanced performance visualization (NEW) produces errors.  Move section 7 to 4.3.  
 Phase 7. Read Phase1_Breast_Cancer_Enhanced_GANerAid.ipynb. Author section 5 of this document first.   After I review we will then move to complete section 6.
 
+USER NOTE: Phase 7 is completed.  I will take Phase1_Breast_Cancer_Enhanced_GANerAid.ipynb and run in HPC environ
+
+
+
 Phase 8.  Build a notebook along the lines of Phase1_Breast_Cancer_Enhanced_GANerAid.ipynb, but employ CTGAN. The only change should be associated with swapping GANerAid with CTGAN
 Phase 9. Build a notebook along the lines of Phase1_Breast_Cancer_Enhanced_GANerAid.ipynb, but employ TVAE. The only change should be associated with swapping GANerAid with TVAE
 Phase 10. Build a notebook along the lines of Phase1_Breast_Cancer_Enhanced_GANerAid.ipynb, but employ CopulaGAN. The only change should be associated with swapping GANerAid with CopulaGAN
