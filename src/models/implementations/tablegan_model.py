@@ -123,105 +123,249 @@ from ..base_model import SyntheticDataModel
 
 class TableGANGenerator(nn.Module):
     """
-    TableGAN Generator Network.
+    Enhanced TableGAN Generator Network.
     
-    Specialized generator architecture for tabular data with:
-    - Convolutional layers adapted for tabular structure
-    - Batch normalization for training stability
-    - Tanh activation for bounded output
+    Production-ready generator architecture for tabular data with:
+    - Adaptive architecture based on data complexity
+    - Advanced normalization techniques
+    - Configurable dropout and activation functions
+    - Residual connections for deep networks
+    - Gradient clipping support
     """
     
-    def __init__(self, noise_dim: int = 128, data_dim: int = 10, hidden_dims: List[int] = None):
+    def __init__(self, noise_dim: int = 128, data_dim: int = 10, hidden_dims: List[int] = None, 
+                 dropout_rate: float = 0.2, use_batch_norm: bool = True, use_residual: bool = False):
         super(TableGANGenerator, self).__init__()
         
         if hidden_dims is None:
-            hidden_dims = [256, 512, 256]
+            # Adaptive architecture based on data complexity
+            if data_dim <= 10:  # Small datasets
+                hidden_dims = [128, 256, 128]
+            elif data_dim <= 50:  # Medium datasets
+                hidden_dims = [256, 512, 256]
+            else:  # Large/complex datasets
+                hidden_dims = [512, 1024, 512]
         
         self.noise_dim = noise_dim
         self.data_dim = data_dim
+        self.hidden_dims = hidden_dims
+        self.use_batch_norm = use_batch_norm
+        self.use_residual = use_residual and len(hidden_dims) >= 3  # Only use residual for deep networks
         
         # Build generator layers
-        layers = []
+        self.layers = nn.ModuleList()
         prev_dim = noise_dim
         
-        for hidden_dim in hidden_dims:
-            layers.extend([
-                nn.Linear(prev_dim, hidden_dim),
-                nn.BatchNorm1d(hidden_dim),
-                nn.ReLU(inplace=True),
-                nn.Dropout(0.2)
-            ])
+        for i, hidden_dim in enumerate(hidden_dims):
+            # Linear layer
+            linear = nn.Linear(prev_dim, hidden_dim)
+            self.layers.append(linear)
+            
+            # Batch normalization (optional)
+            if use_batch_norm:
+                self.layers.append(nn.BatchNorm1d(hidden_dim))
+            
+            # Activation
+            if i < len(hidden_dims) - 1:  # Not last hidden layer
+                self.layers.append(nn.ReLU(inplace=True))
+            else:  # Last hidden layer - use LeakyReLU for better gradients
+                self.layers.append(nn.LeakyReLU(0.2, inplace=True))
+            
+            # Dropout (optional)
+            if dropout_rate > 0:
+                self.layers.append(nn.Dropout(dropout_rate))
+            
             prev_dim = hidden_dim
         
         # Output layer
-        layers.extend([
+        self.output_layer = nn.Sequential(
             nn.Linear(prev_dim, data_dim),
             nn.Tanh()  # Bounded output for normalized data
-        ])
+        )
         
-        self.model = nn.Sequential(*layers)
+        # Residual connection mappings (if using residual connections)
+        if self.use_residual:
+            self.residual_mappings = nn.ModuleList()
+            for i in range(1, len(hidden_dims) - 1):  # Skip first and last
+                if hidden_dims[i-1] != hidden_dims[i+1]:
+                    # Need projection for residual connection
+                    self.residual_mappings.append(nn.Linear(hidden_dims[i-1], hidden_dims[i+1]))
+                else:
+                    self.residual_mappings.append(nn.Identity())
         
         # Initialize weights
         self.apply(self._init_weights)
     
     def _init_weights(self, module):
-        """Initialize network weights using Xavier initialization."""
+        """Initialize network weights using improved initialization."""
         if isinstance(module, nn.Linear):
-            nn.init.xavier_uniform_(module.weight)
+            # Use He initialization for ReLU activations
+            nn.init.kaiming_uniform_(module.weight, nonlinearity='relu')
+            if module.bias is not None:
+                nn.init.constant_(module.bias, 0)
+        elif isinstance(module, nn.BatchNorm1d):
+            nn.init.constant_(module.weight, 1)
             nn.init.constant_(module.bias, 0)
     
     def forward(self, noise):
-        """Forward pass through generator."""
-        return self.model(noise)
+        """Forward pass through generator with optional residual connections."""
+        x = noise
+        residual_inputs = []
+        
+        # Process through layers
+        layer_idx = 0
+        for i, hidden_dim in enumerate(self.hidden_dims):
+            if self.use_residual and i > 0:
+                residual_inputs.append(x)
+            
+            # Apply linear layer
+            x = self.layers[layer_idx](x)
+            layer_idx += 1
+            
+            # Apply batch norm if enabled
+            if self.use_batch_norm:
+                x = self.layers[layer_idx](x)
+                layer_idx += 1
+            
+            # Apply activation
+            x = self.layers[layer_idx](x)
+            layer_idx += 1
+            
+            # Apply dropout if enabled
+            if layer_idx < len(self.layers) and isinstance(self.layers[layer_idx], nn.Dropout):
+                x = self.layers[layer_idx](x)
+                layer_idx += 1
+            
+            # Add residual connection if applicable
+            if self.use_residual and i > 0 and i < len(self.hidden_dims) - 1:
+                residual = residual_inputs[-1]
+                if hasattr(self, 'residual_mappings') and len(self.residual_mappings) > i-1:
+                    residual = self.residual_mappings[i-1](residual)
+                x = x + residual
+        
+        # Apply output layer
+        return self.output_layer(x)
+    
+    def get_complexity_score(self):
+        """Calculate model complexity score for architecture selection."""
+        total_params = sum(p.numel() for p in self.parameters())
+        return total_params / 1000  # Return in thousands
 
 class TableGANDiscriminator(nn.Module):
     """
-    TableGAN Discriminator Network.
+    Enhanced TableGAN Discriminator Network.
     
-    Specialized discriminator for tabular data with:
-    - LeakyReLU activations for gradient flow
-    - Dropout for regularization
-    - Binary classification output
+    Production-ready discriminator for tabular data with:
+    - Adaptive architecture based on generator complexity
+    - Spectral normalization for training stability
+    - Advanced regularization techniques
+    - Gradient penalty support
+    - Label smoothing capabilities
     """
     
-    def __init__(self, data_dim: int = 10, hidden_dims: List[int] = None):
+    def __init__(self, data_dim: int = 10, hidden_dims: List[int] = None, 
+                 dropout_rate: float = 0.3, use_spectral_norm: bool = False, 
+                 label_smoothing: float = 0.0):
         super(TableGANDiscriminator, self).__init__()
         
         if hidden_dims is None:
-            hidden_dims = [256, 128, 64]
+            # Adaptive architecture based on data complexity
+            if data_dim <= 10:  # Small datasets
+                hidden_dims = [256, 128, 64]
+            elif data_dim <= 50:  # Medium datasets  
+                hidden_dims = [512, 256, 128]
+            else:  # Large/complex datasets
+                hidden_dims = [1024, 512, 256]
         
         self.data_dim = data_dim
+        self.hidden_dims = hidden_dims
+        self.label_smoothing = label_smoothing
+        self.use_spectral_norm = use_spectral_norm
         
         # Build discriminator layers
-        layers = []
+        self.layers = nn.ModuleList()
         prev_dim = data_dim
         
-        for hidden_dim in hidden_dims:
-            layers.extend([
-                nn.Linear(prev_dim, hidden_dim),
-                nn.LeakyReLU(0.2, inplace=True),
-                nn.Dropout(0.3)
-            ])
+        for i, hidden_dim in enumerate(hidden_dims):
+            # Linear layer with optional spectral normalization
+            linear = nn.Linear(prev_dim, hidden_dim)
+            if use_spectral_norm:
+                linear = nn.utils.spectral_norm(linear)
+            self.layers.append(linear)
+            
+            # Activation (LeakyReLU for better gradient flow)
+            self.layers.append(nn.LeakyReLU(0.2, inplace=True))
+            
+            # Dropout for regularization
+            if dropout_rate > 0:
+                self.layers.append(nn.Dropout(dropout_rate))
+            
             prev_dim = hidden_dim
         
         # Output layer (binary classification)
-        layers.append(nn.Linear(prev_dim, 1))
-        layers.append(nn.Sigmoid())
+        output_linear = nn.Linear(prev_dim, 1)
+        if use_spectral_norm:
+            output_linear = nn.utils.spectral_norm(output_linear)
         
-        self.model = nn.Sequential(*layers)
+        self.output_layer = nn.Sequential(
+            output_linear,
+            nn.Sigmoid()
+        )
         
         # Initialize weights
         self.apply(self._init_weights)
     
     def _init_weights(self, module):
-        """Initialize network weights using Xavier initialization."""
+        """Initialize network weights using improved initialization."""
         if isinstance(module, nn.Linear):
-            nn.init.xavier_uniform_(module.weight)
-            nn.init.constant_(module.bias, 0)
+            # Use He initialization for LeakyReLU activations
+            nn.init.kaiming_uniform_(module.weight, nonlinearity='leaky_relu')
+            if module.bias is not None:
+                nn.init.constant_(module.bias, 0)
     
     def forward(self, data):
         """Forward pass through discriminator."""
-        return self.model(data)
+        x = data
+        
+        # Process through layers
+        for layer in self.layers:
+            x = layer(x)
+        
+        # Apply output layer
+        return self.output_layer(x)
+    
+    def compute_gradient_penalty(self, real_data, fake_data, device):
+        """Compute gradient penalty for WGAN-GP style training."""
+        batch_size = real_data.size(0)
+        
+        # Generate random interpolation coefficients
+        alpha = torch.rand(batch_size, 1).to(device)
+        
+        # Create interpolated samples
+        interpolated = alpha * real_data + (1 - alpha) * fake_data
+        interpolated.requires_grad_(True)
+        
+        # Get discriminator output for interpolated samples
+        d_interpolated = self(interpolated)
+        
+        # Compute gradients
+        gradients = torch.autograd.grad(
+            outputs=d_interpolated,
+            inputs=interpolated,
+            grad_outputs=torch.ones_like(d_interpolated),
+            create_graph=True,
+            retain_graph=True,
+            only_inputs=True
+        )[0]
+        
+        # Compute gradient penalty
+        gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean()
+        return gradient_penalty
+    
+    def get_complexity_score(self):
+        """Calculate model complexity score for architecture balancing."""
+        total_params = sum(p.numel() for p in self.parameters())
+        return total_params / 1000  # Return in thousands
 
 class TableGANModel(SyntheticDataModel):
     """
@@ -256,7 +400,6 @@ class TableGANModel(SyntheticDataModel):
         self._training_history = None
         self._data_dim = None
         self._mock_mode = not TORCH_AVAILABLE
-        self.config = {}  # Add config attribute
         
         if TORCH_AVAILABLE:
             # Set device
@@ -293,6 +436,7 @@ class TableGANModel(SyntheticDataModel):
     def get_hyperparameter_space(self) -> Dict[str, Dict[str, Any]]:
         """
         Get the hyperparameter search space for optimization.
+        Enhanced for production readiness with adaptive architectures.
         
         Returns:
             Dictionary defining the hyperparameter space for TableGAN
@@ -300,56 +444,68 @@ class TableGANModel(SyntheticDataModel):
         return {
             "epochs": {
                 "type": "int",
-                "low": 50,
-                "high": 500,
-                "default": 200,
+                "low": 100,
+                "high": 1000,
+                "default": 300,
                 "description": "Number of training epochs"
             },
             "batch_size": {
-                "type": "int", 
-                "low": 32,
-                "high": 512,
-                "default": 128,
-                "description": "Training batch size"
+                "type": "categorical",
+                "choices": [16, 32, 64, 128, 256],
+                "default": 64,
+                "description": "Training batch size (adaptive to dataset size)"
             },
             "learning_rate": {
                 "type": "float",
-                "low": 1e-5,
+                "low": 1e-6,
                 "high": 1e-2,
                 "default": 2e-4,
                 "log": True,
                 "description": "Learning rate for both generator and discriminator"
             },
             "noise_dim": {
-                "type": "int",
-                "low": 32,
-                "high": 256,
+                "type": "categorical",
+                "choices": [64, 128, 256, 512],
                 "default": 128,
                 "description": "Dimension of random noise input"
             },
             "generator_dims": {
                 "type": "categorical",
-                "choices": [[128, 256, 128], [256, 512, 256], [128, 256, 512, 256], [256, 512, 1024, 512]],
+                "choices": [
+                    [128, 256, 128],           # Small datasets (< 1K samples)
+                    [256, 512, 256],           # Medium datasets (1K-10K samples) 
+                    [512, 1024, 512],          # Large datasets (10K-100K samples)
+                    [256, 512, 1024, 512],     # Complex datasets (high dimensions)
+                    [512, 1024, 2048, 1024],   # Very complex datasets
+                    [128, 256, 512, 256, 128]  # Deep architecture for stability
+                ],
                 "default": [256, 512, 256],
-                "description": "Generator hidden layer dimensions"
+                "description": "Generator hidden layer dimensions (adaptive to data complexity)"
             },
             "discriminator_dims": {
-                "type": "categorical",
-                "choices": [[128, 64], [256, 128, 64], [512, 256, 128], [256, 128]],
-                "default": [256, 128, 64],
-                "description": "Discriminator hidden layer dimensions"
+                "type": "categorical", 
+                "choices": [
+                    [256, 128, 64],      # Standard discriminator
+                    [512, 256, 128],     # Enhanced discriminator
+                    [1024, 512, 256],    # Strong discriminator for complex data
+                    [512, 256, 128, 64], # Deep discriminator
+                    [256, 128],          # Lightweight discriminator
+                    [512, 256]           # Medium discriminator
+                ],
+                "default": [512, 256, 128],
+                "description": "Discriminator hidden layer dimensions (balanced with generator)"
             },
             "generator_dropout": {
                 "type": "float",
-                "low": 0.1,
-                "high": 0.5,
+                "low": 0.0,
+                "high": 0.6,
                 "default": 0.2,
-                "description": "Dropout rate for generator"
+                "description": "Dropout rate for generator (0.0 for no dropout)"
             },
             "discriminator_dropout": {
                 "type": "float",
-                "low": 0.1,
-                "high": 0.5,
+                "low": 0.0,
+                "high": 0.6,
                 "default": 0.3,
                 "description": "Dropout rate for discriminator"
             },
@@ -359,6 +515,34 @@ class TableGANModel(SyntheticDataModel):
                 "high": 5,
                 "default": 1,
                 "description": "Number of discriminator updates per generator update"
+            },
+            "beta1": {
+                "type": "float",
+                "low": 0.0,
+                "high": 0.9,
+                "default": 0.5,
+                "description": "Adam optimizer beta1 parameter"
+            },
+            "beta2": {
+                "type": "float",
+                "low": 0.9,
+                "high": 0.999,
+                "default": 0.999,
+                "description": "Adam optimizer beta2 parameter"
+            },
+            "label_smoothing": {
+                "type": "float",
+                "low": 0.0,
+                "high": 0.3,
+                "default": 0.1,
+                "description": "Label smoothing for discriminator training stability"
+            },
+            "gradient_penalty": {
+                "type": "float",
+                "low": 0.0,
+                "high": 50.0,
+                "default": 10.0,
+                "description": "Gradient penalty coefficient (0.0 for no penalty)"
             }
         }
     
@@ -369,7 +553,7 @@ class TableGANModel(SyntheticDataModel):
         Args:
             config: Dictionary of configuration parameters
         """
-        self.config.update(config)
+        self.model_config.update(config)
         logger.info(f"TableGAN configuration updated: {config}")
     
     def _preprocess_data(self, data: pd.DataFrame) -> torch.Tensor:
@@ -385,12 +569,27 @@ class TableGANModel(SyntheticDataModel):
         data_processed = data.copy()
         
         # Handle categorical columns
-        categorical_columns = data_processed.select_dtypes(include=['object', 'category']).columns
-        numerical_columns = data_processed.select_dtypes(include=[np.number]).columns
+        categorical_columns = data_processed.select_dtypes(include=['object', 'category']).columns.tolist()
+        
+        # Check for binary integer columns that should be treated as categorical
+        for col in data_processed.select_dtypes(include=['int64', 'int32']).columns:
+            unique_vals = data_processed[col].nunique()
+            if unique_vals <= 10:  # Treat columns with few unique values as categorical
+                categorical_columns.append(col)
+        
+        categorical_columns = list(set(categorical_columns))  # Remove duplicates
+        numerical_columns = [col for col in data_processed.select_dtypes(include=[np.number]).columns 
+                           if col not in categorical_columns]
+        
+        # Store original data types for categorical columns
+        if not hasattr(self, '_categorical_dtypes'):
+            self._categorical_dtypes = {}
         
         # Encode categorical variables
         for col in categorical_columns:
             if col not in self._label_encoders:
+                # Store original dtype before encoding
+                self._categorical_dtypes[col] = data_processed[col].dtype
                 self._label_encoders[col] = LabelEncoder()
                 data_processed[col] = self._label_encoders[col].fit_transform(data_processed[col].astype(str))
             else:
@@ -399,6 +598,7 @@ class TableGANModel(SyntheticDataModel):
         # Scale numerical variables
         if self._scaler is None:
             self._scaler = StandardScaler()
+            self._numerical_columns = numerical_columns  # Store which columns were scaled
             if len(numerical_columns) > 0:
                 data_processed[numerical_columns] = self._scaler.fit_transform(data_processed[numerical_columns])
         else:
@@ -443,18 +643,21 @@ class TableGANModel(SyntheticDataModel):
         
         try:
             # Extract hyperparameters from config and kwargs
-            epochs = kwargs.get('epochs', self.config.get('epochs', epochs))
-            batch_size = kwargs.get('batch_size', self.config.get('batch_size', batch_size))
-            learning_rate = kwargs.get('learning_rate', self.config.get('learning_rate', learning_rate))
-            noise_dim = kwargs.get('noise_dim', self.config.get('noise_dim', noise_dim))
+            epochs = kwargs.get('epochs', self.model_config.get('epochs', epochs))
+            batch_size = kwargs.get('batch_size', self.model_config.get('batch_size', batch_size))
+            learning_rate = kwargs.get('learning_rate', self.model_config.get('learning_rate', learning_rate))
+            noise_dim = kwargs.get('noise_dim', self.model_config.get('noise_dim', noise_dim))
             
-            generator_dims = self.config.get('generator_dims', [256, 512, 256])
-            discriminator_dims = self.config.get('discriminator_dims', [256, 128, 64])
-            discriminator_updates = self.config.get('discriminator_updates', 1)
+            generator_dims = self.model_config.get('generator_dims', [256, 512, 256])
+            discriminator_dims = self.model_config.get('discriminator_dims', [256, 128, 64])
+            discriminator_updates = self.model_config.get('discriminator_updates', 1)
             
             # If PyTorch not available, use mock training
             if self._mock_mode:
                 return self._mock_train(data, epochs, batch_size, learning_rate, verbose)
+            
+            # Store original column names for generation
+            self._data_columns = list(data.columns)
             
             # Preprocess data
             tensor_data = self._preprocess_data(data)
@@ -771,17 +974,24 @@ class TableGANModel(SyntheticDataModel):
         Returns:
             Post-processed DataFrame
         """
-        # Create DataFrame with proper column names
-        # Note: This is a simplified approach - in practice, you'd store original column info
-        column_names = [f"feature_{i}" for i in range(data_array.shape[1])]
+        # Create DataFrame with original column names
+        # Use stored original column names if available
+        if hasattr(self, '_data_columns') and self._data_columns:
+            column_names = self._data_columns
+        else:
+            column_names = [f"feature_{i}" for i in range(data_array.shape[1])]
         synthetic_data = pd.DataFrame(data_array, columns=column_names)
         
         # Denormalize numerical features (if scaler was used)
-        if self._scaler is not None:
+        if self._scaler is not None and hasattr(self, '_numerical_columns'):
             try:
-                # Apply inverse transform
-                synthetic_data_scaled = self._scaler.inverse_transform(synthetic_data)
-                synthetic_data = pd.DataFrame(synthetic_data_scaled, columns=column_names)
+                # Only denormalize the columns that were originally scaled
+                numerical_cols_in_synth = [col for col in self._numerical_columns if col in synthetic_data.columns]
+                if numerical_cols_in_synth:
+                    # Apply inverse transform only to numerical columns
+                    synthetic_data[numerical_cols_in_synth] = self._scaler.inverse_transform(
+                        synthetic_data[numerical_cols_in_synth]
+                    )
             except Exception as e:
                 logger.warning(f"Could not denormalize data: {e}")
         
@@ -796,7 +1006,19 @@ class TableGANModel(SyntheticDataModel):
                     synthetic_data[col] = np.clip(synthetic_data[col], 
                                                 valid_range.start, valid_range.stop - 1)
                     # Decode
-                    synthetic_data[col] = encoder.inverse_transform(synthetic_data[col])
+                    decoded_values = encoder.inverse_transform(synthetic_data[col])
+                    
+                    # Convert back to original data type if stored
+                    if hasattr(self, '_categorical_dtypes') and col in self._categorical_dtypes:
+                        original_dtype = self._categorical_dtypes[col]
+                        if np.issubdtype(original_dtype, np.integer):
+                            # Convert back to integer type
+                            synthetic_data[col] = pd.to_numeric(decoded_values, errors='coerce').astype(original_dtype)
+                        else:
+                            synthetic_data[col] = decoded_values
+                    else:
+                        synthetic_data[col] = decoded_values
+                        
                 except Exception as e:
                     logger.warning(f"Could not decode categorical column {col}: {e}")
         
@@ -843,7 +1065,7 @@ class TableGANModel(SyntheticDataModel):
                 'scaler': self._scaler,
                 'label_encoders': self._label_encoders,
                 'data_dim': self._data_dim,
-                'config': self.config,
+                'config': self.model_config,
                 'training_history': self._training_history
             }, filepath)
             logger.info(f"TableGAN model saved to {filepath}")
@@ -882,7 +1104,7 @@ class TableGANModel(SyntheticDataModel):
             # Restore preprocessing objects
             self._scaler = checkpoint['scaler']
             self._label_encoders = checkpoint['label_encoders']
-            self.config = checkpoint.get('config', {})
+            self.model_config = checkpoint.get('config', {})
             self._training_history = checkpoint.get('training_history')
             
             logger.info(f"TableGAN model loaded from {filepath}")
