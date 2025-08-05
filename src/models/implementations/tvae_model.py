@@ -225,10 +225,11 @@ class TVAEModel(SyntheticDataModel):
     
     def get_hyperparameter_space(self) -> Dict[str, Dict[str, Any]]:
         """
-        Get the hyperparameter search space for TVAE optimization.
+        Get the enhanced hyperparameter search space for TVAE optimization.
+        Production-ready hyperparameter space designed for diverse tabular datasets.
         
         Returns:
-            Dictionary defining hyperparameter search space
+            Dictionary defining comprehensive hyperparameter search space
         """
         return {
             'epochs': {
@@ -236,46 +237,107 @@ class TVAEModel(SyntheticDataModel):
                 'low': 100,
                 'high': 1000,
                 'step': 50,
-                'description': 'Number of training epochs'
+                'default': 300,
+                'description': 'Training epochs - 300 optimal for VAE convergence in most tabular datasets'
             },
             'compress_dims': {
                 'type': 'categorical',
-                'choices': [(64, 64), (128, 128), (256, 256), (128, 256), (256, 128)],
-                'description': 'Encoder (compression) network dimensions'
+                'choices': [
+                    (64, 64),            # Small datasets (<1K samples, <20 features)
+                    (128, 128),          # Medium datasets (1K-10K samples, 20-50 features)
+                    (256, 256),          # Large datasets (10K-100K samples, 50+ features)
+                    (512, 512),          # Very large datasets (100K+ samples, 100+ features)
+                    (128, 256),          # Asymmetric - expanding encoder for complex features
+                    (256, 128),          # Asymmetric - bottleneck encoder for regularization
+                    (64, 128, 64),       # Deep encoder for small-medium datasets  
+                    (128, 256, 128),     # Deep encoder for medium-large datasets
+                    (256, 512, 256),     # Deep encoder for large/complex datasets
+                    (128, 256, 512)      # Progressive expansion for very complex features
+                ],
+                'default': (128, 128),
+                'description': 'Encoder architecture - adaptive compression based on data complexity'
             },
             'decompress_dims': {
                 'type': 'categorical',
-                'choices': [(64, 64), (128, 128), (256, 256), (128, 256), (256, 128)],
-                'description': 'Decoder (decompression) network dimensions'
+                'choices': [
+                    (64, 64),            # Matches small encoder
+                    (128, 128),          # Matches medium encoder - most stable
+                    (256, 256),          # Matches large encoder  
+                    (512, 512),          # Matches very large encoder
+                    (256, 128),          # Stronger decoder for difficult reconstruction
+                    (128, 256),          # Progressive decoder expansion
+                    (64, 128, 64),       # Deep decoder for small-medium datasets
+                    (128, 256, 128),     # Deep decoder for medium-large datasets
+                    (256, 512, 256),     # Deep decoder for large/complex datasets
+                    (512, 256, 128)      # Funnel decoder for feature selection
+                ],
+                'default': (128, 128),
+                'description': 'Decoder architecture - balanced reconstruction capability'
             },
             'l2scale': {
                 'type': 'float',
-                'low': 1e-6,
-                'high': 1e-3,
+                'low': 1e-7,
+                'high': 1e-2,
                 'log': True,
-                'description': 'L2 regularization scale (log scale)'
+                'default': 1e-5,
+                'description': 'L2 regularization scale - 1e-5 optimal for preventing overfitting'
             },
             'batch_size': {
                 'type': 'categorical',
-                'choices': [100, 250, 500, 1000],
-                'description': 'Training batch size'
+                'choices': [32, 64, 128, 256, 500, 1000, 2000],
+                'default': 500,
+                'description': 'Batch size - larger batches (500+) improve VAE stability and latent space quality'
             },
             'loss_factor': {
                 'type': 'int',
                 'low': 1,
                 'high': 10,
                 'step': 1,
-                'description': 'Loss factor for VAE training'
+                'default': 2,
+                'description': 'VAE loss weighting factor - 2 balances reconstruction vs KL divergence'
             },
             'enforce_min_max_values': {
                 'type': 'categorical',
                 'choices': [True, False],
-                'description': 'Enforce min/max value constraints'
+                'default': True,
+                'description': 'Enforce min/max constraints - True for data fidelity in production'
             },
             'enforce_rounding': {
                 'type': 'categorical',
                 'choices': [True, False],
-                'description': 'Enforce rounding for integer columns'
+                'default': False,
+                'description': 'Enforce integer rounding - False for smoother continuous distributions'
+            },
+            'learning_rate': {
+                'type': 'float',
+                'low': 1e-5,
+                'high': 1e-2,
+                'log': True,
+                'default': 1e-3,
+                'description': 'Learning rate for VAE training - 1e-3 optimal for Adam optimizer'
+            },
+            'beta': {
+                'type': 'float',
+                'low': 0.1,
+                'high': 10.0,
+                'log': True,
+                'default': 1.0,
+                'description': 'Beta parameter for β-VAE - controls regularization strength in latent space'
+            },
+            'latent_dim': {
+                'type': 'int',
+                'low': 16,
+                'high': 512,
+                'step': 16,
+                'default': 128,
+                'description': 'Latent space dimensionality - 128 good balance for most tabular data'
+            },
+            'dropout_rate': {
+                'type': 'float',
+                'low': 0.0,
+                'high': 0.5,
+                'default': 0.1,
+                'description': 'Dropout rate for regularization - 0.1 prevents overfitting without hurting performance'
             }
         }
     

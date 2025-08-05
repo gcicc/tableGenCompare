@@ -25,7 +25,12 @@
       "Bash(cp:*)",
       "Bash(git rm:*)",
       "Bash(git reset:*)",
-      "Bash(touch:*)"
+      "Bash(touch:*)",
+      "Bash(sed:*)",
+      "Bash(grep:*)",
+      "Bash(jupyter nbconvert:*)",
+      "Bash(del:*)",
+      "Bash(mv:*)"
     ],
     "deny": []
   }

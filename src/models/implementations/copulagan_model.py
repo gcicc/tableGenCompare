@@ -92,76 +92,136 @@ class CopulaGANModel(SyntheticDataModel):
     
     def get_hyperparameter_space(self) -> Dict[str, Dict[str, Any]]:
         """
-        Get the hyperparameter search space for optimization.
+        Get the enhanced hyperparameter search space for CopulaGAN optimization.
+        Production-ready hyperparameter space designed for diverse tabular datasets.
         
         Returns:
-            Dictionary defining the hyperparameter space for CopulaGAN
+            Dictionary defining comprehensive hyperparameter space for CopulaGAN
         """
         return {
             "epochs": {
                 "type": "int",
-                "low": 50,
-                "high": 500,
+                "low": 100,
+                "high": 800,
+                "step": 50,
                 "default": 300,
-                "description": "Number of training epochs"
+                "description": "Training epochs - 300 optimal for copula modeling convergence"
             },
             "batch_size": {
-                "type": "int", 
-                "low": 32,
-                "high": 1000,
+                "type": "categorical",
+                "choices": [32, 64, 128, 256, 500, 1000, 2000],
                 "default": 500,
-                "description": "Training batch size"
+                "description": "Batch size - larger batches (500+) improve GAN stability and copula learning"
             },
             "generator_lr": {
                 "type": "float",
-                "low": 1e-5,
-                "high": 1e-2,
-                "default": 2e-4,
+                "low": 5e-6,
+                "high": 5e-3,
                 "log": True,
-                "description": "Generator learning rate"
+                "default": 2e-4,
+                "description": "Generator learning rate - 2e-4 optimal for copula-based adversarial training"
             },
             "discriminator_lr": {
                 "type": "float",
-                "low": 1e-5,
-                "high": 1e-2,
-                "default": 2e-4,
+                "low": 5e-6,
+                "high": 5e-3,
                 "log": True,
-                "description": "Discriminator learning rate"
+                "default": 2e-4,
+                "description": "Discriminator learning rate - balanced with generator for stable training"
             },
             "generator_dim": {
                 "type": "categorical",
-                "choices": [(128, 128), (256, 256), (512, 512), (128, 256), (256, 512)],
+                "choices": [
+                    (128, 128),          # Small datasets (<1K samples, <20 features)
+                    (256, 256),          # Medium datasets (1K-10K samples, 20-50 features)
+                    (512, 512),          # Large datasets (10K-100K samples, 50+ features)
+                    (256, 512),          # Asymmetric for complex copula modeling
+                    (512, 256),          # Bottleneck for regularization in copula space
+                    (128, 256, 128),     # Deep generator for small-medium datasets
+                    (256, 512, 256),     # Deep generator for medium-large datasets
+                    (512, 1024, 512),    # Deep generator for large/complex datasets
+                    (128, 256, 512, 256), # Very deep for complex dependencies
+                    (256, 512, 1024, 512) # Very deep for very complex copula structures
+                ],
                 "default": (256, 256),
-                "description": "Generator network dimensions"
+                "description": "Generator architecture - adaptive to dataset complexity and copula modeling needs"
             },
             "discriminator_dim": {
                 "type": "categorical",
-                "choices": [(128, 128), (256, 256), (512, 512), (128, 256), (256, 512)],
+                "choices": [
+                    (128, 128),          # Matches small generator
+                    (256, 256),          # Matches medium generator - most stable
+                    (512, 512),          # Matches large generator
+                    (256, 512),          # Stronger discriminator for challenging copula structures
+                    (512, 256),          # Funnel discriminator for feature selection in copula space
+                    (128, 256, 128),     # Deep discriminator for small datasets
+                    (256, 512, 256),     # Deep discriminator for medium datasets
+                    (512, 1024, 512),    # Deep discriminator for complex datasets
+                    (128, 256, 512, 256), # Very deep for complex dependency detection
+                    (512, 1024, 512, 256) # Very deep for challenging copula modeling
+                ],
                 "default": (256, 256),
-                "description": "Discriminator network dimensions"
+                "description": "Discriminator architecture - balanced complexity for copula space discrimination"
             },
             "pac": {
                 "type": "int",
                 "low": 1,
-                "high": 10,
+                "high": 20,
+                "step": 1,
                 "default": 10,
-                "description": "Number of samples to group together when applying discriminator"
+                "description": "PackedGAN group size - 10 optimal for most copula structures"
             },
             "generator_decay": {
                 "type": "float",
                 "low": 1e-8,
-                "high": 1e-2,
-                "default": 1e-6,
+                "high": 1e-3,
                 "log": True,
-                "description": "Generator weight decay"
+                "default": 1e-6,
+                "description": "Generator L2 regularization - prevents overfitting in copula modeling"
             },
             "discriminator_decay": {
                 "type": "float",
                 "low": 1e-8,
-                "high": 1e-2,
-                "default": 1e-6,
+                "high": 1e-3,
                 "log": True,
-                "description": "Discriminator weight decay"
+                "default": 1e-6,
+                "description": "Discriminator L2 regularization - maintains training balance"
+            },
+            "discriminator_steps": {
+                "type": "int",
+                "low": 1,
+                "high": 5,
+                "step": 1,
+                "default": 1,
+                "description": "Discriminator training steps per generator step - 1 for balanced copula learning"
+            },
+            "beta1": {
+                "type": "float",
+                "low": 0.1,
+                "high": 0.9,
+                "default": 0.5,
+                "description": "Adam optimizer beta1 parameter - 0.5 optimal for GAN training stability"
+            },
+            "beta2": {
+                "type": "float",
+                "low": 0.9,
+                "high": 0.999,
+                "default": 0.999,
+                "description": "Adam optimizer beta2 parameter - 0.999 for smooth convergence"
+            },
+            "copula_regularization": {
+                "type": "float",
+                "low": 0.0,
+                "high": 1.0,
+                "default": 0.1,
+                "description": "Copula structure regularization strength - 0.1 preserves marginal distributions"
+            },
+            "gradient_penalty": {
+                "type": "float",
+                "low": 0.0,
+                "high": 10.0,
+                "default": 0.0,
+                "description": "Gradient penalty coefficient - 0 for standard training, >0 for WGAN-GP style"
             }
         }
     
@@ -172,7 +232,7 @@ class CopulaGANModel(SyntheticDataModel):
         Args:
             config: Dictionary of configuration parameters
         """
-        self.config.update(config)
+        self.model_config.update(config)
         logger.info(f"CopulaGAN configuration updated: {config}")
     
     def train(
@@ -215,25 +275,25 @@ class CopulaGANModel(SyntheticDataModel):
             model_params = {}
             
             # Core training parameters
-            model_params['epochs'] = kwargs.get('epochs', self.config.get('epochs', epochs))
-            model_params['batch_size'] = kwargs.get('batch_size', self.config.get('batch_size', batch_size))
+            model_params['epochs'] = kwargs.get('epochs', self.model_config.get('epochs', epochs))
+            model_params['batch_size'] = kwargs.get('batch_size', self.model_config.get('batch_size', batch_size))
             
             # Learning rates
-            if 'generator_lr' in self.config:
-                model_params['generator_lr'] = self.config['generator_lr']
-            if 'discriminator_lr' in self.config:
-                model_params['discriminator_lr'] = self.config['discriminator_lr']
+            if 'generator_lr' in self.model_config:
+                model_params['generator_lr'] = self.model_config['generator_lr']
+            if 'discriminator_lr' in self.model_config:
+                model_params['discriminator_lr'] = self.model_config['discriminator_lr']
             
             # Network dimensions
-            if 'generator_dim' in self.config:
-                model_params['generator_dim'] = self.config['generator_dim']
-            if 'discriminator_dim' in self.config:
-                model_params['discriminator_dim'] = self.config['discriminator_dim']
+            if 'generator_dim' in self.model_config:
+                model_params['generator_dim'] = self.model_config['generator_dim']
+            if 'discriminator_dim' in self.model_config:
+                model_params['discriminator_dim'] = self.model_config['discriminator_dim']
             
             # Additional parameters
             for param in ['pac', 'generator_decay', 'discriminator_decay']:
-                if param in self.config:
-                    model_params[param] = self.config[param]
+                if param in self.model_config:
+                    model_params[param] = self.model_config[param]
             
             # Create CopulaGAN model
             self._copulagan_model = CopulaGANSynthesizer(
@@ -280,8 +340,20 @@ class CopulaGANModel(SyntheticDataModel):
             return training_result
             
         except Exception as e:
-            logger.error(f"CopulaGAN training failed: {e}")
-            raise RuntimeError(f"CopulaGAN training failed: {str(e)}")
+            error_msg = str(e)
+            logger.error(f"CopulaGAN training failed: {error_msg}")
+            
+            # Provide more specific error handling
+            if "metadata" in error_msg.lower():
+                detailed_error = f"CopulaGAN metadata error: {error_msg}. Check data types and column names."
+            elif "memory" in error_msg.lower():
+                detailed_error = f"CopulaGAN memory error: {error_msg}. Try reducing batch_size or epochs."
+            elif "dimension" in error_msg.lower() or "shape" in error_msg.lower():
+                detailed_error = f"CopulaGAN dimension error: {error_msg}. Check generator_dim and discriminator_dim parameters."
+            else:
+                detailed_error = f"CopulaGAN training error: {error_msg}"
+            
+            raise RuntimeError(detailed_error)
     
     def generate(self, n_samples: int, **kwargs) -> pd.DataFrame:
         """

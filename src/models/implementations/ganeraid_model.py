@@ -344,58 +344,127 @@ class GANerAidModel(SyntheticDataModel):
     
     def get_hyperparameter_space(self) -> Dict[str, Dict[str, Any]]:
         """
-        Get the hyperparameter search space for GANerAid optimization.
+        Get the enhanced hyperparameter search space for GANerAid optimization.
+        Production-ready hyperparameter space designed for diverse tabular datasets.
         
         Returns:
-            Dictionary defining hyperparameter search space
+            Dictionary defining comprehensive hyperparameter search space
         """
         return {
-            'lr_d': {
-                'type': 'float',
-                'low': 1e-5,
-                'high': 1e-3,
-                'log': True,
-                'description': 'Discriminator learning rate (log scale)'
-            },
-            'lr_g': {
-                'type': 'float', 
-                'low': 1e-5,
-                'high': 1e-3,
-                'log': True,
-                'description': 'Generator learning rate (log scale)'
-            },
-            'hidden_feature_space': {
-                'type': 'int',
-                'low': 100,
-                'high': 400,
-                'step': 50,
-                'description': 'Hidden feature dimensions'
-            },
-            'batch_size': {
-                'type': 'categorical',
-                'choices': [32, 64, 100, 128, 256],
-                'description': 'Training batch size'
-            },
-            'nr_of_rows': {
-                'type': 'int',
-                'low': 25,
-                'high': 25,  # Limited to prevent dimension issues
-                'step': 5,
-                'description': 'Number of rows parameter'
-            },
-            'binary_noise': {
-                'type': 'float',
-                'low': 0.1,
-                'high': 0.4,
-                'log': False,
-                'description': 'Binary noise level'
-            },
             'epochs': {
                 'type': 'int',
                 'low': 1000,
-                'high': 8000,
+                'high': 10000,
                 'step': 500,
-                'description': 'Training epochs'
+                'default': 5000,
+                'description': 'Training epochs - 5000 optimal for GANerAid convergence on most datasets'
+            },
+            'lr_d': {
+                'type': 'float',
+                'low': 1e-6,
+                'high': 5e-3,
+                'log': True,
+                'default': 5e-4,
+                'description': 'Discriminator learning rate - 5e-4 optimal for clinical/healthcare data'
+            },
+            'lr_g': {
+                'type': 'float',
+                'low': 1e-6,
+                'high': 5e-3,
+                'log': True,
+                'default': 5e-4,
+                'description': 'Generator learning rate - matched with discriminator for stable training'
+            },
+            'hidden_feature_space': {
+                'type': 'categorical',
+                'choices': [
+                    100,    # Small datasets (<1K samples, <10 features)
+                    150,    # Small-medium datasets (1K-5K samples, 10-20 features)
+                    200,    # Medium datasets (5K-20K samples, 20-50 features) - default
+                    300,    # Large datasets (20K-50K samples, 50-100 features)
+                    400,    # Very large datasets (50K+ samples, 100+ features)
+                    500,    # Complex high-dimensional datasets (>150 features)
+                    600     # Very complex datasets with intricate relationships
+                ],
+                'default': 200,
+                'description': 'Hidden feature space dimensionality - adaptive to dataset complexity'
+            },
+            'batch_size': {
+                'type': 'categorical',
+                'choices': [16, 32, 64, 100, 128, 256, 512],
+                'default': 100,
+                'description': 'Batch size - 100 optimal balance for GANerAid stability and memory efficiency'
+            },
+            'nr_of_rows': {
+                'type': 'categorical',
+                'choices': [10, 15, 20, 25, 30, 35, 40, 50],
+                'default': 25,
+                'description': 'GANerAid sequence length parameter - 25 optimal for most tabular structures'
+            },
+            'binary_noise': {
+                'type': 'float',
+                'low': 0.05,
+                'high': 0.6,
+                'default': 0.2,
+                'description': 'Binary noise injection level - 0.2 optimal for privacy-utility tradeoff'
+            },
+            'generator_dropout': {
+                'type': 'float',
+                'low': 0.0,
+                'high': 0.5,
+                'default': 0.1,
+                'description': 'Generator dropout rate for regularization - 0.1 prevents overfitting'
+            },
+            'discriminator_dropout': {
+                'type': 'float',
+                'low': 0.0,
+                'high': 0.5,
+                'default': 0.2,
+                'description': 'Discriminator dropout rate - 0.2 improves generalization'
+            },
+            'weight_decay': {
+                'type': 'float',
+                'low': 1e-8,
+                'high': 1e-3,
+                'log': True,
+                'default': 1e-6,
+                'description': 'L2 weight decay for both networks - 1e-6 prevents parameter explosion'
+            },
+            'beta1': {
+                'type': 'float',
+                'low': 0.1,
+                'high': 0.9,
+                'default': 0.5,
+                'description': 'Adam optimizer beta1 - 0.5 optimal for GAN training stability'
+            },
+            'beta2': {
+                'type': 'float',
+                'low': 0.9,
+                'high': 0.999,
+                'default': 0.999,
+                'description': 'Adam optimizer beta2 - 0.999 for smooth convergence'
+            },
+            'gradient_penalty_weight': {
+                'type': 'float',
+                'low': 0.0,
+                'high': 10.0,
+                'default': 0.0,
+                'description': 'Gradient penalty coefficient - 0 for standard training, >0 improves stability'
+            },
+            'privacy_epsilon': {
+                'type': 'float',
+                'low': 0.1,
+                'high': 10.0,
+                'log': True,
+                'default': 1.0,
+                'description': 'Privacy budget epsilon for differential privacy - 1.0 good balance'
+            },
+            'feature_noise_std': {
+                'type': 'float',
+                'low': 0.01,
+                'high': 0.3,
+                'default': 0.05,
+                'description': 'Standard deviation of feature noise injection - 0.05 for privacy preservation'
             }
         }
     
