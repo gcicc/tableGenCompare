@@ -30,7 +30,11 @@
       "Bash(grep:*)",
       "Bash(jupyter nbconvert:*)",
       "Bash(del:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "mcp__ide__executeCode",
+      "Bash(for file in *.py)",
+      "Bash(do echo \"=== $file ===\")",
+      "Bash(done)"
     ],
     "deny": []
   }
