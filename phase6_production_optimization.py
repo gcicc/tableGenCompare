@@ -9,8 +9,7 @@ diabetes dataset.
 
 Focus Models:
 1. MockGANerAid (Best performer: 0.812 quality)
-2. MockTableGAN (Second best: 0.795 quality)
-3. MockCTGAN (Strong baseline: 0.762 quality)
+2. MockCTGAN (Strong baseline: 0.762 quality)
 
 Features:
 - Bayesian optimization with 25-50 trials per model
