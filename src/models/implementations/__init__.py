@@ -27,6 +27,13 @@ except ImportError:
     pass
 
 try:
-    from .tablegan_model import TableGANModel
+    from .ctabgan_model import CTABGANModel
 except ImportError:
     pass
+
+try:
+    from .ctabganplus_model import CTABGANPlusModel
+except ImportError:
+    pass
+
+# TableGAN removed

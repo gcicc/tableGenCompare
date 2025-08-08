@@ -67,12 +67,7 @@ class ClinicalModelOptimizer:
                 'learning_rate': {'type': 'float', 'low': 1e-4, 'high': 1e-2, 'log': True},
                 'noise_level': {'type': 'float', 'low': 0.01, 'high': 0.3}
             },
-            'TableGAN': {
-                'epochs': {'type': 'int', 'low': 50, 'high': 250},
-                'batch_size': {'type': 'categorical', 'choices': [32, 64, 128, 256]},
-                'learning_rate': {'type': 'float', 'low': 5e-5, 'high': 5e-3, 'log': True},
-                'noise_dim': {'type': 'int', 'low': 32, 'high': 256}
-            },
+# TableGAN removed
             'GANerAid': {
                 'epochs': {'type': 'int', 'low': 50, 'high': 200},
                 'batch_size': {'type': 'categorical', 'choices': [32, 64, 128]},
@@ -230,7 +225,7 @@ class ClinicalModelOptimizer:
     def optimize_all_models(self, models=None, n_trials=100, timeout_per_model=None):
         """Optimize all supported models."""
         if models is None:
-            models = ['CTGAN', 'TVAE', 'CopulaGAN', 'TableGAN', 'GANerAid']
+            models = ['CTGAN', 'TVAE', 'CopulaGAN', 'GANerAid']
         
         print(f"Starting comprehensive optimization for {len(models)} models...")
         print(f"Estimated time: ~{len(models) * n_trials * 0.5 / 60:.1f} minutes")
