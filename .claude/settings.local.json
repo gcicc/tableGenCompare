@@ -34,7 +34,8 @@
       "mcp__ide__executeCode",
       "Bash(for file in *.py)",
       "Bash(do echo \"=== $file ===\")",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(git merge:*)"
     ],
     "deny": []
   }
