@@ -34,7 +34,10 @@
       "mcp__ide__executeCode",
       "Bash(for file in *.py)",
       "Bash(do echo \"=== $file ===\")",
-      "Bash(done)"
+      "Bash(done)",
+      "mcp__ide__getDiagnostics",
+      "Bash(awk:*)",
+      "Bash(rg:*)"
     ],
     "deny": []
   }
