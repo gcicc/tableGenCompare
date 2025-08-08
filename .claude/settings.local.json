@@ -35,7 +35,12 @@
       "Bash(for file in *.py)",
       "Bash(do echo \"=== $file ===\")",
       "Bash(done)",
-      "Bash(git merge:*)"
+      "Bash(git merge:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(awk:*)",
+      "Bash(rg:*)",
+      "Bash(git -C CTAB-GAN add model/synthesizer/transformer.py)",
+      "Bash(git -C CTAB-GAN commit -m \"Fix BayesianGaussianMixture sklearn 1.0+ compatibility - generated with Claude Code\")"
     ],
     "deny": []
   }

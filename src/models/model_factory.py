@@ -35,9 +35,19 @@ except ImportError:
     COPULAGAN_AVAILABLE = False
 
 try:
-    from .implementations.tablegan_model import TableGANModel, TABLEGAN_AVAILABLE
+    from .implementations.ctabgan_model import CTABGANModel
+    CTABGAN_AVAILABLE = True
 except ImportError:
-    TABLEGAN_AVAILABLE = False
+    CTABGAN_AVAILABLE = False
+
+try:
+    from .implementations.ctabganplus_model import CTABGANPlusModel
+    CTABGANPLUS_AVAILABLE = True
+except ImportError:
+    CTABGANPLUS_AVAILABLE = False
+
+# TableGAN removed
+TABLEGAN_AVAILABLE = False
 
 
 logger = logging.getLogger(__name__)
@@ -82,11 +92,20 @@ class ModelFactory:
         else:
             cls._model_availability["copulagan"] = False
             
-        if TABLEGAN_AVAILABLE:
-            cls._model_registry["tablegan"] = TableGANModel
-            cls._model_availability["tablegan"] = True
+        if CTABGAN_AVAILABLE:
+            cls._model_registry["ctabgan"] = CTABGANModel
+            cls._model_availability["ctabgan"] = True
         else:
-            cls._model_availability["tablegan"] = False
+            cls._model_availability["ctabgan"] = False
+            
+        if CTABGANPLUS_AVAILABLE:
+            cls._model_registry["ctabganplus"] = CTABGANPlusModel
+            cls._model_availability["ctabganplus"] = True
+        else:
+            cls._model_availability["ctabganplus"] = False
+            
+        # TableGAN removed
+        cls._model_availability["tablegan"] = False
     
     @classmethod
     def create(
@@ -100,7 +119,7 @@ class ModelFactory:
         Create a synthetic data model instance.
         
         Args:
-            model_name: Name of the model ("ganeraid", "ctgan", "tvae", etc.)
+            model_name: Name of the model ("ganeraid", "ctgan", "tvae", "copulagan", "ctabgan", "ctabganplus", etc.)
             device: Computing device ("cpu", "cuda", "mps")
             random_state: Random seed for reproducibility
             **kwargs: Additional model-specific configuration
