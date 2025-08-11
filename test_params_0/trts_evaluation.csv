@@ -1,5 +1,0 @@
-Scenario,Description,Accuracy,Interpretation
-TRTR (Baseline),"Train Real, Test Real",0.6,Best possible performance
-TSTS,"Train Synthetic, Test Synthetic",0.9666666666666667,Internal consistency
-TRTS,"Train Real, Test Synthetic",0.15,Synthetic data quality
-TSTR,"Train Synthetic, Test Real",0.43333333333333335,Synthetic data utility
