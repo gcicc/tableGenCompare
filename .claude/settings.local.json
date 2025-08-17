@@ -40,7 +40,10 @@
       "Bash(awk:*)",
       "Bash(rg:*)",
       "Bash(git -C CTAB-GAN add model/synthesizer/transformer.py)",
-      "Bash(git -C CTAB-GAN commit -m \"Fix BayesianGaussianMixture sklearn 1.0+ compatibility - generated with Claude Code\")"
+      "Bash(git -C CTAB-GAN commit -m \"Fix BayesianGaussianMixture sklearn 1.0+ compatibility - generated with Claude Code\")",
+      "Bash(cat:*)",
+      "Bash(/dev/null)",
+      "Bash(jupyter execute:*)"
     ],
     "deny": []
   }
