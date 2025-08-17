@@ -202,6 +202,22 @@ class CTABGANModel(SyntheticDataModel):
             # Generate samples using CTAB-GAN
             synthetic_data = self._ctabgan_model.generate_samples()
             
+            # CTAB-GAN FIX: Ensure categorical columns have consistent data types
+            # This prevents TRTS evaluation errors with string/int comparison
+            for col in self._categorical_columns:
+                if col in synthetic_data.columns:
+                    try:
+                        # Convert string categorical values back to numeric if they represent numbers
+                        if synthetic_data[col].dtype == 'object':
+                            # Try to convert to numeric, handling potential string categories
+                            numeric_values = pd.to_numeric(synthetic_data[col], errors='coerce')
+                            if not numeric_values.isna().all():
+                                # If conversion was successful for most values, use it
+                                if numeric_values.notna().sum() / len(numeric_values) > 0.8:
+                                    synthetic_data[col] = numeric_values.fillna(0).astype(int)
+                    except Exception:
+                        pass  # If conversion fails, leave as is
+            
             # Sample the requested number of rows
             if len(synthetic_data) > n_samples:
                 synthetic_data = synthetic_data.sample(n=n_samples, random_state=self.random_state)
