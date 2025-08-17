@@ -43,7 +43,8 @@
       "Bash(git -C CTAB-GAN commit -m \"Fix BayesianGaussianMixture sklearn 1.0+ compatibility - generated with Claude Code\")",
       "Bash(cat:*)",
       "Bash(/dev/null)",
-      "Bash(jupyter execute:*)"
+      "Bash(jupyter execute:*)",
+      "Bash(git log:*)"
     ],
     "deny": []
   }
