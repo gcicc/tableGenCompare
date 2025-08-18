@@ -75,9 +75,14 @@ class GANerAidModel(SyntheticDataModel):
         
         self.set_config(self.default_config)
     
+    def _is_binary_column(self, data: pd.DataFrame, column: str) -> bool:
+        """Check if a column is binary (only 2 unique values)."""
+        return data[column].nunique() == 2
+    
     def _detect_categorical_columns(self, data: pd.DataFrame) -> List[str]:
         """
         Detect categorical columns in the dataset.
+        FIXED: Exclude binary columns from categorical processing to prevent missing data issues.
         
         Args:
             data: Input dataset
@@ -88,14 +93,22 @@ class GANerAidModel(SyntheticDataModel):
         categorical_columns = []
         
         for column in data.columns:
+            # FIXED: Skip binary columns entirely - let GANerAid handle them as continuous
+            if self._is_binary_column(data, column):
+                logger.info(f"Skipping binary column '{column}' - handling as continuous")
+                continue
+                
             # Check if column is object/string type
             if data[column].dtype == 'object':
                 categorical_columns.append(column)
             # Check if column is categorical dtype
             elif data[column].dtype.name == 'category':
                 categorical_columns.append(column)
-            # Check for low-cardinality numeric columns that might be categorical
-            elif data[column].dtype in ['int64', 'int32'] and data[column].nunique() <= 10 and data[column].nunique() < len(data) * 0.1:
+            # Only process truly categorical numeric columns (>2 categories)
+            elif (data[column].dtype in ['int64', 'int32'] and 
+                  data[column].nunique() > 2 and 
+                  data[column].nunique() <= 10 and 
+                  data[column].nunique() < len(data) * 0.05):  # More conservative threshold
                 categorical_columns.append(column)
         
         return categorical_columns
