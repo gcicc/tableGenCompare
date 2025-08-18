@@ -82,7 +82,7 @@ class GANerAidModel(SyntheticDataModel):
     def _detect_categorical_columns(self, data: pd.DataFrame) -> List[str]:
         """
         Detect categorical columns in the dataset.
-        FIXED: Exclude binary columns from categorical processing to prevent missing data issues.
+        FIXED: Include binary columns in categorical processing to maintain discrete nature.
         
         Args:
             data: Input dataset
@@ -93,9 +93,10 @@ class GANerAidModel(SyntheticDataModel):
         categorical_columns = []
         
         for column in data.columns:
-            # FIXED: Skip binary columns entirely - let GANerAid handle them as continuous
+            # FIXED: Include binary columns in categorical processing to maintain distribution
             if self._is_binary_column(data, column):
-                logger.info(f"Skipping binary column '{column}' - handling as continuous")
+                logger.info(f"Including binary column '{column}' in categorical processing")
+                categorical_columns.append(column)
                 continue
                 
             # Check if column is object/string type
@@ -197,6 +198,14 @@ class GANerAidModel(SyntheticDataModel):
             
             # Add the categorical column back
             processed_data[col] = categorical_values
+            
+            # FIXED: Ensure binary columns are converted to proper integer type
+            if len(unique_values) == 2 and all(str(v).isdigit() for v in unique_values):
+                try:
+                    processed_data[col] = processed_data[col].astype(int)
+                    logger.info(f"Converted binary column '{col}' to integer type")
+                except (ValueError, TypeError):
+                    logger.warning(f"Could not convert binary column '{col}' to integer")
             
             # Remove one-hot columns
             processed_data = processed_data.drop(columns=one_hot_cols)
