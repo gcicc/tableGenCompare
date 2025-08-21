@@ -4148,8 +4148,21 @@ print(f"🎯 Expected: Variable scores reflecting actual ML accuracy performance
 
 # GANerAid Search Space and Hyperparameter Optimization
 
-def ganeraid_search_space(trial):
+def ganeraid_search_space(trial, dataset_size=None):
     """Define GANerAid hyperparameter search space based on actual model capabilities."""
+    
+    # Dataset-size-aware nr_of_rows parameter to prevent index out of bounds
+    if dataset_size is not None:
+        max_safe_rows = min(25, dataset_size - 1)  # Ensure we don't exceed dataset size
+        safe_nr_of_rows = [x for x in [10, 15, 20, 25] if x < dataset_size]
+        if not safe_nr_of_rows:  # If dataset is very small, use smaller values
+            safe_nr_of_rows = [min(5, dataset_size - 1), min(10, dataset_size - 1)]
+        print(f"   📊 Dataset size: {dataset_size}, safe nr_of_rows: {safe_nr_of_rows}")
+    else:
+        # Fallback to conservative values if dataset_size not provided
+        safe_nr_of_rows = [10, 15, 20, 25]
+        print(f"   ⚠️ Dataset size unknown, using conservative nr_of_rows: {safe_nr_of_rows}")
+    
     return {
         'epochs': trial.suggest_int('epochs', 1000, 10000, step=500),
         'batch_size': trial.suggest_categorical('batch_size', [16, 32, 64, 100, 128]),
@@ -4158,8 +4171,8 @@ def ganeraid_search_space(trial):
         'hidden_feature_space': trial.suggest_categorical('hidden_feature_space', [
             100, 150, 200, 300, 400, 500, 600
         ]),
-        # Fixed nr_of_rows to safe values to avoid index out of bounds
-        'nr_of_rows': trial.suggest_categorical('nr_of_rows', [10, 15, 20, 25, 30]),
+        # Dataset-size-aware nr_of_rows to prevent index out of bounds
+        'nr_of_rows': trial.suggest_categorical('nr_of_rows', safe_nr_of_rows),
         'binary_noise': trial.suggest_uniform('binary_noise', 0.05, 0.6),
         'generator_decay': trial.suggest_loguniform('generator_decay', 1e-8, 1e-3),
         'discriminator_decay': trial.suggest_loguniform('discriminator_decay', 1e-8, 1e-3),
@@ -4170,8 +4183,8 @@ def ganeraid_search_space(trial):
 def ganeraid_objective(trial):
     """GANerAid objective function using ModelFactory and proper parameter handling."""
     try:
-        # Get hyperparameters from trial
-        params = ganeraid_search_space(trial)
+        # Get hyperparameters from trial with dataset-size-aware parameter bounds
+        params = ganeraid_search_space(trial, dataset_size=len(data))
 
         print(f"\n🔄 GANerAid Trial {trial.number + 1}: epochs={params['epochs']}, batch_size={params['batch_size']}, hidden_dim={params['hidden_feature_space']}")
 
