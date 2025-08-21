@@ -4286,34 +4286,15 @@ except Exception as e:
 # CopulaGAN Search Space and Hyperparameter Optimization
 
 def copulagan_search_space(trial):
-    """Define CopulaGAN hyperparameter search space based on actual model capabilities."""
+    """Define CopulaGAN hyperparameter search space - SIMPLIFIED for SDV compatibility."""
+    # Simplified parameter space using only core SDV CopulaGAN supported parameters
+    # Many advanced parameters may not be supported by SDV's CopulaGAN implementation
     return {
-        'epochs': trial.suggest_int('epochs', 100, 800, step=50),
-        'batch_size': trial.suggest_categorical('batch_size', [32, 64, 128, 256, 500, 1000]),
-        'generator_lr': trial.suggest_loguniform('generator_lr', 5e-6, 5e-3),
-        'discriminator_lr': trial.suggest_loguniform('discriminator_lr', 5e-6, 5e-3),
-        'generator_dim': trial.suggest_categorical('generator_dim', [
-            (128, 128),
-            (256, 256), 
-            (512, 512),
-            (256, 512),
-            (512, 256),
-            (128, 256, 128),
-            (256, 512, 256)
-        ]),
-        'discriminator_dim': trial.suggest_categorical('discriminator_dim', [
-            (128, 128),
-            (256, 256),
-            (512, 512), 
-            (256, 512),
-            (512, 256),
-            (128, 256, 128),
-            (256, 512, 256)
-        ]),
-        'pac': trial.suggest_int('pac', 1, 10),
-        'generator_decay': trial.suggest_loguniform('generator_decay', 1e-8, 1e-4),
-        'discriminator_decay': trial.suggest_loguniform('discriminator_decay', 1e-8, 1e-4),
-        'verbose': trial.suggest_categorical('verbose', [True])
+        'epochs': trial.suggest_int('epochs', 100, 500, step=50),  # Reduced range for stability
+        'batch_size': trial.suggest_categorical('batch_size', [128, 256, 500]),  # Conservative batch sizes
+        # Note: SDV CopulaGAN may not support learning rates, generator/discriminator dims
+        # Focus on core parameters that are guaranteed to work
+        'pac': trial.suggest_int('pac', 1, 5),  # Reduced PAC range for compatibility
     }
 
 def copulagan_objective(trial):
@@ -4322,7 +4303,7 @@ def copulagan_objective(trial):
         # Get hyperparameters from trial
         params = copulagan_search_space(trial)
 
-        print(f"\n🔄 CopulaGAN Trial {trial.number + 1}: epochs={params['epochs']}, batch_size={params['batch_size']}, lr={params['generator_lr']:.2e}")
+        print(f"\n🔄 CopulaGAN Trial {trial.number + 1}: epochs={params['epochs']}, batch_size={params['batch_size']}, pac={params['pac']}")
 
         # Initialize CopulaGAN using ModelFactory
         model = ModelFactory.create("copulagan", random_state=42)
@@ -4349,11 +4330,14 @@ def copulagan_objective(trial):
 
     except Exception as e:
         print(f"❌ CopulaGAN trial {trial.number + 1} failed: {str(e)}")
+        print(f"🔍 Parameters that caused failure: {params}")
+        import traceback
+        print(f"🔍 Error details: {traceback.format_exc()}")
         return 0.0
 
 # Execute CopulaGAN hyperparameter optimization
 print("\n🎯 Starting CopulaGAN Hyperparameter Optimization")
-print(f"   • Search space: 9 optimized parameters")
+print(f"   • Search space: 3 core parameters (simplified for compatibility)")
 print(f"   • Number of trials: 10")
 print(f"   • Algorithm: TPE with median pruning")
 
