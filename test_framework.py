@@ -3131,7 +3131,7 @@ def ctgan_objective(trial):
 
         # Evaluate using enhanced objective function
         score, similarity_score, accuracy_score = enhanced_objective_function_v2(
-            data, synthetic_data, 'diagnosis'
+            data, synthetic_data, TARGET_COLUMN
         )
 
         print(f"✅ CTGAN Trial {trial.number + 1} Score: {score:.4f} (Similarity: {similarity_score:.4f}, Accuracy: {accuracy_score:.4f})")
@@ -3798,21 +3798,21 @@ def ctabgan_objective(trial):
 
         # CRITICAL FIX: Convert synthetic data labels to match original data types before TRTS evaluation
         synthetic_data_converted = synthetic_data.copy()
-        if 'diagnosis' in synthetic_data_converted.columns and 'diagnosis' in data.columns:
+        if target_column in synthetic_data_converted.columns and target_column in data.columns:
             # Convert string labels to numeric to match original data type
-            if synthetic_data_converted['diagnosis'].dtype == 'object' and data['diagnosis'].dtype != 'object':
-                print(f"🔧 Converting synthetic labels from {synthetic_data_converted['diagnosis'].dtype} to {data['diagnosis'].dtype}")
-                synthetic_data_converted['diagnosis'] = pd.to_numeric(synthetic_data_converted['diagnosis'], errors='coerce')
+            if synthetic_data_converted[target_column].dtype == 'object' and data[target_column].dtype != 'object':
+                print(f"🔧 Converting synthetic labels from {synthetic_data_converted[target_column].dtype} to {data[target_column].dtype}")
+                synthetic_data_converted[target_column] = pd.to_numeric(synthetic_data_converted[target_column], errors='coerce')
 
                 # Handle any conversion failures
-                if synthetic_data_converted['diagnosis'].isna().any():
+                if synthetic_data_converted[target_column].isna().any():
                     print(f"⚠️ Some labels failed conversion - filling with mode")
-                    mode_value = data['diagnosis'].mode()[0]
-                    synthetic_data_converted['diagnosis'].fillna(mode_value, inplace=True)
+                    mode_value = data[target_column].mode()[0]
+                    synthetic_data_converted[target_column].fillna(mode_value, inplace=True)
 
                 # Ensure same data type as original
-                synthetic_data_converted['diagnosis'] = synthetic_data_converted['diagnosis'].astype(data['diagnosis'].dtype)
-                print(f"✅ Label conversion successful: {synthetic_data_converted['diagnosis'].dtype}")
+                synthetic_data_converted[target_column] = synthetic_data_converted[target_column].astype(data[target_column].dtype)
+                print(f"✅ Label conversion successful: {synthetic_data_converted[target_column].dtype}")
 
         # Calculate similarity score using TRTS framework with converted data
         trts = TRTSEvaluator(random_state=42)
@@ -3849,11 +3849,11 @@ def ctabgan_objective(trial):
             from sklearn.model_selection import train_test_split
 
             # Use converted synthetic data for accuracy calculation
-            if 'diagnosis' in data.columns and 'diagnosis' in synthetic_data_converted.columns:
-                X_real = data.drop('diagnosis', axis=1)
-                y_real = data['diagnosis']
-                X_synth = synthetic_data_converted.drop('diagnosis', axis=1) 
-                y_synth = synthetic_data_converted['diagnosis']
+            if target_column in data.columns and target_column in synthetic_data_converted.columns:
+                X_real = data.drop(target_column, axis=1)
+                y_real = data[target_column]
+                X_synth = synthetic_data_converted.drop(target_column, axis=1) 
+                y_synth = synthetic_data_converted[target_column]
 
                 # Train on synthetic, test on real (TRTS approach)
                 X_train, X_test, y_train, y_test = train_test_split(X_real, y_real, test_size=0.2, random_state=42)
@@ -4023,21 +4023,21 @@ def ctabganplus_objective(trial):
 
         # CRITICAL FIX: Convert synthetic data labels to match original data types before TRTS evaluation
         synthetic_data_converted = synthetic_data.copy()
-        if 'diagnosis' in synthetic_data_converted.columns and 'diagnosis' in data.columns:
+        if target_column in synthetic_data_converted.columns and target_column in data.columns:
             # Convert string labels to numeric to match original data type
-            if synthetic_data_converted['diagnosis'].dtype == 'object' and data['diagnosis'].dtype != 'object':
-                print(f"🔧 Converting synthetic labels from {synthetic_data_converted['diagnosis'].dtype} to {data['diagnosis'].dtype}")
-                synthetic_data_converted['diagnosis'] = pd.to_numeric(synthetic_data_converted['diagnosis'], errors='coerce')
+            if synthetic_data_converted[target_column].dtype == 'object' and data[target_column].dtype != 'object':
+                print(f"🔧 Converting synthetic labels from {synthetic_data_converted[target_column].dtype} to {data[target_column].dtype}")
+                synthetic_data_converted[target_column] = pd.to_numeric(synthetic_data_converted[target_column], errors='coerce')
 
                 # Handle any conversion failures
-                if synthetic_data_converted['diagnosis'].isna().any():
+                if synthetic_data_converted[target_column].isna().any():
                     print(f"⚠️ Some labels failed conversion - filling with mode")
-                    mode_value = data['diagnosis'].mode()[0]
-                    synthetic_data_converted['diagnosis'].fillna(mode_value, inplace=True)
+                    mode_value = data[target_column].mode()[0]
+                    synthetic_data_converted[target_column].fillna(mode_value, inplace=True)
 
                 # Ensure same data type as original
-                synthetic_data_converted['diagnosis'] = synthetic_data_converted['diagnosis'].astype(data['diagnosis'].dtype)
-                print(f"✅ Label conversion successful: {synthetic_data_converted['diagnosis'].dtype}")
+                synthetic_data_converted[target_column] = synthetic_data_converted[target_column].astype(data[target_column].dtype)
+                print(f"✅ Label conversion successful: {synthetic_data_converted[target_column].dtype}")
 
         # Calculate similarity score using TRTS framework with converted data
         trts = TRTSEvaluator(random_state=42)
@@ -4074,11 +4074,11 @@ def ctabganplus_objective(trial):
             from sklearn.model_selection import train_test_split
 
             # Use converted synthetic data for accuracy calculation
-            if 'diagnosis' in data.columns and 'diagnosis' in synthetic_data_converted.columns:
-                X_real = data.drop('diagnosis', axis=1)
-                y_real = data['diagnosis']
-                X_synth = synthetic_data_converted.drop('diagnosis', axis=1) 
-                y_synth = synthetic_data_converted['diagnosis']
+            if target_column in data.columns and target_column in synthetic_data_converted.columns:
+                X_real = data.drop(target_column, axis=1)
+                y_real = data[target_column]
+                X_synth = synthetic_data_converted.drop(target_column, axis=1) 
+                y_synth = synthetic_data_converted[target_column]
 
                 # Train on synthetic, test on real (TRTS approach)
                 X_train, X_test, y_train, y_test = train_test_split(X_real, y_real, test_size=0.2, random_state=42)
@@ -4191,7 +4191,7 @@ def ganeraid_objective(trial):
 
         # Evaluate using enhanced objective function
         score, similarity_score, accuracy_score = enhanced_objective_function_v2(
-            data, synthetic_data, 'diagnosis'
+            data, synthetic_data, TARGET_COLUMN
         )
 
         print(f"✅ GANerAid Trial {trial.number + 1} Score: {score:.4f} (Similarity: {similarity_score:.4f}, Accuracy: {accuracy_score:.4f})")
@@ -4327,7 +4327,7 @@ def copulagan_objective(trial):
 
         # Evaluate using enhanced objective function
         score, similarity_score, accuracy_score = enhanced_objective_function_v2(
-            data, synthetic_data, 'diagnosis'
+            data, synthetic_data, TARGET_COLUMN
         )
 
         print(f"✅ CopulaGAN Trial {trial.number + 1} Score: {score:.4f} (Similarity: {similarity_score:.4f}, Accuracy: {accuracy_score:.4f})")
