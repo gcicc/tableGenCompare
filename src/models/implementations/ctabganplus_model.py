@@ -143,13 +143,10 @@ class CTABGANPlusModel(SyntheticDataModel):
             
             problem_type = {"Classification": target_column}
             
-            # Initialize CTAB-GAN+ model - check if we have the enhanced version
-            import inspect
-            ctabgan_signature = inspect.signature(CTABGAN.__init__)
-            has_general_columns = 'general_columns' in ctabgan_signature.parameters
-            
-            if has_general_columns:
-                # We have the enhanced CTAB-GAN+ version
+            # Initialize CTAB-GAN+ model - enhanced feature detection
+            try:
+                # Test if we can instantiate with CTAB-GAN+ specific parameters
+                # Use the enhanced version directly since we have CTAB-GAN-Plus
                 self._ctabganplus_model = CTABGAN(
                     raw_csv_path=temp_csv_path,
                     test_ratio=self.model_config.get("test_ratio", 0.2),
@@ -161,9 +158,10 @@ class CTABGANPlusModel(SyntheticDataModel):
                     integer_columns=integer_columns,
                     problem_type=problem_type
                 )
-            else:
-                # Fallback to regular CTAB-GAN parameters
-                logger.warning("CTAB-GAN+ features not available, falling back to regular CTAB-GAN parameters")
+                logger.info("✅ CTAB-GAN+ enhanced features successfully enabled")
+            except TypeError as e:
+                # Fallback to regular CTAB-GAN parameters if enhanced features fail
+                logger.warning(f"CTAB-GAN+ enhanced features not compatible, falling back to regular parameters: {e}")
                 self._ctabganplus_model = CTABGAN(
                     raw_csv_path=temp_csv_path,
                     test_ratio=self.model_config.get("test_ratio", 0.2),
