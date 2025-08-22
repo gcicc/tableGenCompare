@@ -57,11 +57,45 @@ class TRTSEvaluator:
         logger.info("Starting TRTS framework evaluation")
         
         try:
+            # 🎯 CRITICAL FIX: Robust target column detection
+            # Handle case where target_column name doesn't exactly match data columns
+            actual_target_column = target_column
+            
+            # Check if target_column exists in data, if not try to find it
+            if target_column not in original_data.columns:
+                # Try case insensitive search
+                target_lower = target_column.lower()
+                for col in original_data.columns:
+                    if col.lower() == target_lower:
+                        actual_target_column = col
+                        logger.info(f"Target column mapped: '{target_column}' → '{col}'")
+                        break
+                else:
+                    # Try fuzzy matching for common target column names
+                    common_targets = ['outcome', 'target', 'label', 'class', 'diagnosis', 'result']
+                    for col in original_data.columns:
+                        if col.lower() in common_targets:
+                            actual_target_column = col
+                            logger.info(f"Target column auto-detected: '{target_column}' → '{col}'")
+                            break
+                    else:
+                        # Last resort: use the last column
+                        actual_target_column = original_data.columns[-1]
+                        logger.info(f"Target column fallback: '{target_column}' → '{actual_target_column}' (last column)")
+            
+            # Verify target column exists in both datasets
+            if actual_target_column not in original_data.columns:
+                raise KeyError(f"Target column '{actual_target_column}' not found in original data columns: {list(original_data.columns)}")
+            if actual_target_column not in synthetic_data.columns:
+                raise KeyError(f"Target column '{actual_target_column}' not found in synthetic data columns: {list(synthetic_data.columns)}")
+            
+            logger.info(f"Using target column: '{actual_target_column}'")
+            
             # Prepare data for TRTS evaluation
-            X_real = original_data.drop(columns=[target_column])
-            y_real = original_data[target_column]
-            X_synth = synthetic_data.drop(columns=[target_column])
-            y_synth = synthetic_data[target_column]
+            X_real = original_data.drop(columns=[actual_target_column])
+            y_real = original_data[actual_target_column]
+            X_synth = synthetic_data.drop(columns=[actual_target_column])
+            y_synth = synthetic_data[actual_target_column]
             
             # Ensure target is binary/categorical for classification
             if y_real.dtype not in ['int64', 'int32'] or y_real.nunique() > 10:
