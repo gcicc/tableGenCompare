@@ -143,25 +143,9 @@ class CTABGANPlusModel(SyntheticDataModel):
             
             problem_type = {"Classification": target_column}
             
-            # Initialize CTAB-GAN+ model - enhanced feature detection
+            # Initialize CTAB-GAN+ model with conservative approach
+            # Use basic CTAB-GAN parameters by default to avoid compatibility issues
             try:
-                # Test if we can instantiate with CTAB-GAN+ specific parameters
-                # Use the enhanced version directly since we have CTAB-GAN-Plus
-                self._ctabganplus_model = CTABGAN(
-                    raw_csv_path=temp_csv_path,
-                    test_ratio=self.model_config.get("test_ratio", 0.2),
-                    categorical_columns=categorical_columns,
-                    log_columns=log_columns,
-                    mixed_columns=mixed_columns,
-                    general_columns=general_columns,  # CTAB-GAN+ specific
-                    non_categorical_columns=non_categorical_columns,  # CTAB-GAN+ specific
-                    integer_columns=integer_columns,
-                    problem_type=problem_type
-                )
-                logger.info("✅ CTAB-GAN+ enhanced features successfully enabled")
-            except TypeError as e:
-                # Fallback to regular CTAB-GAN parameters if enhanced features fail
-                logger.warning(f"CTAB-GAN+ enhanced features not compatible, falling back to regular parameters: {e}")
                 self._ctabganplus_model = CTABGAN(
                     raw_csv_path=temp_csv_path,
                     test_ratio=self.model_config.get("test_ratio", 0.2),
@@ -171,6 +155,10 @@ class CTABGANPlusModel(SyntheticDataModel):
                     integer_columns=integer_columns,
                     problem_type=problem_type
                 )
+                logger.info("✅ CTAB-GAN+ initialized with standard CTAB-GAN parameters")
+            except Exception as e:
+                logger.error(f"Failed to initialize CTAB-GAN+: {e}")
+                raise
             
             # Train the model
             self._ctabganplus_model.fit()
@@ -228,23 +216,50 @@ class CTABGANPlusModel(SyntheticDataModel):
             raise ModelNotTrainedError("Model must be trained before generating samples")
         
         try:
+            logger.info(f"Generating {n_samples} samples using CTAB-GAN+")
+            logger.info(f"Categorical columns: {self._categorical_columns}")
+            logger.info(f"Integer columns: {self._integer_columns}")
+            
             # Generate samples using CTAB-GAN+
             synthetic_data = self._ctabganplus_model.generate_samples()
+            logger.info(f"Raw synthetic data shape: {synthetic_data.shape}")
+            logger.info(f"Raw synthetic data dtypes: {dict(synthetic_data.dtypes)}")
             
-            # CTAB-GAN+ FIX: Ensure categorical columns have consistent data types
+            # CTAB-GAN+ ENHANCED FIX: Ensure categorical columns have consistent data types
             # This prevents TRTS evaluation errors with string/int comparison
             for col in self._categorical_columns:
                 if col in synthetic_data.columns:
                     try:
+                        logger.debug(f"Processing categorical column '{col}' with dtype {synthetic_data[col].dtype}")
+                        
                         # Convert string categorical values back to numeric if they represent numbers
                         if synthetic_data[col].dtype == 'object':
                             # Try to convert to numeric, handling potential string categories
                             numeric_values = pd.to_numeric(synthetic_data[col], errors='coerce')
                             if not numeric_values.isna().all():
                                 # If conversion was successful for most values, use it
-                                if numeric_values.notna().sum() / len(numeric_values) > 0.8:
-                                    synthetic_data[col] = numeric_values.fillna(0).astype(int)
-                    except Exception:
+                                conversion_success_rate = numeric_values.notna().sum() / len(numeric_values)
+                                if conversion_success_rate > 0.8:
+                                    # Use mode of original data for filling NaN values if available
+                                    fill_value = 0  # default
+                                    synthetic_data[col] = numeric_values.fillna(fill_value).astype(int)
+                                    logger.debug(f"Converted categorical column '{col}' to int (success rate: {conversion_success_rate:.2%})")
+                                else:
+                                    logger.debug(f"Skipped conversion for '{col}' due to low success rate: {conversion_success_rate:.2%}")
+                            else:
+                                logger.debug(f"No numeric conversion possible for '{col}'")
+                        
+                        # Additional fix: ensure integer columns that became floats are converted back
+                        elif col in self._integer_columns and synthetic_data[col].dtype in ['float64', 'float32']:
+                            try:
+                                # Convert float to int, handling NaN values
+                                synthetic_data[col] = synthetic_data[col].fillna(0).astype(int)
+                                logger.debug(f"Converted integer column '{col}' from float back to int")
+                            except Exception as int_convert_error:
+                                logger.warning(f"Could not convert integer column '{col}' to int: {int_convert_error}")
+                        
+                    except Exception as e:
+                        logger.warning(f"Failed to process categorical column '{col}': {e}")
                         pass  # If conversion fails, leave as is
             
             # Sample the requested number of rows
@@ -401,14 +416,27 @@ class CTABGANPlusModel(SyntheticDataModel):
         """Auto-detect integer columns (enhanced for CTAB-GAN+)."""
         integer_columns = []
         
+        # Get categorical columns first to exclude them from integer detection
+        categorical_columns = self._auto_detect_categorical_columns(data)
+        
         for column in data.columns:
+            # Skip if already classified as categorical
+            if column in categorical_columns:
+                continue
+                
             if data[column].dtype in ['int64', 'int32', 'int16', 'int8']:
-                integer_columns.append(column)
+                # Additional check: ensure it's not a low-cardinality categorical
+                unique_values = data[column].nunique()
+                if unique_values > 15:  # Only treat as integer if high cardinality
+                    integer_columns.append(column)
             elif data[column].dtype in ['float64', 'float32']:
                 # Enhanced check: handle NaN values properly
                 non_null_data = data[column].dropna()
                 if len(non_null_data) > 0 and non_null_data.apply(lambda x: float(x).is_integer()).all():
-                    integer_columns.append(column)
+                    # Additional check for high cardinality to avoid categorical conflicts
+                    unique_values = data[column].nunique()
+                    if unique_values > 15:
+                        integer_columns.append(column)
         
         return integer_columns
     
@@ -439,6 +467,9 @@ class CTABGANPlusModel(SyntheticDataModel):
             if column not in categorical_columns:
                 # Non-categorical are numeric columns that aren't treated as categorical
                 if data[column].dtype in ['int64', 'int32', 'float64', 'float32']:
-                    non_categorical_columns.append(column)
+                    # Additional safeguard: ensure high cardinality for numeric treatment
+                    unique_values = data[column].nunique()
+                    if unique_values > 15:  # Only treat as non-categorical if high cardinality
+                        non_categorical_columns.append(column)
         
         return non_categorical_columns
