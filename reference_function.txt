@@ -1,0 +1,332 @@
+# SECTION 4 IMPLEMENTATION - COMPREHENSIVE HYPERPARAMETER OPTIMIZATION ANALYSIS
+# Enhanced following Section 3 success patterns: consistent approach across all models
+
+def analyze_hyperparameter_optimization(study_results, model_name, 
+                                       target_column, results_dir=None,
+                                       export_figures=True, export_tables=True,
+                                       display_plots=True):
+    """
+    Comprehensive hyperparameter optimization analysis with file output
+    Reusable across all model sections in Section 4
+    
+    Enhanced following Section 3 lessons learned:
+    - Model-specific subdirectories for clean organization
+    - Professional dataframe display for all tables
+    - Consistent display + file output for all models
+    - High-quality graphics with proper styling
+    
+    Parameters:
+    - study_results: Optuna study object or trial results dataframe
+    - model_name: str, model identifier (ctgan, ctabgan, etc.)
+    - target_column: str, target column name for context
+    - results_dir: str, base results directory (creates model subdirectories)
+    - export_figures: bool, save graphics to files
+    - export_tables: bool, save tables to CSV files  
+    - display_plots: bool, show plots and dataframes in notebook
+    
+    Returns:
+    - Dictionary with analysis results and file paths
+    """
+    import numpy as np
+    import pandas as pd
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    from pathlib import Path
+    from IPython.display import display
+    import warnings
+    warnings.filterwarnings('ignore')
+    
+    # Helper function to safely convert parameters for plotting
+    def safe_plot_parameter(param_col, trials_df):
+        """Convert parameter values to plottable numeric format"""
+        param_data = trials_df[param_col]
+        
+        # Handle TimeDelta64 types (convert to seconds)
+        if pd.api.types.is_timedelta64_dtype(param_data):
+            return param_data.dt.total_seconds()
+        
+        # Handle datetime types (convert to timestamp)
+        elif pd.api.types.is_datetime64_dtype(param_data):
+            return pd.to_numeric(param_data)
+        
+        # Handle list/tuple parameters (convert to string representation)
+        elif param_data.apply(lambda x: isinstance(x, (list, tuple))).any():
+            return param_data.astype(str)
+        
+        # Handle object/categorical types
+        elif pd.api.types.is_object_dtype(param_data) or pd.api.types.is_categorical_dtype(param_data):
+            try:
+                # Try to convert to numeric
+                return pd.to_numeric(param_data, errors='coerce')
+            except:
+                # If conversion fails, use string representation
+                return param_data.astype(str)
+        
+        # For numeric types, return as-is
+        else:
+            return param_data
+    
+    # Enhanced Setup with Model-Specific Subdirectories (Following Section 3 Pattern)
+    if results_dir is None:
+        base_results_dir = Path('./results')
+    else:
+        base_results_dir = Path(results_dir)
+    
+    # Create model-specific subdirectory for clean organization
+    results_dir = base_results_dir / 'section4_optimizations' / model_name
+    results_dir.mkdir(parents=True, exist_ok=True)
+    
+    print(f"🔍 ANALYZING {model_name.upper()} HYPERPARAMETER OPTIMIZATION")
+    print("=" * 60)
+    
+    try:
+        # 1. EXTRACT AND PROCESS TRIAL DATA
+        print("📊 1. TRIAL DATA EXTRACTION AND PROCESSING")
+        print("-" * 40)
+        
+        # Handle both Optuna Study objects and DataFrames
+        if hasattr(study_results, 'trials_dataframe'):
+            trials_df = study_results.trials_dataframe()
+        elif hasattr(study_results, 'trials'):
+            # Convert Optuna study to DataFrame manually
+            trial_data = []
+            for trial in study_results.trials:
+                trial_dict = {
+                    'number': trial.number,
+                    'value': trial.value,
+                    'datetime_start': trial.datetime_start,
+                    'datetime_complete': trial.datetime_complete,
+                    'duration': trial.duration,
+                    'state': trial.state.name
+                }
+                # Add parameters with 'params_' prefix
+                for key, value in trial.params.items():
+                    trial_dict[f'params_{key}'] = value
+                trial_data.append(trial_dict)
+            trials_df = pd.DataFrame(trial_data)
+        else:
+            # Assume it's already a DataFrame
+            trials_df = study_results.copy()
+        
+        if trials_df.empty:
+            print("❌ No trial data available for analysis")
+            return {"error": "No trial data available"}
+        
+        print(f"✅ Extracted {len(trials_df)} trials for analysis")
+        
+        # Get parameter columns (those starting with 'params_')
+        param_cols = [col for col in trials_df.columns if col.startswith('params_')]
+        objective_col = 'value'
+        
+        if objective_col not in trials_df.columns:
+            print(f"❌ Objective column '{objective_col}' not found")
+            return {"error": f"Objective column '{objective_col}' not found"}
+        
+        print(f"📊 2. PARAMETER SPACE EXPLORATION ANALYSIS")
+        print("-" * 40)
+        print(f"   • Found {len(param_cols)} hyperparameters: {param_cols}")
+        
+        # Filter out completed trials for analysis
+        completed_trials = trials_df[trials_df['state'] == 'COMPLETE'] if 'state' in trials_df.columns else trials_df
+        
+        if completed_trials.empty:
+            print("❌ No completed trials available for analysis")
+            return {"error": "No completed trials available"}
+        
+        print(f"   • Using {len(completed_trials)} completed trials")
+        
+        # ENHANCED PARAMETER VS PERFORMANCE VISUALIZATION (WITH DTYPE FIX)
+        if param_cols and display_plots:
+            print(f"📈 Creating parameter vs performance visualizations...")
+            
+            # Limit parameters for readability 
+            n_params = min(6, len(param_cols))  # Limit to 6 for visualization
+            if n_params > 0:
+                n_cols = 3
+                n_rows = (n_params + n_cols - 1) // n_cols
+                
+                fig, axes = plt.subplots(n_rows, n_cols, figsize=(5*n_cols, 4*n_rows))
+                if n_params == 1:
+                    axes = [axes]
+                elif n_rows == 1:
+                    axes = axes
+                else:
+                    axes = axes.flatten()
+                
+                fig.suptitle(f'{model_name.upper()} - Parameter vs Performance Analysis', 
+                             fontsize=16, fontweight='bold')
+                
+                for i, param_col in enumerate(param_cols[:n_params]):
+                    if param_col in completed_trials.columns:
+                        try:
+                            # CRITICAL FIX: Use safe parameter conversion for plotting
+                            param_data = safe_plot_parameter(param_col, completed_trials)
+                            objective_data = completed_trials[objective_col]
+                            
+                            # Create scatter plot with converted data
+                            axes[i].scatter(param_data, objective_data, alpha=0.6, s=50)
+                            axes[i].set_xlabel(param_col)
+                            axes[i].set_ylabel(f'{objective_col}')
+                            axes[i].set_title(f'{param_col} vs Performance', fontweight='bold')
+                            axes[i].grid(True, alpha=0.3)
+                            
+                            # Add correlation coefficient if possible
+                            try:
+                                if pd.api.types.is_numeric_dtype(param_data):
+                                    corr = param_data.corr(objective_data)
+                                    axes[i].text(0.05, 0.95, f'Corr: {corr:.3f}', 
+                                               transform=axes[i].transAxes,
+                                               bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8))
+                            except Exception as corr_error:
+                                print(f"⚠️ Could not calculate correlation for {param_col}: {corr_error}")
+                                
+                        except Exception as plot_error:
+                            print(f"⚠️ Could not plot {param_col}: {plot_error}")
+                            axes[i].text(0.5, 0.5, f'Plot Error\n{param_col}', 
+                                       transform=axes[i].transAxes, ha='center', va='center')
+                            axes[i].set_title(f'{param_col} (Plot Error)', fontweight='bold')
+                
+                # Remove empty subplots
+                for j in range(n_params, len(axes)):
+                    fig.delaxes(axes[j])
+                
+                plt.tight_layout()
+                
+                if export_figures:
+                    param_plot_path = results_dir / f'{model_name}_parameter_analysis.png'
+                    plt.savefig(param_plot_path, dpi=300, bbox_inches='tight')
+                    print(f"   📁 Parameter analysis plot saved: {param_plot_path}")
+                
+                if display_plots:
+                    plt.show()
+                else:
+                    plt.close()
+        
+        # BEST TRIAL ANALYSIS
+        print(f"📊 3. BEST TRIAL ANALYSIS")
+        print("-" * 40)
+        
+        best_trial = completed_trials.loc[completed_trials[objective_col].idxmax()]
+        print(f"✅ Best Trial #{best_trial.get('number', 'Unknown')}")
+        print(f"   • Best Score: {best_trial[objective_col]:.4f}")
+        
+        if 'duration' in best_trial:
+            duration = best_trial['duration']
+            if pd.isna(duration):
+                print(f"   • Duration: Not available")
+            else:
+                try:
+                    if isinstance(duration, pd.Timedelta):
+                        print(f"   • Duration: {duration.total_seconds():.1f} seconds")
+                    else:
+                        print(f"   • Duration: {duration}")
+                except:
+                    print(f"   • Duration: {duration}")
+        
+        # Best parameters
+        best_params = {col.replace('params_', ''): best_trial[col] 
+                      for col in param_cols if col in best_trial.index}
+        
+        print(f"   • Best Parameters:")
+        for param, value in best_params.items():
+            if isinstance(value, float):
+                print(f"     - {param}: {value:.4f}")
+            else:
+                print(f"     - {param}: {value}")
+        
+        # CONVERGENCE ANALYSIS
+        print(f"📊 4. CONVERGENCE ANALYSIS")
+        print("-" * 40)
+        
+        if len(completed_trials) > 1 and display_plots:
+            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5))
+            
+            # Trial progression
+            ax1.plot(completed_trials['number'], completed_trials[objective_col], 'o-', alpha=0.7)
+            ax1.set_xlabel('Trial Number')
+            ax1.set_ylabel('Objective Value')
+            ax1.set_title(f'{model_name.upper()} - Trial Progression', fontweight='bold')
+            ax1.grid(True, alpha=0.3)
+            
+            # Best value progression (cumulative best)
+            cumulative_best = completed_trials[objective_col].cummax()
+            ax2.plot(completed_trials['number'], cumulative_best, 'g-', linewidth=2, label='Best So Far')
+            ax2.fill_between(completed_trials['number'], cumulative_best, alpha=0.3, color='green')
+            ax2.set_xlabel('Trial Number')
+            ax2.set_ylabel('Best Objective Value')
+            ax2.set_title(f'{model_name.upper()} - Convergence', fontweight='bold')
+            ax2.legend()
+            ax2.grid(True, alpha=0.3)
+            
+            plt.tight_layout()
+            
+            if export_figures:
+                convergence_plot_path = results_dir / f'{model_name}_convergence_analysis.png'
+                plt.savefig(convergence_plot_path, dpi=300, bbox_inches='tight')
+                print(f"   📁 Convergence plot saved: {convergence_plot_path}")
+            
+            if display_plots:
+                plt.show()
+            else:
+                plt.close()
+        
+        # STATISTICAL SUMMARY
+        print(f"📊 5. STATISTICAL SUMMARY")
+        print("-" * 40)
+        
+        summary_stats = completed_trials[objective_col].describe()
+        print(f"✅ Performance Statistics:")
+        print(f"   • Mean Score: {summary_stats['mean']:.4f}")
+        print(f"   • Std Dev: {summary_stats['std']:.4f}")
+        print(f"   • Min Score: {summary_stats['min']:.4f}")
+        print(f"   • Max Score: {summary_stats['max']:.4f}")
+        print(f"   • Median Score: {summary_stats['50%']:.4f}")
+        
+        # EXPORT RESULTS TABLES
+        files_generated = []
+        
+        if export_tables:
+            # Export trial results
+            trials_export_path = results_dir / f'{model_name}_trial_results.csv'
+            completed_trials.to_csv(trials_export_path, index=False)
+            files_generated.append(str(trials_export_path))
+            print(f"   📁 Trial results saved: {trials_export_path}")
+            
+            # Export summary statistics
+            summary_export_path = results_dir / f'{model_name}_optimization_summary.csv'
+            summary_df = pd.DataFrame({
+                'Metric': ['Best Score', 'Mean Score', 'Std Dev', 'Min Score', 'Max Score', 'Trials Completed'],
+                'Value': [best_trial[objective_col], summary_stats['mean'], 
+                         summary_stats['std'], summary_stats['min'], 
+                         summary_stats['max'], len(completed_trials)]
+            })
+            summary_df.to_csv(summary_export_path, index=False)
+            files_generated.append(str(summary_export_path))
+            print(f"   📁 Summary statistics saved: {summary_export_path}")
+        
+        # PREPARE RETURN DATA
+        analysis_results = {
+            'best_score': float(best_trial[objective_col]),
+            'best_params': best_params,
+            'n_trials': len(completed_trials),
+            'mean_score': float(summary_stats['mean']),
+            'std_score': float(summary_stats['std']),
+            'trials_df': completed_trials,
+            'files_generated': files_generated,
+            'output_dir': str(results_dir)
+        }
+        
+        print(f"✅ {model_name.upper()} optimization analysis completed successfully!")
+        print(f"📁 Results saved to: {results_dir}")
+        
+        return analysis_results
+        
+    except Exception as e:
+        print(f"❌ Error in {model_name} hyperparameter optimization analysis: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {"error": str(e)}
+
+print("✅ Enhanced hyperparameter optimization analysis function loaded!")
+print("🔧 Includes TimeDelta64 and dtype compatibility fixes for plotting")
+print("📊 Ready for use in all Section 4.X.1 analysis sections")
