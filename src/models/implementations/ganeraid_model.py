@@ -419,9 +419,9 @@ class GANerAidModel(SyntheticDataModel):
             },
             'nr_of_rows': {
                 'type': 'categorical',
-                'choices': [10, 15, 20, 25, 30, 35, 40, 50],
-                'default': 25,
-                'description': 'GANerAid sequence length parameter - 25 optimal for most tabular structures'
+                'choices': [5, 10, 15, 20, 25],  # Conservative safe defaults - will be overridden dynamically
+                'default': 15,  # More conservative default
+                'description': 'GANerAid sequence length parameter - MUST be < dataset size to avoid index errors'
             },
             'binary_noise': {
                 'type': 'float',

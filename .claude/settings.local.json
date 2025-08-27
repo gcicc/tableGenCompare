@@ -44,7 +44,9 @@
       "Bash(cat:*)",
       "Bash(/dev/null)",
       "Bash(jupyter execute:*)",
-      "Bash(git log:*)"
+      "Bash(git log:*)",
+      "Bash(git branch:*)",
+      "Read(/c:\\Users\\gcicc\\.conda\\envs\\privategpt\\Lib\\site-packages\\GANerAid/**)"
     ],
     "deny": []
   }
