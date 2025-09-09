@@ -1,5 +1,0 @@
-Metric,Default Model,Optimized Model,Improvement
-Average Mean Error,16.2041,5.9015,+63.6%
-Average Std Error,17.0427,12.4167,+27.1%
-Similar Distributions (KS test),2/6,2/6,+0 features
-Total Features Evaluated,6,6,Same

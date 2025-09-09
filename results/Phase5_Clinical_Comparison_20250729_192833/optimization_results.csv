@@ -1,6 +1,0 @@
-Model,Best_Score,N_Trials,Optimization_Time,Best_Params
-CTGAN,0.3308495533738441,100,183.36961460113525,"{'epochs': 198, 'batch_size': 64, 'generator_lr': 0.00011083801704214101, 'discriminator_lr': 0.00015072344954724257, 'generator_dim': (128, 128), 'discriminator_dim': (512, 512)}"
-TVAE,0.33052521742605057,100,151.7028911113739,"{'epochs': 174, 'batch_size': 32, 'lr': 1.6378338952836577e-05, 'compress_dims': (256, 128), 'decompress_dims': (128, 256)}"
-CopulaGAN,0.33536377583598004,100,173.98748993873596,"{'epochs': 162, 'batch_size': 128, 'learning_rate': 0.0018717849703136452, 'noise_level': 0.021435583435699082}"
-TableGAN,0.330719573046658,100,175.82888102531433,"{'epochs': 102, 'batch_size': 128, 'learning_rate': 0.0012366639603233409, 'noise_dim': 131}"
-GANerAid,0.33469889885078735,100,101.4278519153595,"{'epochs': 136, 'batch_size': 32, 'learning_rate': 0.0001718325193180064, 'generator_dim': 263, 'noise_level': 0.05050619950061619}"

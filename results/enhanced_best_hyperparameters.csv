@@ -1,8 +1,0 @@
-Parameter,Value
-lr_d,0.0008692991511139548
-lr_g,0.0003550304858128307
-hidden_feature_space,400.0
-batch_size,100.0
-nr_of_rows,25.0
-binary_noise,0.11356818667316143
-epochs,1500.0
