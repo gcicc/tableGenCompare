@@ -1,6 +1,0 @@
-Model,Statistical_Adequacy,Predictive_Validity,Privacy_Protection,Regulatory_Readiness
-CopulaGAN,Low,Low,High,Needs Review
-GANerAid,Low,Low,High,Needs Review
-CTGAN,Low,Low,High,Needs Review
-TableGAN,Low,Low,High,Needs Review
-TVAE,Low,Low,High,Needs Review

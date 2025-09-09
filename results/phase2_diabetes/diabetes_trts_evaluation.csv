@@ -1,5 +1,0 @@
-Scenario,Description,Accuracy,Clinical_Interpretation
-TRTR (Baseline),Real→Real Diabetes Prediction,0.9963369963369964,Best achievable diabetes prediction
-TSTS,Synthetic→Synthetic Consistency,0.8058608058608059,Synthetic data internal consistency
-TRTS,Real→Synthetic Quality,0.5641025641025641,How well real model predicts synthetic patients
-TSTR,Synthetic→Real Utility,0.8791208791208791,Synthetic data utility for real diabetes prediction

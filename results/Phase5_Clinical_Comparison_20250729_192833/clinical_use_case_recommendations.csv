@@ -1,6 +1,0 @@
-Model,Primary_Use_Case,Secondary_Use_Cases,Risk_Level
-CopulaGAN,Not Recommended,None,High
-GANerAid,Not Recommended,None,High
-CTGAN,Not Recommended,None,High
-TableGAN,Not Recommended,None,High
-TVAE,Not Recommended,None,High
