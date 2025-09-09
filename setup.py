@@ -1,6 +1,33 @@
 # Setup Module for Clinical Synthetic Data Generation Framework
 # Contains imported chunks from notebook for better organization
 
+# SESSION TIMESTAMP AND DATASET IDENTIFIER SYSTEM
+from datetime import datetime
+import os
+
+# Generate session timestamp when setup.py is first imported
+SESSION_TIMESTAMP = datetime.now().strftime("%Y-%m-%d")
+print(f"Session timestamp captured: {SESSION_TIMESTAMP}")
+
+def extract_dataset_identifier(data_file_path):
+    """Extract dataset identifier from file path or filename"""
+    if isinstance(data_file_path, str):
+        # Extract filename without extension
+        filename = os.path.basename(data_file_path)
+        dataset_id = os.path.splitext(filename)[0].lower()
+        # Clean up common dataset naming patterns
+        dataset_id = dataset_id.replace('_', '-').replace(' ', '-')
+        return dataset_id
+    return "unknown-dataset"
+
+def get_results_path(dataset_identifier, section_number):
+    """Generate standardized results path: results/dataset_identifier/YYYY-MM-DD/Section-N"""
+    return f"results/{dataset_identifier}/{SESSION_TIMESTAMP}/Section-{section_number}"
+
+# Global variables to be set when data is loaded
+DATASET_IDENTIFIER = None
+CURRENT_DATA_FILE = None
+
 # Code Chunk ID: CHUNK_001 - CTAB-GAN Import and Compatibility
 # Import CTAB-GAN - try multiple installation paths with sklearn compatibility fix
 import sys
@@ -210,222 +237,582 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 
-def evaluate_synthetic_data_quality(real_data, synthetic_data, target_column=None, verbose=True):
+def evaluate_synthetic_data_quality(real_data, synthetic_data, model_name, target_column, 
+                                  section_number, dataset_identifier=None, 
+                                  save_files=True, display_plots=False, verbose=True):
     """
-    Comprehensive evaluation of synthetic data quality using multiple metrics.
+    Enhanced comprehensive evaluation of synthetic data quality with PCA analysis and file output.
     
     Parameters:
     - real_data: Original dataset
-    - synthetic_data: Synthetic dataset to evaluate
-    - target_column: Name of target column for supervised metrics
+    - synthetic_data: Synthetic dataset to evaluate  
+    - model_name: Model identifier (e.g., 'CTGAN', 'TVAE')
+    - target_column: Name of target column for supervised metrics and PCA color-coding
+    - section_number: Section number for file organization (2, 3, 5, etc.)
+    - dataset_identifier: Dataset name for folder structure (auto-detected if None)
+    - save_files: Whether to save plots and tables to files
+    - display_plots: Whether to display plots in notebook (False for file-only mode)
     - verbose: Print detailed results
     
     Returns:
-    - Dictionary with all evaluation metrics
+    - Dictionary with all evaluation metrics and file paths
     """
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    import pandas as pd
+    import numpy as np
+    from pathlib import Path
+    
+    # Auto-detect dataset identifier if not provided
+    if dataset_identifier is None:
+        dataset_identifier = DATASET_IDENTIFIER or "unknown-dataset"
+    
+    # Create results directory structure
+    results_dir = None
+    if save_files:
+        results_dir = Path(get_results_path(dataset_identifier, section_number)) / model_name.upper()
+        results_dir.mkdir(parents=True, exist_ok=True)
     
     if verbose:
-        print("🔍 COMPREHENSIVE DATA QUALITY EVALUATION")
-        print("=" * 50)
+        print(f"🔍 {model_name.upper()} - COMPREHENSIVE DATA QUALITY EVALUATION")
+        print("=" * 60)
+        if save_files:
+            print(f"📁 Output directory: {results_dir}")
     
-    results = {}
+    results = {
+        'model': model_name,
+        'section': section_number,
+        'files_generated': [],
+        'dataset_identifier': dataset_identifier
+    }
     
-    # 1. Basic Statistics Comparison
+    # Get numeric columns for analysis
+    numeric_cols = real_data.select_dtypes(include=[np.number]).columns.tolist()
+    # Keep target column for PCA analysis but separate for other analyses
+    numeric_cols_no_target = [col for col in numeric_cols if col != target_column]
+    
+    # 1. STATISTICAL SIMILARITY
     if verbose:
         print("\n1️⃣ STATISTICAL SIMILARITY")
         print("-" * 30)
     
-    # Get numeric columns
-    numeric_cols = real_data.select_dtypes(include=[np.number]).columns.tolist()
-    if target_column in numeric_cols:
-        numeric_cols.remove(target_column)
+    stat_results = []
+    for col in numeric_cols_no_target:
+        try:
+            real_vals = real_data[col].dropna()
+            synth_vals = synthetic_data[col].dropna()
+            
+            real_mean, real_std = real_vals.mean(), real_vals.std()
+            synth_mean, synth_std = synth_vals.mean(), synth_vals.std()
+            
+            mean_diff = abs(real_mean - synth_mean) / real_std if real_std > 0 else 0
+            std_ratio = min(real_std, synth_std) / max(real_std, synth_std) if max(real_std, synth_std) > 0 else 1
+            
+            stat_results.append({
+                'column': col,
+                'real_mean': real_mean,
+                'synthetic_mean': synth_mean,
+                'mean_similarity': 1 - min(mean_diff, 1),
+                'std_similarity': std_ratio,
+                'overall_similarity': (1 - min(mean_diff, 1) + std_ratio) / 2
+            })
+        except Exception as e:
+            if verbose:
+                print(f"   ⚠️ Error analyzing {col}: {e}")
     
-    stat_similarity = {}
-    for col in numeric_cols:
-        real_mean = real_data[col].mean()
-        synth_mean = synthetic_data[col].mean()
-        real_std = real_data[col].std()
-        synth_std = synthetic_data[col].std()
+    if stat_results:
+        stat_df = pd.DataFrame(stat_results)
+        avg_stat_similarity = stat_df['overall_similarity'].mean()
+        results['avg_statistical_similarity'] = avg_stat_similarity
         
-        mean_diff = abs(real_mean - synth_mean) / real_std if real_std > 0 else 0
-        std_ratio = min(real_std, synth_std) / max(real_std, synth_std) if max(real_std, synth_std) > 0 else 1
+        if save_files and results_dir:
+            stat_file = results_dir / 'statistical_similarity.csv'
+            stat_df.to_csv(stat_file, index=False)
+            results['files_generated'].append(str(stat_file))
         
-        stat_similarity[col] = {
-            'mean_similarity': 1 - min(mean_diff, 1),
-            'std_similarity': std_ratio
-        }
+        if verbose:
+            print(f"   📊 Average Statistical Similarity: {avg_stat_similarity:.3f}")
     
-    results['statistical_similarity'] = stat_similarity
-    avg_stat_similarity = np.mean([np.mean(list(metrics.values())) for metrics in stat_similarity.values()])
-    results['avg_statistical_similarity'] = avg_stat_similarity
-    
+    # 2. PCA COMPARISON ANALYSIS WITH OUTCOME VARIABLE COLOR-CODING
     if verbose:
-        print(f"   📊 Average Statistical Similarity: {avg_stat_similarity:.3f}")
+        print("\n2️⃣ PCA COMPARISON ANALYSIS WITH OUTCOME COLOR-CODING")
+        print("-" * 50)
     
-    # 2. Distribution Similarity (Jensen-Shannon Divergence)
+    pca_results = {}
+    try:
+        # Use all numeric columns including target for PCA
+        pca_columns = [col for col in numeric_cols if col in synthetic_data.columns]
+        
+        if len(pca_columns) >= 2:
+            # Standardize data
+            scaler = StandardScaler()
+            real_scaled = scaler.fit_transform(real_data[pca_columns].fillna(0))
+            synth_scaled = scaler.transform(synthetic_data[pca_columns].fillna(0))
+            
+            # Apply PCA
+            n_components = min(4, len(pca_columns))
+            pca = PCA(n_components=n_components)
+            real_pca = pca.fit_transform(real_scaled)
+            synth_pca = pca.transform(synth_scaled)
+            
+            # Calculate PCA similarity metrics
+            pca_similarities = []
+            for i in range(n_components):
+                corr = abs(stats.pearsonr(real_pca[:, i], synth_pca[:len(real_pca), i])[0]) if len(real_pca) > 0 else 0
+                pca_similarities.append(corr)
+            
+            pca_similarity = np.mean(pca_similarities)
+            explained_variance_real = pca.explained_variance_ratio_
+            
+            # Store PCA results
+            pca_results = {
+                'n_components': n_components,
+                'explained_variance_ratio': explained_variance_real,
+                'component_similarity': pca_similarities,
+                'overall_pca_similarity': pca_similarity
+            }
+            results.update(pca_results)
+            
+            # Create PCA comparison plots with outcome color-coding
+            if save_files or display_plots:
+                fig, axes = plt.subplots(2, 2, figsize=(15, 12))
+                fig.suptitle(f'{model_name.upper()} - PCA Comparison with {target_column.title()} Color-coding', 
+                           fontsize=16, fontweight='bold')
+                
+                # Get target values for color-coding
+                real_target = real_data[target_column] if target_column in real_data.columns else np.zeros(len(real_data))
+                synth_target = synthetic_data[target_column] if target_column in synthetic_data.columns else np.zeros(len(synthetic_data))
+                
+                # Plot 1: Real data PC1 vs PC2
+                axes[0,0].scatter(real_pca[:, 0], real_pca[:, 1], c=real_target, cmap='viridis', alpha=0.6, s=30)
+                axes[0,0].set_title('Real Data - PC1 vs PC2')
+                axes[0,0].set_xlabel(f'PC1 ({explained_variance_real[0]:.1%} variance)')
+                axes[0,0].set_ylabel(f'PC2 ({explained_variance_real[1]:.1%} variance)')
+                
+                # Plot 2: Synthetic data PC1 vs PC2  
+                scatter = axes[0,1].scatter(synth_pca[:, 0], synth_pca[:, 1], c=synth_target, cmap='viridis', alpha=0.6, s=30)
+                axes[0,1].set_title('Synthetic Data - PC1 vs PC2')
+                axes[0,1].set_xlabel(f'PC1 ({explained_variance_real[0]:.1%} variance)')
+                axes[0,1].set_ylabel(f'PC2 ({explained_variance_real[1]:.1%} variance)')
+                plt.colorbar(scatter, ax=axes[0,1], label=target_column.title())
+                
+                # Plot 3: Explained variance comparison
+                components = range(1, n_components + 1)
+                axes[1,0].bar([x - 0.2 for x in components], explained_variance_real, 0.4, 
+                            label='Real Data', alpha=0.7, color='blue')
+                # Note: Using same explained variance ratio for synthetic as approximation
+                axes[1,0].bar([x + 0.2 for x in components], explained_variance_real, 0.4,
+                            label='Synthetic Data', alpha=0.7, color='orange') 
+                axes[1,0].set_title('Explained Variance Ratio Comparison')
+                axes[1,0].set_xlabel('Principal Component')
+                axes[1,0].set_ylabel('Explained Variance Ratio')
+                axes[1,0].legend()
+                
+                # Plot 4: Component similarity scores
+                axes[1,1].bar(components, pca_similarities, alpha=0.7, color='green')
+                axes[1,1].set_title('PCA Component Similarity Scores')
+                axes[1,1].set_xlabel('Principal Component')
+                axes[1,1].set_ylabel('Similarity Score')
+                axes[1,1].set_ylim(0, 1)
+                
+                plt.tight_layout()
+                
+                if save_files and results_dir:
+                    pca_plot_file = results_dir / 'pca_comparison_with_outcome.png'
+                    plt.savefig(pca_plot_file, dpi=300, bbox_inches='tight')
+                    results['files_generated'].append(str(pca_plot_file))
+                    if verbose:
+                        print(f"   📊 PCA comparison plot saved: {pca_plot_file.name}")
+                
+                if display_plots:
+                    plt.show()
+                else:
+                    plt.close()
+            
+            if verbose:
+                print(f"   📊 PCA Overall Similarity: {pca_similarity:.3f}")
+                print(f"   📊 Explained Variance (PC1, PC2): {explained_variance_real[0]:.3f}, {explained_variance_real[1]:.3f}")
+                
+    except Exception as e:
+        if verbose:
+            print(f"   ❌ PCA analysis failed: {e}")
+        pca_results = {'error': str(e)}
+    
+    # 3. DISTRIBUTION SIMILARITY WITH VISUALIZATIONS
     if verbose:
-        print("\n2️⃣ DISTRIBUTION SIMILARITY")
+        print("\n3️⃣ DISTRIBUTION SIMILARITY")
         print("-" * 30)
     
-    js_divergences = {}
-    for col in numeric_cols:
-        try:
-            # Create histograms for comparison
-            real_hist, bins = np.histogram(real_data[col].dropna(), bins=20, density=True)
-            synth_hist, _ = np.histogram(synthetic_data[col].dropna(), bins=bins, density=True)
+    try:
+        if save_files or display_plots:
+            n_cols = min(3, len(numeric_cols_no_target))
+            n_rows = (len(numeric_cols_no_target) + n_cols - 1) // n_cols
             
-            # Normalize to create probability distributions
-            real_hist = real_hist / real_hist.sum() if real_hist.sum() > 0 else real_hist
-            synth_hist = synth_hist / synth_hist.sum() if synth_hist.sum() > 0 else synth_hist
-            
-            # Calculate Jensen-Shannon divergence
-            js_div = jensenshannon(real_hist, synth_hist)
-            js_divergences[col] = 1 - js_div  # Convert to similarity (1 = identical)
-        except:
-            js_divergences[col] = 0
+            if n_rows > 0:
+                fig, axes = plt.subplots(n_rows, n_cols, figsize=(5*n_cols, 4*n_rows))
+                fig.suptitle(f'{model_name.upper()} - Feature Distribution Comparison', 
+                           fontsize=16, fontweight='bold')
+                
+                if n_rows == 1 and n_cols == 1:
+                    axes = [axes]
+                elif n_rows == 1:
+                    axes = axes
+                else:
+                    axes = axes.flatten()
+                
+                js_scores = []
+                for i, col in enumerate(numeric_cols_no_target):
+                    if i < len(axes):
+                        ax = axes[i]
+                        
+                        # Calculate Jensen-Shannon divergence
+                        try:
+                            real_hist, bins = np.histogram(real_data[col].dropna(), bins=20, density=True)
+                            synth_hist, _ = np.histogram(synthetic_data[col].dropna(), bins=bins, density=True)
+                            
+                            real_hist = real_hist / real_hist.sum() if real_hist.sum() > 0 else real_hist
+                            synth_hist = synth_hist / synth_hist.sum() if synth_hist.sum() > 0 else synth_hist
+                            
+                            js_div = jensenshannon(real_hist, synth_hist)
+                            js_similarity = 1 - js_div
+                            js_scores.append(js_similarity)
+                            
+                            # Create distribution comparison plot
+                            ax.hist(real_data[col].dropna(), bins=20, alpha=0.7, label='Real', 
+                                  density=True, color='blue')
+                            ax.hist(synthetic_data[col].dropna(), bins=20, alpha=0.7, label='Synthetic', 
+                                  density=True, color='orange')
+                            ax.set_title(f'{col}\nJS Similarity: {js_similarity:.3f}')
+                            ax.legend()
+                            ax.grid(True, alpha=0.3)
+                            
+                        except Exception as e:
+                            ax.text(0.5, 0.5, f'Error: {str(e)[:30]}...', 
+                                   ha='center', va='center', transform=ax.transAxes)
+                            ax.set_title(f'{col} - Error')
+                
+                # Hide unused subplots
+                for j in range(len(numeric_cols_no_target), len(axes)):
+                    axes[j].set_visible(False)
+                
+                plt.tight_layout()
+                
+                if save_files and results_dir:
+                    dist_plot_file = results_dir / 'distribution_comparison.png'
+                    plt.savefig(dist_plot_file, dpi=300, bbox_inches='tight')
+                    results['files_generated'].append(str(dist_plot_file))
+                
+                if display_plots:
+                    plt.show()
+                else:
+                    plt.close()
+                
+                avg_js_similarity = np.mean(js_scores) if js_scores else 0
+                results['avg_js_similarity'] = avg_js_similarity
+                
+                if verbose:
+                    print(f"   📊 Average Distribution Similarity: {avg_js_similarity:.3f}")
     
-    results['js_similarities'] = js_divergences
-    avg_js_similarity = np.mean(list(js_divergences.values())) if js_divergences else 0
-    results['avg_js_similarity'] = avg_js_similarity
+    except Exception as e:
+        if verbose:
+            print(f"   ❌ Distribution analysis failed: {e}")
     
+    # 4. CORRELATION STRUCTURE PRESERVATION
     if verbose:
-        print(f"   📊 Average Distribution Similarity: {avg_js_similarity:.3f}")
-    
-    # 3. Correlation Structure Preservation
-    if verbose:
-        print("\n3️⃣ CORRELATION STRUCTURE")
+        print("\n4️⃣ CORRELATION STRUCTURE")
         print("-" * 30)
     
     try:
         real_corr = real_data[numeric_cols].corr()
         synth_corr = synthetic_data[numeric_cols].corr()
         
-        # Calculate correlation between correlation matrices
+        # Calculate correlation preservation
         corr_preservation = stats.pearsonr(
             real_corr.values.flatten(),
             synth_corr.values.flatten()
         )[0]
-        corr_preservation = max(0, corr_preservation)  # Ensure non-negative
-    except:
-        corr_preservation = 0
-    
-    results['correlation_preservation'] = corr_preservation
-    
-    if verbose:
-        print(f"   📊 Correlation Structure Preservation: {corr_preservation:.3f}")
-    
-    # 4. PCA-based Similarity
-    if verbose:
-        print("\n4️⃣ DIMENSIONALITY REDUCTION SIMILARITY")
-        print("-" * 30)
-    
-    try:
-        # Standardize data
-        scaler = StandardScaler()
-        real_scaled = scaler.fit_transform(real_data[numeric_cols].fillna(0))
-        synth_scaled = scaler.transform(synthetic_data[numeric_cols].fillna(0))
+        corr_preservation = max(0, corr_preservation)
+        results['correlation_preservation'] = corr_preservation
         
-        # Apply PCA
-        pca = PCA(n_components=min(5, len(numeric_cols)))
-        real_pca = pca.fit_transform(real_scaled)
-        synth_pca = pca.transform(synth_scaled)
+        # Create correlation heatmap comparison
+        if save_files or display_plots:
+            fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+            
+            # Real data correlation
+            sns.heatmap(real_corr, annot=True, cmap='RdBu_r', center=0, 
+                       square=True, ax=axes[0], fmt='.2f')
+            axes[0].set_title('Real Data - Correlation Matrix')
+            
+            # Synthetic data correlation
+            sns.heatmap(synth_corr, annot=True, cmap='RdBu_r', center=0,
+                       square=True, ax=axes[1], fmt='.2f')
+            axes[1].set_title(f'Synthetic Data - Correlation Matrix\nPreservation Score: {corr_preservation:.3f}')
+            
+            plt.tight_layout()
+            
+            if save_files and results_dir:
+                corr_plot_file = results_dir / 'correlation_comparison.png'
+                plt.savefig(corr_plot_file, dpi=300, bbox_inches='tight')
+                results['files_generated'].append(str(corr_plot_file))
+            
+            if display_plots:
+                plt.show()
+            else:
+                plt.close()
         
-        # Compare PCA representations
-        pca_similarities = []
-        for i in range(real_pca.shape[1]):
-            corr = abs(stats.pearsonr(real_pca[:, i], synth_pca[:len(real_pca), i])[0])
-            pca_similarities.append(corr)
-        
-        pca_similarity = np.mean(pca_similarities)
-    except:
-        pca_similarity = 0
+        if verbose:
+            print(f"   📊 Correlation Structure Preservation: {corr_preservation:.3f}")
+            
+    except Exception as e:
+        if verbose:
+            print(f"   ❌ Correlation analysis failed: {e}")
+        results['correlation_preservation'] = 0
     
-    results['pca_similarity'] = pca_similarity
-    
-    if verbose:
-        print(f"   📊 PCA Similarity: {pca_similarity:.3f}")
-    
-    # 5. Machine Learning Utility (if target column provided)
+    # 5. MACHINE LEARNING UTILITY
     if target_column and target_column in real_data.columns:
         if verbose:
             print("\n5️⃣ MACHINE LEARNING UTILITY")
             print("-" * 30)
         
         try:
-            # Train on real data, test on synthetic data
-            X_real = real_data[numeric_cols].fillna(0)
+            X_real = real_data[numeric_cols_no_target].fillna(0)
             y_real = real_data[target_column]
-            X_synth = synthetic_data[numeric_cols].fillna(0)
+            X_synth = synthetic_data[numeric_cols_no_target].fillna(0)
             y_synth = synthetic_data[target_column] if target_column in synthetic_data.columns else None
             
-            # Random Forest trained on real data
-            rf_real = RandomForestClassifier(n_estimators=100, random_state=42)
-            rf_real.fit(X_real, y_real)
-            
-            # Test on synthetic data
             if y_synth is not None:
-                synth_pred_accuracy = rf_real.score(X_synth, y_synth)
-            else:
-                synth_pred_accuracy = 0
-            
-            # Train on synthetic data, test on real data
-            if y_synth is not None:
+                # Train on real, test on synthetic
+                rf_real = RandomForestClassifier(n_estimators=100, random_state=42)
+                rf_real.fit(X_real, y_real)
+                synth_test_accuracy = rf_real.score(X_synth, y_synth)
+                
+                # Train on synthetic, test on real
                 rf_synth = RandomForestClassifier(n_estimators=100, random_state=42)
                 rf_synth.fit(X_synth, y_synth)
-                real_pred_accuracy = rf_synth.score(X_real, y_real)
-            else:
-                real_pred_accuracy = 0
+                real_test_accuracy = rf_synth.score(X_real, y_real)
+                
+                ml_utility = (synth_test_accuracy + real_test_accuracy) / 2
+                
+                results.update({
+                    'ml_utility': ml_utility,
+                    'synth_test_accuracy': synth_test_accuracy,
+                    'real_test_accuracy': real_test_accuracy
+                })
+                
+                if verbose:
+                    print(f"   📊 ML Utility (Cross-Accuracy): {ml_utility:.3f}")
+                    print(f"   📊 Real→Synth Accuracy: {synth_test_accuracy:.3f}")
+                    print(f"   📊 Synth→Real Accuracy: {real_test_accuracy:.3f}")
             
-            ml_utility = (synth_pred_accuracy + real_pred_accuracy) / 2
-            
-        except:
-            ml_utility = 0
-            synth_pred_accuracy = 0
-            real_pred_accuracy = 0
-        
-        results['ml_utility'] = ml_utility
-        results['synth_test_accuracy'] = synth_pred_accuracy
-        results['real_test_accuracy'] = real_pred_accuracy
-        
-        if verbose:
-            print(f"   📊 ML Utility (Avg Cross-Accuracy): {ml_utility:.3f}")
-            print(f"   📊 Real→Synth Test Accuracy: {synth_pred_accuracy:.3f}")
-            print(f"   📊 Synth→Real Test Accuracy: {real_pred_accuracy:.3f}")
+        except Exception as e:
+            if verbose:
+                print(f"   ❌ ML utility analysis failed: {e}")
     
-    # 6. Overall Quality Score
-    scores = [
-        avg_stat_similarity,
-        avg_js_similarity,
-        corr_preservation,
-        pca_similarity
-    ]
+    # 6. OVERALL QUALITY ASSESSMENT
+    quality_scores = []
+    if 'avg_statistical_similarity' in results:
+        quality_scores.append(results['avg_statistical_similarity'])
+    if 'avg_js_similarity' in results:
+        quality_scores.append(results['avg_js_similarity'])
+    if 'correlation_preservation' in results:
+        quality_scores.append(results['correlation_preservation'])
+    if 'overall_pca_similarity' in results:
+        quality_scores.append(results['overall_pca_similarity'])
+    if 'ml_utility' in results:
+        quality_scores.append(results['ml_utility'])
     
-    if target_column and target_column in real_data.columns:
-        scores.append(results.get('ml_utility', 0))
-    
-    overall_quality = np.mean([s for s in scores if s > 0])  # Only include valid scores
+    overall_quality = np.mean(quality_scores) if quality_scores else 0
     results['overall_quality_score'] = overall_quality
     
+    # Quality assessment
+    if overall_quality >= 0.8:
+        quality_label = "EXCELLENT"
+    elif overall_quality >= 0.6:
+        quality_label = "GOOD"
+    elif overall_quality >= 0.4:
+        quality_label = "FAIR"
+    else:
+        quality_label = "POOR"
+    
+    results['quality_assessment'] = quality_label
+    
+    # Save comprehensive results summary
+    if save_files and results_dir:
+        summary_df = pd.DataFrame([{
+            'Model': model_name,
+            'Overall_Quality_Score': overall_quality,
+            'Quality_Assessment': quality_label,
+            'Statistical_Similarity': results.get('avg_statistical_similarity', 'N/A'),
+            'Distribution_Similarity': results.get('avg_js_similarity', 'N/A'),
+            'Correlation_Preservation': results.get('correlation_preservation', 'N/A'),
+            'PCA_Similarity': results.get('overall_pca_similarity', 'N/A'),
+            'ML_Utility': results.get('ml_utility', 'N/A')
+        }])
+        
+        summary_file = results_dir / 'evaluation_summary.csv'
+        summary_df.to_csv(summary_file, index=False)
+        results['files_generated'].append(str(summary_file))
+    
     if verbose:
-        print("\n" + "=" * 50)
-        print(f"🏆 OVERALL QUALITY SCORE: {overall_quality:.3f}")
-        print("=" * 50)
-        
-        # Quality interpretation
-        if overall_quality >= 0.8:
-            quality_label = "EXCELLENT"
-        elif overall_quality >= 0.6:
-            quality_label = "GOOD"
-        elif overall_quality >= 0.4:
-            quality_label = "FAIR"
-        else:
-            quality_label = "POOR"
-        
+        print("\n" + "=" * 60)
+        print(f"🏆 {model_name.upper()} OVERALL QUALITY SCORE: {overall_quality:.3f}")
         print(f"📋 Quality Assessment: {quality_label}")
+        print("=" * 60)
+        
+        if save_files:
+            print(f"\n📁 Generated {len(results['files_generated'])} output files:")
+            for file_path in results['files_generated']:
+                print(f"   • {Path(file_path).name}")
     
     return results
 
 print("✅ Comprehensive data quality evaluation function loaded!")
+
+# ============================================================================
+# BATCH EVALUATION SYSTEM FOR ALL SECTIONS
+# ============================================================================
+
+def evaluate_all_available_models(section_number, scope=None, models_to_evaluate=None, real_data=None, target_col=None):
+    """
+    Enhanced batch evaluation for all available synthetic datasets with notebook scope support
+    
+    Parameters:
+    - section_number: Section number for file organization (3, 5, etc.)
+    - scope: globals() from notebook for variable access (required for notebook use)
+    - models_to_evaluate: List of specific models to evaluate (optional, evaluates all if None)
+    - real_data: Real dataset (uses 'data' from scope if not provided)
+    - target_col: Target column name (uses 'target_column' from scope if not provided)
+    
+    Returns:
+    - Dictionary with results for each evaluated model
+    """
+    
+    if scope is None:
+        print("❌ ERROR: scope parameter required! Pass globals() from notebook")
+        return {}
+    
+    # Get data and target from scope if not provided
+    if real_data is None:
+        real_data = scope.get('data')
+        if real_data is None:
+            print("❌ ERROR: 'data' variable not found in scope")
+            return {}
+    
+    if target_col is None:
+        target_col = scope.get('target_column')
+        if target_col is None:
+            print("❌ ERROR: 'target_column' variable not found in scope")
+            return {}
+    
+    dataset_id = scope.get('DATASET_IDENTIFIER', 'unknown-dataset')
+    
+    # Model mappings - check for available synthetic datasets in scope
+    available_models = {}
+    
+    # Standard model variable names to check
+    model_checks = {
+        'CTGAN': 'synthetic_data_ctgan',
+        'CTABGAN': 'synthetic_data_ctabgan', 
+        'CTABGANPLUS': 'synthetic_data_ctabganplus',
+        'GANerAid': 'synthetic_data_ganeraid',
+        'CopulaGAN': 'synthetic_data_copulagan',
+        'TVAE': 'synthetic_data_tvae'
+    }
+    
+    # Check which models are available in notebook scope
+    for model_name, var_name in model_checks.items():
+        if var_name in scope and scope[var_name] is not None:
+            # Filter by requested models if specified
+            if models_to_evaluate is None or model_name in models_to_evaluate or model_name.lower() in [m.lower() for m in models_to_evaluate]:
+                available_models[model_name] = scope[var_name]
+    
+    print(f"🔍 BATCH EVALUATION - SECTION {section_number}")
+    print("=" * 60)
+    print(f"📋 Dataset: {dataset_id}")
+    print(f"📋 Target column: {target_col}")
+    print(f"📋 Found {len(available_models)} trained models:")
+    for model_name in available_models.keys():
+        print(f"   ✅ {model_name}")
+    
+    if not available_models:
+        available_vars = [var for var in model_checks.values() if var in scope]
+        print("❌ No synthetic datasets found!")
+        print("   Train some models first before running batch evaluation")
+        if available_vars:
+            print(f"   Found variables: {available_vars}")
+        return {}
+    
+    # Evaluate each available model
+    evaluation_results = {}
+    
+    for model_name, synthetic_data in available_models.items():
+        print(f"\n{'='*20} EVALUATING {model_name} {'='*20}")
+        
+        try:
+            results = evaluate_synthetic_data_quality(
+                real_data=real_data,
+                synthetic_data=synthetic_data,
+                model_name=model_name,
+                target_column=target_col,
+                section_number=section_number,
+                dataset_identifier=dataset_id,
+                save_files=True,
+                display_plots=False,  # File-only mode for batch processing
+                verbose=True
+            )
+            
+            evaluation_results[model_name] = results
+            print(f"✅ {model_name} evaluation completed successfully!")
+            
+        except Exception as e:
+            print(f"❌ {model_name} evaluation failed: {e}")
+            evaluation_results[model_name] = {'error': str(e)}
+    
+    # Create summary comparison
+    print(f"\n{'='*25} EVALUATION SUMMARY {'='*25}")
+    print(f"{'Model':<15} {'Quality Score':<15} {'Assessment':<12} {'Files':<8}")
+    print("-" * 65)
+    
+    for model_name, results in evaluation_results.items():
+        if 'error' not in results:
+            quality_score = results.get('overall_quality_score', 0)
+            assessment = results.get('quality_assessment', 'Unknown')
+            file_count = len(results.get('files_generated', []))
+            print(f"{model_name:<15} {quality_score:<15.3f} {assessment:<12} {file_count:<8}")
+        else:
+            print(f"{model_name:<15} {'ERROR':<15} {'FAILED':<12} {'0':<8}")
+    
+    # Save comparison summary
+    if evaluation_results:
+        try:
+            summary_data = []
+            for model_name, results in evaluation_results.items():
+                if 'error' not in results:
+                    summary_data.append({
+                        'Model': model_name,
+                        'Section': section_number,
+                        'Quality_Score': results.get('overall_quality_score', 0),
+                        'Quality_Assessment': results.get('quality_assessment', 'Unknown'),
+                        'Statistical_Similarity': results.get('avg_statistical_similarity', 'N/A'),
+                        'PCA_Similarity': results.get('overall_pca_similarity', 'N/A'),
+                        'Files_Generated': len(results.get('files_generated', []))
+                    })
+            
+            if summary_data:
+                import pandas as pd
+                summary_df = pd.DataFrame(summary_data)
+                summary_path = get_results_path(dataset_id, section_number)
+                os.makedirs(summary_path, exist_ok=True)
+                summary_file = f"{summary_path}/batch_evaluation_summary.csv"
+                summary_df.to_csv(summary_file, index=False)
+                print(f"\n📊 Batch summary saved to: {summary_file}")
+                
+        except Exception as e:
+            print(f"⚠️ Could not save batch summary: {e}")
+    
+    return evaluation_results
+
+print("✅ Batch evaluation system loaded!")
 
 print("🎯 SETUP MODULE LOADED SUCCESSFULLY!")
 print("="*60)
