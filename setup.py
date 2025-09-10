@@ -957,7 +957,560 @@ def evaluate_all_available_models(section_number, scope=None, models_to_evaluate
     
     return evaluation_results
 
+# Code Chunk ID: CHUNK_037 - Enhanced Objective Function v2
+def enhanced_objective_function_v2(real_data, synthetic_data, target_column, 
+                                 similarity_weight=0.6, accuracy_weight=0.4):
+    """
+    Enhanced objective function: 60% similarity + 40% accuracy with DYNAMIC TARGET COLUMN FIX
+    
+    Args:
+        real_data: Original dataset
+        synthetic_data: Generated synthetic dataset  
+        target_column: Name of target column (DYNAMIC - works with any dataset)
+        similarity_weight: Weight for similarity component (default 0.6)
+        accuracy_weight: Weight for accuracy component (default 0.4)
+
+    Returns:
+        Combined objective score (higher is better), similarity_score, accuracy_score
+    """
+    
+    print(f"🎯 Enhanced objective function using target column: '{target_column}'")
+    
+    # CRITICAL FIX: Validate target column exists in both datasets
+    if target_column not in real_data.columns:
+        print(f"❌ Target column '{target_column}' not found in real data columns: {list(real_data.columns)}")
+        return 0.0, 0.0, 0.0
+    
+    if target_column not in synthetic_data.columns:
+        print(f"❌ Target column '{target_column}' not found in synthetic data columns: {list(synthetic_data.columns)}")
+        return 0.0, 0.0, 0.0
+    
+    # 1. Similarity Component (60%)
+    similarity_scores = []
+    
+    # Univariate similarity using Earth Mover's Distance
+    numeric_columns = real_data.select_dtypes(include=[np.number]).columns
+    for col in numeric_columns:
+        if col != target_column and col in synthetic_data.columns:
+            try:
+                # DATA TYPE VALIDATION: Ensure both columns are numeric before EMD calculation
+                real_values = real_data[col]
+                synth_values = synthetic_data[col]
+                
+                # Check for mixed data types in synthetic data
+                if synth_values.dtype == 'object' or synth_values.apply(lambda x: isinstance(x, str)).any():
+                    print(f"⚠️ Warning: {col} in synthetic data contains non-numeric values, attempting to convert...")
+                    # Try to convert to numeric, replacing invalid values with NaN
+                    synth_values = pd.to_numeric(synth_values, errors='coerce')
+                    # Remove NaN values for EMD calculation
+                    synth_values = synth_values.dropna()
+                    real_values = real_values.dropna()
+                    print(f"✅ Converted {col}: {len(synth_values)} valid numeric values")
+                
+                # Ensure we have enough values for EMD calculation
+                if len(real_values) == 0 or len(synth_values) == 0:
+                    print(f"❌ Skipping {col}: insufficient valid numeric values")
+                    continue
+                    
+                # Earth Mover's Distance (Wasserstein distance)
+                emd_score = wasserstein_distance(real_values, synth_values)
+                # Convert to similarity (lower EMD = higher similarity)
+                similarity_scores.append(1 / (1 + emd_score))
+                print(f"✅ {col}: EMD={emd_score:.4f}, Similarity={similarity_scores[-1]:.4f}")
+                
+            except Exception as e:
+                print(f"❌ Error calculating EMD for {col}: {e}")
+                print(f"   Real dtype: {real_data[col].dtype}, Synthetic dtype: {synthetic_data[col].dtype}")
+                continue
+    
+    # Correlation similarity
+    try:
+        # Only use columns that have valid numeric data in both datasets
+        valid_numeric_cols = []
+        for col in numeric_columns:
+            if col in synthetic_data.columns and col != target_column:
+                if not synthetic_data[col].apply(lambda x: isinstance(x, str)).any():
+                    valid_numeric_cols.append(col)
+        
+        if len(valid_numeric_cols) > 1:
+            real_corr = real_data[valid_numeric_cols].corr()
+            synth_corr = synthetic_data[valid_numeric_cols].corr()
+            
+            # Flatten correlation matrices and compute distance
+            real_corr_flat = real_corr.values[np.triu_indices_from(real_corr, k=1)]
+            synth_corr_flat = synth_corr.values[np.triu_indices_from(synth_corr, k=1)]
+            
+            # Correlation similarity (1 - distance)
+            corr_distance = np.mean(np.abs(real_corr_flat - synth_corr_flat))
+            similarity_scores.append(1 - corr_distance)
+            print(f"✅ Correlation similarity: {similarity_scores[-1]:.4f}")
+        else:
+            print("⚠️ Insufficient valid numeric columns for correlation analysis")
+            
+    except Exception as e:
+        print(f"Warning: Correlation similarity failed: {e}")
+    
+    similarity_score = np.mean(similarity_scores) if similarity_scores else 0.5
+    
+    # 2. Accuracy Component (40%) - TRTS Framework with DYNAMIC TARGET COLUMN FIX
+    accuracy_scores = []
+    
+    try:
+        # CRITICAL FIX: Robust column existence checking
+        print(f"🔧 Preparing TRTS evaluation with target column: '{target_column}'")
+        
+        # Ensure target column exists before proceeding
+        if target_column not in real_data.columns or target_column not in synthetic_data.columns:
+            print(f"❌ Target column '{target_column}' missing. Real cols: {list(real_data.columns)[:5]}...")
+            return similarity_score * similarity_weight, similarity_score, 0.0
+        
+        # Prepare features and target with robust error handling
+        try:
+            X_real = real_data.drop(columns=[target_column])
+            y_real = real_data[target_column]
+            X_synth = synthetic_data.drop(columns=[target_column]) 
+            y_synth = synthetic_data[target_column]
+            
+            print(f"🔧 Data shapes - Real: X{X_real.shape}, y{y_real.shape}, Synthetic: X{X_synth.shape}, y{y_synth.shape}")
+            
+        except KeyError as ke:
+            print(f"❌ KeyError in data preparation: {ke}")
+            return similarity_score * similarity_weight, similarity_score, 0.0
+        
+        # CRITICAL FIX: Ensure consistent label types before any sklearn operations
+        print(f"🔧 Data type check - Real: {y_real.dtype}, Synthetic: {y_synth.dtype}")
+        
+        # Convert all labels to same type (prefer numeric if possible)
+        if y_real.dtype != y_synth.dtype:
+            print(f"⚠️ Data type mismatch detected - harmonizing types")
+            if pd.api.types.is_numeric_dtype(y_real):
+                try:
+                    y_synth = pd.to_numeric(y_synth, errors='coerce')
+                    print(f"✅ Converted synthetic labels to numeric")
+                except:
+                    y_real = y_real.astype(str)
+                    y_synth = y_synth.astype(str)
+                    print(f"✅ Converted both to string type")
+            else:
+                y_real = y_real.astype(str)
+                y_synth = y_synth.astype(str)
+                print(f"✅ Converted both to string type")
+        
+        # Ensure we have matching features between datasets
+        common_features = list(set(X_real.columns) & set(X_synth.columns))
+        if len(common_features) == 0:
+            print("❌ No common features between real and synthetic data")
+            return similarity_score * similarity_weight, similarity_score, 0.0
+        
+        print(f"🔧 Using {len(common_features)} common features for TRTS evaluation")
+        
+        X_real = X_real[common_features]
+        X_synth = X_synth[common_features]
+        
+        # Handle mixed data types in features
+        for col in common_features:
+            if X_synth[col].dtype == 'object':
+                try:
+                    X_synth[col] = pd.to_numeric(X_synth[col], errors='coerce')
+                    if X_synth[col].isna().all():
+                        # If conversion failed, use label encoding
+                        from sklearn.preprocessing import LabelEncoder
+                        le = LabelEncoder()
+                        X_real[col] = le.fit_transform(X_real[col].astype(str))
+                        X_synth[col] = le.transform(X_synth[col].astype(str))
+                        print(f"🔧 Label encoded column: {col}")
+                    else:
+                        print(f"🔧 Converted to numeric: {col}")
+                except Exception as e:
+                    print(f"⚠️ Could not process column {col}: {e}")
+                    # Drop problematic columns
+                    X_real = X_real.drop(columns=[col])
+                    X_synth = X_synth.drop(columns=[col])
+        
+        # Handle missing values
+        X_real = X_real.fillna(X_real.median())
+        X_synth = X_synth.fillna(X_synth.median())
+        
+        # Final check for remaining NaN values
+        if X_real.isna().any().any() or X_synth.isna().any().any():
+            X_real = X_real.fillna(0)
+            X_synth = X_synth.fillna(0)
+            print("⚠️ Used zero-fill for remaining NaN values")
+        
+        # TRTS: Train on Real, Test on Synthetic (and vice versa)
+        from sklearn.model_selection import train_test_split
+        from sklearn.ensemble import RandomForestClassifier
+        from sklearn.metrics import accuracy_score
+        
+        # Ensure we have sufficient samples
+        if len(X_real) < 10 or len(X_synth) < 10:
+            print("⚠️ Insufficient samples for TRTS evaluation")
+            return similarity_score * similarity_weight, similarity_score, 0.5
+        
+        # TRTS 1: Train on Real, Test on Synthetic
+        try:
+            rf1 = RandomForestClassifier(n_estimators=50, random_state=42, max_depth=10)
+            rf1.fit(X_real, y_real)
+            pred_synth = rf1.predict(X_synth)
+            acc1 = accuracy_score(y_synth, pred_synth)
+            accuracy_scores.append(acc1)
+            print(f"✅ TRTS (Real→Synthetic): {acc1:.4f}")
+        except Exception as e:
+            print(f"❌ TRTS (Real→Synthetic) failed: {e}")
+        
+        # TRTS 2: Train on Synthetic, Test on Real
+        try:
+            rf2 = RandomForestClassifier(n_estimators=50, random_state=42, max_depth=10)
+            rf2.fit(X_synth, y_synth)
+            pred_real = rf2.predict(X_real)
+            acc2 = accuracy_score(y_real, pred_real)
+            accuracy_scores.append(acc2)
+            print(f"✅ TRTS (Synthetic→Real): {acc2:.4f}")
+        except Exception as e:
+            print(f"❌ TRTS (Synthetic→Real) failed: {e}")
+            
+    except Exception as e:
+        print(f"❌ Accuracy evaluation failed: {e}")
+        import traceback
+        print(f"🔍 Traceback: {traceback.format_exc()}")
+    
+    # Calculate final scores
+    accuracy_score_final = np.mean(accuracy_scores) if accuracy_scores else 0.5
+    combined_score = (similarity_score * similarity_weight) + (accuracy_score_final * accuracy_weight)
+    
+    print(f"📊 Final scores - Similarity: {similarity_score:.4f}, Accuracy: {accuracy_score_final:.4f}, Combined: {combined_score:.4f}")
+    
+    return combined_score, similarity_score, accuracy_score_final
+
+# Code Chunk ID: CHUNK_039 - Analyze Hyperparameter Optimization
+def analyze_hyperparameter_optimization(study_results, model_name, 
+                                       target_column, results_dir=None,
+                                       export_figures=True, export_tables=True,
+                                       display_plots=True):
+    """
+    Comprehensive hyperparameter optimization analysis with file output
+    Reusable across all model sections in Section 4
+    
+    Enhanced following Section 3 lessons learned:
+    - Model-specific subdirectories for clean organization
+    - Professional dataframe display for all tables
+    - Consistent display + file output for all models
+    - High-quality graphics with proper styling
+    
+    Parameters:
+    - study_results: Optuna study object or trial results dataframe
+    - model_name: str, model identifier (ctgan, ctabgan, etc.)
+    - target_column: str, target column name for context
+    - results_dir: str, base results directory (creates model subdirectories)
+    - export_figures: bool, save graphics to files
+    - export_tables: bool, save tables to CSV files  
+    - display_plots: bool, show plots and dataframes in notebook
+    
+    Returns:
+    - Dictionary with analysis results and file paths
+    """
+    import numpy as np
+    import pandas as pd
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    from pathlib import Path
+    import warnings
+    warnings.filterwarnings('ignore')
+    
+    # Helper function to safely convert parameters for plotting
+    def safe_plot_parameter(param_col, trials_df):
+        """Convert parameter values to plottable numeric format"""
+        param_data = trials_df[param_col]
+        
+        # Handle TimeDelta64 types (convert to seconds)
+        if pd.api.types.is_timedelta64_dtype(param_data):
+            return param_data.dt.total_seconds()
+        
+        # Handle datetime types (convert to timestamp)
+        elif pd.api.types.is_datetime64_dtype(param_data):
+            return pd.to_numeric(param_data)
+        
+        # Handle list/tuple parameters (convert to string representation)
+        elif param_data.apply(lambda x: isinstance(x, (list, tuple))).any():
+            return param_data.astype(str)
+        
+        # Handle object/categorical types
+        elif pd.api.types.is_object_dtype(param_data) or pd.api.types.is_categorical_dtype(param_data):
+            try:
+                # Try to convert to numeric
+                return pd.to_numeric(param_data, errors='coerce')
+            except:
+                # If conversion fails, use string representation
+                return param_data.astype(str)
+        
+        # For numeric types, return as-is
+        else:
+            return param_data
+    
+    # Enhanced Setup with Model-Specific Subdirectories (Following Section 3 Pattern)
+    if results_dir is None:
+        base_results_dir = Path('./results')
+    else:
+        base_results_dir = Path(results_dir)
+    
+    # Create model-specific subdirectory for clean organization
+    results_dir = base_results_dir / 'section4_optimizations' / model_name
+    results_dir.mkdir(parents=True, exist_ok=True)
+    
+    print(f"🔍 ANALYZING {model_name.upper()} HYPERPARAMETER OPTIMIZATION")
+    print("=" * 60)
+    
+    try:
+        # 1. EXTRACT AND PROCESS TRIAL DATA
+        print("📊 1. TRIAL DATA EXTRACTION AND PROCESSING")
+        print("-" * 40)
+        
+        # Handle both Optuna Study objects and DataFrames
+        if hasattr(study_results, 'trials_dataframe'):
+            trials_df = study_results.trials_dataframe()
+        elif hasattr(study_results, 'trials'):
+            # Convert Optuna study to DataFrame manually
+            trial_data = []
+            for trial in study_results.trials:
+                trial_dict = {
+                    'number': trial.number,
+                    'value': trial.value,
+                    'datetime_start': trial.datetime_start,
+                    'datetime_complete': trial.datetime_complete,
+                    'duration': trial.duration,
+                    'state': trial.state.name
+                }
+                # Add parameters with 'params_' prefix
+                for key, value in trial.params.items():
+                    trial_dict[f'params_{key}'] = value
+                trial_data.append(trial_dict)
+            trials_df = pd.DataFrame(trial_data)
+        else:
+            # Assume it's already a DataFrame
+            trials_df = study_results.copy()
+        
+        if trials_df.empty:
+            print("❌ No trial data available for analysis")
+            return {"error": "No trial data available"}
+        
+        print(f"✅ Extracted {len(trials_df)} trials for analysis")
+        
+        # Get parameter columns (those starting with 'params_')
+        param_cols = [col for col in trials_df.columns if col.startswith('params_')]
+        objective_col = 'value'
+        
+        if objective_col not in trials_df.columns:
+            print(f"❌ Objective column '{objective_col}' not found")
+            return {"error": f"Objective column '{objective_col}' not found"}
+        
+        print(f"📊 2. PARAMETER SPACE EXPLORATION ANALYSIS")
+        print("-" * 40)
+        print(f"   • Found {len(param_cols)} hyperparameters: {param_cols}")
+        
+        # Filter out completed trials for analysis
+        completed_trials = trials_df[trials_df['state'] == 'COMPLETE'] if 'state' in trials_df.columns else trials_df
+        
+        if completed_trials.empty:
+            print("❌ No completed trials available for analysis")
+            return {"error": "No completed trials available"}
+        
+        print(f"   • Using {len(completed_trials)} completed trials")
+        
+        # ENHANCED PARAMETER VS PERFORMANCE VISUALIZATION (WITH DTYPE FIX)
+        if param_cols and display_plots:
+            print(f"📈 Creating parameter vs performance visualizations...")
+            
+            # Limit parameters for readability 
+            n_params = min(6, len(param_cols))  # Limit to 6 for visualization
+            if n_params > 0:
+                n_cols = 3
+                n_rows = (n_params + n_cols - 1) // n_cols
+                
+                fig, axes = plt.subplots(n_rows, n_cols, figsize=(5*n_cols, 4*n_rows))
+                if n_params == 1:
+                    axes = [axes]
+                elif n_rows == 1:
+                    axes = axes
+                else:
+                    axes = axes.flatten()
+                
+                fig.suptitle(f'{model_name.upper()} - Parameter vs Performance Analysis', 
+                             fontsize=16, fontweight='bold')
+                
+                for i, param_col in enumerate(param_cols[:n_params]):
+                    if param_col in completed_trials.columns:
+                        try:
+                            # CRITICAL FIX: Use safe parameter conversion for plotting
+                            param_data = safe_plot_parameter(param_col, completed_trials)
+                            objective_data = completed_trials[objective_col]
+                            
+                            # Create scatter plot with converted data
+                            axes[i].scatter(param_data, objective_data, alpha=0.6, s=50)
+                            axes[i].set_xlabel(param_col)
+                            axes[i].set_ylabel(f'{objective_col}')
+                            axes[i].set_title(f'{param_col} vs Performance', fontweight='bold')
+                            axes[i].grid(True, alpha=0.3)
+                            
+                            # Add correlation coefficient if possible
+                            try:
+                                if pd.api.types.is_numeric_dtype(param_data):
+                                    corr = param_data.corr(objective_data)
+                                    axes[i].text(0.05, 0.95, f'Corr: {corr:.3f}', 
+                                               transform=axes[i].transAxes,
+                                               bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8))
+                            except Exception as corr_error:
+                                print(f"⚠️ Could not calculate correlation for {param_col}: {corr_error}")
+                                
+                        except Exception as plot_error:
+                            print(f"⚠️ Could not plot {param_col}: {plot_error}")
+                            axes[i].text(0.5, 0.5, f'Plot Error\\n{param_col}', 
+                                       transform=axes[i].transAxes, ha='center', va='center')
+                            axes[i].set_title(f'{param_col} (Plot Error)', fontweight='bold')
+                
+                # Remove empty subplots
+                for j in range(n_params, len(axes)):
+                    fig.delaxes(axes[j])
+                
+                plt.tight_layout()
+                
+                if export_figures:
+                    param_plot_path = results_dir / f'{model_name}_parameter_analysis.png'
+                    plt.savefig(param_plot_path, dpi=300, bbox_inches='tight')
+                    print(f"   📁 Parameter analysis plot saved: {param_plot_path}")
+                
+                if display_plots:
+                    plt.show()
+                else:
+                    plt.close()
+        
+        # BEST TRIAL ANALYSIS
+        print(f"📊 3. BEST TRIAL ANALYSIS")
+        print("-" * 40)
+        
+        best_trial = completed_trials.loc[completed_trials[objective_col].idxmax()]
+        print(f"✅ Best Trial #{best_trial.get('number', 'Unknown')}")
+        print(f"   • Best Score: {best_trial[objective_col]:.4f}")
+        
+        if 'duration' in best_trial:
+            duration = best_trial['duration']
+            if pd.isna(duration):
+                print(f"   • Duration: Not available")
+            else:
+                try:
+                    if isinstance(duration, pd.Timedelta):
+                        print(f"   • Duration: {duration.total_seconds():.1f} seconds")
+                    else:
+                        print(f"   • Duration: {duration}")
+                except:
+                    print(f"   • Duration: {duration}")
+        
+        # Best parameters
+        best_params = {col.replace('params_', ''): best_trial[col] 
+                      for col in param_cols if col in best_trial.index}
+        
+        print(f"   • Best Parameters:")
+        for param, value in best_params.items():
+            if isinstance(value, float):
+                print(f"     - {param}: {value:.4f}")
+            else:
+                print(f"     - {param}: {value}")
+        
+        # CONVERGENCE ANALYSIS
+        print(f"📊 4. CONVERGENCE ANALYSIS")
+        print("-" * 40)
+        
+        if len(completed_trials) > 1 and display_plots:
+            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5))
+            
+            # Trial progression
+            ax1.plot(completed_trials['number'], completed_trials[objective_col], 'o-', alpha=0.7)
+            ax1.set_xlabel('Trial Number')
+            ax1.set_ylabel('Objective Value')
+            ax1.set_title(f'{model_name.upper()} - Trial Progression', fontweight='bold')
+            ax1.grid(True, alpha=0.3)
+            
+            # Best value progression (cumulative best)
+            cumulative_best = completed_trials[objective_col].cummax()
+            ax2.plot(completed_trials['number'], cumulative_best, 'g-', linewidth=2, label='Best So Far')
+            ax2.fill_between(completed_trials['number'], cumulative_best, alpha=0.3, color='green')
+            ax2.set_xlabel('Trial Number')
+            ax2.set_ylabel('Best Objective Value')
+            ax2.set_title(f'{model_name.upper()} - Convergence', fontweight='bold')
+            ax2.legend()
+            ax2.grid(True, alpha=0.3)
+            
+            plt.tight_layout()
+            
+            if export_figures:
+                convergence_plot_path = results_dir / f'{model_name}_convergence_analysis.png'
+                plt.savefig(convergence_plot_path, dpi=300, bbox_inches='tight')
+                print(f"   📁 Convergence plot saved: {convergence_plot_path}")
+            
+            if display_plots:
+                plt.show()
+            else:
+                plt.close()
+        
+        # STATISTICAL SUMMARY
+        print(f"📊 5. STATISTICAL SUMMARY")
+        print("-" * 40)
+        
+        summary_stats = completed_trials[objective_col].describe()
+        print(f"✅ Performance Statistics:")
+        print(f"   • Mean Score: {summary_stats['mean']:.4f}")
+        print(f"   • Std Dev: {summary_stats['std']:.4f}")
+        print(f"   • Min Score: {summary_stats['min']:.4f}")
+        print(f"   • Max Score: {summary_stats['max']:.4f}")
+        print(f"   • Median Score: {summary_stats['50%']:.4f}")
+        
+        # EXPORT RESULTS TABLES
+        files_generated = []
+        
+        if export_tables:
+            # Export trial results
+            trials_export_path = results_dir / f'{model_name}_trial_results.csv'
+            completed_trials.to_csv(trials_export_path, index=False)
+            files_generated.append(str(trials_export_path))
+            print(f"   📁 Trial results saved: {trials_export_path}")
+            
+            # Export summary statistics
+            summary_export_path = results_dir / f'{model_name}_optimization_summary.csv'
+            summary_df = pd.DataFrame({
+                'Metric': ['Best Score', 'Mean Score', 'Std Dev', 'Min Score', 'Max Score', 'Trials Completed'],
+                'Value': [best_trial[objective_col], summary_stats['mean'], 
+                         summary_stats['std'], summary_stats['min'], 
+                         summary_stats['max'], len(completed_trials)]
+            })
+            summary_df.to_csv(summary_export_path, index=False)
+            files_generated.append(str(summary_export_path))
+            print(f"   📁 Summary statistics saved: {summary_export_path}")
+        
+        # PREPARE RETURN DATA
+        analysis_results = {
+            'best_score': float(best_trial[objective_col]),
+            'best_params': best_params,
+            'n_trials': len(completed_trials),
+            'mean_score': float(summary_stats['mean']),
+            'std_score': float(summary_stats['std']),
+            'trials_df': completed_trials,
+            'files_generated': files_generated,
+            'output_dir': str(results_dir)
+        }
+        
+        print(f"✅ {model_name.upper()} optimization analysis completed successfully!")
+        print(f"📁 Results saved to: {results_dir}")
+        
+        return analysis_results
+        
+    except Exception as e:
+        print(f"❌ Error in {model_name} hyperparameter optimization analysis: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {"error": str(e)}
+
 print("✅ Batch evaluation system loaded!")
+print("✅ Enhanced objective function v2 with DYNAMIC TARGET COLUMN support defined!")
+print("✅ Enhanced hyperparameter optimization analysis function loaded!")
 
 print("🎯 SETUP MODULE LOADED SUCCESSFULLY!")
 print("="*60)
