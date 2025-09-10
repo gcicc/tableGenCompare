@@ -397,8 +397,34 @@ def evaluate_hyperparameter_optimization_results(section_number=4, scope=None, t
     if target_column is None and 'TARGET_COLUMN' in scope:
         target_column = scope['TARGET_COLUMN']
     
-    # Get dataset identifier directly from setup module (same as Section 2 & 3 pattern)
-    dataset_id = DATASET_IDENTIFIER or 'unknown-dataset'
+    # Get dataset identifier - try multiple sources for robustness
+    dataset_id = None
+    
+    # First try: scope (notebook globals) - this is what works for Section 2 & 3  
+    if 'DATASET_IDENTIFIER' in scope and scope['DATASET_IDENTIFIER']:
+        dataset_id = scope['DATASET_IDENTIFIER']
+        print(f"📍 Using DATASET_IDENTIFIER from scope: {dataset_id}")
+    
+    # Second try: setup module global variable
+    elif DATASET_IDENTIFIER:
+        dataset_id = DATASET_IDENTIFIER  
+        print(f"📍 Using DATASET_IDENTIFIER from setup module: {dataset_id}")
+    
+    # Fallback: extract from any available data files in scope
+    else:
+        print("⚠️  DATASET_IDENTIFIER not found! Attempting extraction from scope...")
+        # Look for common data file variables in notebook scope
+        for var_name in ['data_file', 'DATA_FILE', 'current_data_file']:
+            if var_name in scope and scope[var_name]:
+                dataset_id = extract_dataset_identifier(scope[var_name])
+                print(f"📍 Extracted DATASET_IDENTIFIER from {var_name}: {dataset_id}")
+                break
+        
+        if not dataset_id:
+            dataset_id = 'unknown-dataset'
+            print(f"⚠️  Using fallback DATASET_IDENTIFIER: {dataset_id}")
+    
+    print(f"🎯 Final DATASET_IDENTIFIER for Section {section_number}: {dataset_id}")
     
     # Get base results directory for Section 4
     base_results_dir = get_results_path(dataset_id, section_number)
