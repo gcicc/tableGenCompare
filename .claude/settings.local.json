@@ -12,7 +12,10 @@
       "Bash(cat:*)",
       "Bash(git push:*)",
       "Bash(find:*)",
-      "Bash(rg:*)"
+      "Bash(rg:*)",
+      "Bash(awk:*)",
+      "mcp__ide__executeCode",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": []
