@@ -374,6 +374,158 @@ print("✅ All required libraries imported successfully")
 # CRITICAL: Must be defined before Section 3.1 calls
 # ============================================================================
 
+def evaluate_hyperparameter_optimization_results(section_number=4, scope=None, target_column=None):
+    """
+    Batch evaluation of hyperparameter optimization results for all available models.
+    
+    Replaces individual CHUNK_041, CHUNK_043, CHUNK_045, CHUNK_047, CHUNK_049, CHUNK_051
+    Following CHUNK_018 pattern for Section 3.
+    
+    Parameters:
+    - section_number: Section number for file organization (default 4)
+    - scope: Notebook scope (globals()) to access study variables
+    - target_column: Target column name for analysis
+    
+    Returns:
+    - Dictionary with analysis results for all models
+    """
+    
+    if scope is None:
+        scope = globals()
+    
+    # Use global TARGET_COLUMN if not provided
+    if target_column is None and 'TARGET_COLUMN' in scope:
+        target_column = scope['TARGET_COLUMN']
+    
+    # Get dataset identifier and results directory
+    dataset_id = scope.get('DATASET_IDENTIFIER', 'unknown-dataset')
+    results_dir = get_results_path(dataset_id, section_number)
+    
+    print(f"\n{'='*80}")
+    print(f"SECTION {section_number} - HYPERPARAMETER OPTIMIZATION BATCH ANALYSIS")
+    print(f"{'='*80}")
+    print(f"📁 Results directory: {results_dir}")
+    print(f"🎯 Target column: {target_column}")
+    print()
+    
+    # Define model configurations with their study variable names
+    model_configs = [
+        {'name': 'CTGAN', 'study_var': 'ctgan_study', 'model_name': 'ctgan', 'section': '4.1.1'},
+        {'name': 'CTAB-GAN', 'study_var': 'ctabgan_study', 'model_name': 'ctabgan', 'section': '4.2.1'},
+        {'name': 'CTAB-GAN+', 'study_var': 'ctabganplus_study', 'model_name': 'ctabganplus', 'section': '4.3.1'},
+        {'name': 'GANerAid', 'study_var': 'ganeraid_study', 'model_name': 'ganeraid', 'section': '4.4.1'},
+        {'name': 'CopulaGAN', 'study_var': 'copulagan_study', 'model_name': 'copulagan', 'section': '4.5.1'},
+        {'name': 'TVAE', 'study_var': 'tvae_study', 'model_name': 'tvae', 'section': '4.6.1'}
+    ]
+    
+    analysis_results = {}
+    summary_data = []
+    
+    for config in model_configs:
+        model_name = config['name']
+        study_var = config['study_var']
+        model_key = config['model_name']
+        section = config['section']
+        
+        print(f"\n🔍 {section}: {model_name} Hyperparameter Optimization Analysis")
+        print("-" * 60)
+        
+        try:
+            # Check if study exists in scope
+            if study_var in scope and scope[study_var] is not None:
+                study_results = scope[study_var]
+                
+                print(f"✅ {model_name} optimization study found")
+                
+                # Run hyperparameter analysis with file export
+                analysis_result = analyze_hyperparameter_optimization(
+                    study_results=study_results,
+                    model_name=model_key,
+                    target_column=target_column,
+                    results_dir=results_dir,
+                    export_figures=True,  # Export all figures to files
+                    export_tables=True,   # Export all tables to CSV
+                    display_plots=False   # Don't display inline - save to files only
+                )
+                
+                analysis_results[model_key] = analysis_result
+                
+                # Collect summary statistics
+                if hasattr(study_results, 'best_trial'):
+                    best_trial = study_results.best_trial
+                    completed_trials = [t for t in study_results.trials if hasattr(t, 'state') and 
+                                      t.state.name == 'COMPLETE']
+                    
+                    summary_data.append({
+                        'model': model_name,
+                        'section': section,
+                        'best_score': best_trial.value if best_trial else None,
+                        'total_trials': len(study_results.trials),
+                        'completed_trials': len(completed_trials),
+                        'best_trial_number': best_trial.number if best_trial else None,
+                        'study_variable': study_var
+                    })
+                    
+                    print(f"✅ {model_name} analysis completed - files exported to {results_dir}")
+                    
+            else:
+                print(f"⚠️  {model_name} optimization study not found (variable: {study_var})")
+                print(f"   Skipping {model_name} analysis")
+                
+        except Exception as e:
+            print(f"❌ {model_name} analysis failed: {str(e)}")
+            print(f"🔍 Error details: {type(e).__name__}")
+            import traceback
+            traceback.print_exc()
+            continue
+    
+    # Create comprehensive summary
+    print(f"\n{'='*60}")
+    print("HYPERPARAMETER OPTIMIZATION SUMMARY")
+    print(f"{'='*60}")
+    
+    if summary_data:
+        summary_df = pd.DataFrame(summary_data)
+        
+        print(f"📊 Models analyzed: {len(summary_data)}")
+        print(f"📈 Total optimization trials: {summary_df['total_trials'].sum()}")
+        print(f"✅ Successful trials: {summary_df['completed_trials'].sum()}")
+        print()
+        
+        # Display summary table
+        print("📋 OPTIMIZATION RESULTS SUMMARY:")
+        print(summary_df.to_string(index=False))
+        
+        # Export summary to CSV
+        summary_file = f"{results_dir}/hyperparameter_optimization_summary.csv"
+        os.makedirs(os.path.dirname(summary_file), exist_ok=True)
+        summary_df.to_csv(summary_file, index=False)
+        print(f"\n💾 Summary exported to: {summary_file}")
+        
+        # Find best performing model
+        valid_scores = summary_df.dropna(subset=['best_score'])
+        if not valid_scores.empty:
+            best_model = valid_scores.loc[valid_scores['best_score'].idxmax()]
+            print(f"\n🏆 BEST PERFORMING MODEL: {best_model['model']}")
+            print(f"   • Score: {best_model['best_score']:.4f}")
+            print(f"   • Section: {best_model['section']}")
+            print(f"   • Trials completed: {best_model['completed_trials']}")
+    
+    else:
+        print("⚠️  No optimization results found")
+        print("   Run hyperparameter optimization first (CHUNK_040, CHUNK_042, etc.)")
+    
+    print(f"\n✅ Section {section_number} hyperparameter optimization batch analysis completed!")
+    print(f"📁 All figures and tables exported to: {results_dir}")
+    
+    return {
+        'analysis_results': analysis_results,
+        'summary_data': summary_data,
+        'results_dir': results_dir
+    }
+
+# ============================================================================
+
 from scipy import stats
 from scipy.spatial.distance import jensenshannon
 from scipy.stats import wasserstein_distance
