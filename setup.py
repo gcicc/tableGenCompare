@@ -1667,3 +1667,48 @@ print("✅ Enhanced hyperparameter optimization analysis function loaded!")
 
 print("🎯 SETUP MODULE LOADED SUCCESSFULLY!")
 print("="*60)
+
+# Setup Imports - Global dependencies for objective functions
+# CRITICAL: This cell provides wasserstein_distance import for enhanced_objective_function_v2
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+import warnings
+warnings.filterwarnings('ignore')
+import time
+import os
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.metrics import classification_report, accuracy_score
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
+from scipy.stats import wasserstein_distance  # CRITICAL: Required for EMD calculations
+print("✅ Enhanced objective function dependencies imported")
+
+# Set style
+plt.style.use('default')
+sns.set_palette("husl")
+print("📦 Basic libraries imported successfully")
+
+# Import Optuna for hyperparameter optimization
+OPTUNA_AVAILABLE = False
+try:
+    import optuna
+    OPTUNA_AVAILABLE = True
+    print("✅ Optuna imported successfully")
+except ImportError:
+    print("❌ Optuna not found - hyperparameter optimization not available")
+
+# Import CTGAN
+CTGAN_AVAILABLE = False
+try:
+    from ctgan import CTGAN
+    CTGAN_AVAILABLE = True
+    print("✅ CTGAN imported successfully")
+except ImportError:
+    print("❌ CTGAN not found")
+
+print("🔧 Setup imports cell restored from main branch - wasserstein_distance now available globally")
