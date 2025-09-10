@@ -397,13 +397,15 @@ def evaluate_hyperparameter_optimization_results(section_number=4, scope=None, t
     if target_column is None and 'TARGET_COLUMN' in scope:
         target_column = scope['TARGET_COLUMN']
     
-    # FIXED: Get dataset identifier from setup module (not from scope)
+    # FIXED: Get dataset identifier from module globals or scope
     try:
-        import setup
-        dataset_id = getattr(setup, 'DATASET_IDENTIFIER', 'unknown-dataset')
+        # Check module-level DATASET_IDENTIFIER first
+        dataset_id = globals().get('DATASET_IDENTIFIER', None)
+        if dataset_id is None:
+            # Fallback to scope if not found in globals
+            dataset_id = scope.get('DATASET_IDENTIFIER', 'unknown-dataset')
     except:
-        # Fallback to scope if setup module unavailable
-        dataset_id = scope.get('DATASET_IDENTIFIER', 'unknown-dataset')
+        dataset_id = 'unknown-dataset'
     
     # Get base results directory for Section 4
     base_results_dir = get_results_path(dataset_id, section_number)
@@ -1485,7 +1487,7 @@ def analyze_hyperparameter_optimization(study_results, model_name,
         print(f"   • Using {len(completed_trials)} completed trials")
         
         # ENHANCED PARAMETER VS PERFORMANCE VISUALIZATION (WITH DTYPE FIX)
-        if param_cols and display_plots:
+        if param_cols and (display_plots or export_figures):
             print(f"📈 Creating parameter vs performance visualizations...")
             
             # Limit parameters for readability 
@@ -1587,7 +1589,7 @@ def analyze_hyperparameter_optimization(study_results, model_name,
         print(f"📊 4. CONVERGENCE ANALYSIS")
         print("-" * 40)
         
-        if len(completed_trials) > 1 and display_plots:
+        if len(completed_trials) > 1 and (display_plots or export_figures):
             fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5))
             
             # Trial progression
