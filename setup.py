@@ -376,6 +376,7 @@ print("✅ All required libraries imported successfully")
 
 from scipy import stats
 from scipy.spatial.distance import jensenshannon
+from scipy.stats import wasserstein_distance
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestClassifier
