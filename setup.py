@@ -416,7 +416,8 @@ def evaluate_hyperparameter_optimization_results(section_number=4, scope=None, t
     print(f"📊 Dataset identifier: {dataset_id}")
     print()
     
-    # Define model configurations with study variables and directory names matching Section 3
+    # Define model configurations with directory names for 1:1 correspondence with Section 3
+    # All 6 models should have matching directories: CTGAN, CTABGAN, CTABGANPLUS, GANERAID, COPULAGAN, TVAE
     model_configs = [
         {'name': 'CTGAN', 'study_var': 'ctgan_study', 'model_name': 'ctgan', 'section': '4.1.1', 'dir_name': 'CTGAN'},
         {'name': 'CTAB-GAN', 'study_var': 'ctabgan_study', 'model_name': 'ctabgan', 'section': '4.2.1', 'dir_name': 'CTABGAN'},
@@ -1421,8 +1422,8 @@ def analyze_hyperparameter_optimization(study_results, model_name,
     else:
         base_results_dir = Path(results_dir)
     
-    # Create model-specific subdirectory for clean organization
-    results_dir = base_results_dir / 'section4_optimizations' / model_name
+    # Use the provided results_dir directly (batch function provides model-specific directory)
+    results_dir = base_results_dir
     results_dir.mkdir(parents=True, exist_ok=True)
     
     print(f"🔍 ANALYZING {model_name.upper()} HYPERPARAMETER OPTIMIZATION")
