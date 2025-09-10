@@ -1748,3 +1748,225 @@ except ImportError:
     print("❌ CTGAN not found")
 
 print("🔧 Setup imports cell restored from main branch - wasserstein_distance now available globally")
+
+
+def evaluate_section5_optimized_models(section_number=5, scope=None, target_column=None):
+    """
+    Batch evaluation of Section 5 optimized models following Section 3 pattern.
+    
+    Evaluates all available final optimized models from Section 5.1.x:
+    - CTGAN (synthetic_ctgan_final)
+    - CTAB-GAN (synthetic_ctabgan_final) 
+    - CTAB-GAN+ (synthetic_ctabganplus_final)
+    - GANerAid (synthetic_ganeraid_final)
+    - CopulaGAN (synthetic_copulagan_final)
+    - TVAE (synthetic_tvae_final)
+    
+    Parameters:
+    - section_number: Section number for file organization (default 5)
+    - scope: Notebook scope (globals()) to access synthetic data and results
+    - target_column: Target column name for analysis
+    
+    Returns:
+    - Dictionary with batch evaluation results and file paths
+    """
+    
+    if scope is None:
+        scope = globals()
+    
+    # Use global TARGET_COLUMN if not provided
+    if target_column is None and 'TARGET_COLUMN' in scope:
+        target_column = scope['TARGET_COLUMN']
+    
+    # Get dataset identifier - try multiple sources for robustness
+    dataset_id = None
+    
+    # First try: scope (notebook globals) - this is what works for Section 2 & 3  
+    if 'DATASET_IDENTIFIER' in scope and scope['DATASET_IDENTIFIER']:
+        dataset_id = scope['DATASET_IDENTIFIER']
+        print(f"📍 Using DATASET_IDENTIFIER from scope: {dataset_id}")
+    
+    # Second try: setup module global variable
+    elif DATASET_IDENTIFIER:
+        dataset_id = DATASET_IDENTIFIER  
+        print(f"📍 Using DATASET_IDENTIFIER from setup module: {dataset_id}")
+    
+    # Fallback: extract from any available data files in scope
+    else:
+        print("⚠️  DATASET_IDENTIFIER not found! Attempting extraction from scope...")
+        # Look for common data file variables in notebook scope
+        for var_name in ['data_file', 'DATA_FILE', 'current_data_file']:
+            if var_name in scope and scope[var_name]:
+                dataset_id = extract_dataset_identifier(scope[var_name])
+                print(f"📍 Extracted DATASET_IDENTIFIER from {var_name}: {dataset_id}")
+                break
+        
+        if not dataset_id:
+            dataset_id = 'unknown-dataset'
+            print(f"⚠️  Using fallback DATASET_IDENTIFIER: {dataset_id}")
+    
+    print(f"🎯 Final DATASET_IDENTIFIER for Section {section_number}: {dataset_id}")
+    
+    # Get base results directory for Section 5
+    base_results_dir = get_results_path(dataset_id, section_number)
+    
+    print(f"\n{'='*80}")
+    print(f"SECTION {section_number} - OPTIMIZED MODELS BATCH EVALUATION")
+    print(f"{'='*80}")
+    print(f"📁 Base results directory: {base_results_dir}")
+    
+    # Get real data from scope
+    if 'data' not in scope:
+        print("❌ ERROR: 'data' variable not found in scope")
+        return {}
+    
+    real_data = scope['data']
+    print(f"📊 Real data shape: {real_data.shape}")
+    
+    # Model configurations for Section 5 optimized models
+    model_configs = [
+        {'name': 'CTGAN', 'synthetic_var': 'synthetic_ctgan_final', 'results_var': 'ctgan_final_results', 'section': '5.1.1'},
+        {'name': 'CTAB-GAN', 'synthetic_var': 'synthetic_ctabgan_final', 'results_var': 'ctabgan_final_results', 'section': '5.1.2'},
+        {'name': 'CTAB-GAN+', 'synthetic_var': 'synthetic_ctabganplus_final', 'results_var': 'ctabganplus_final_results', 'section': '5.1.3'},
+        {'name': 'GANerAid', 'synthetic_var': 'synthetic_ganeraid_final', 'results_var': 'ganeraid_final_results', 'section': '5.1.4'},
+        {'name': 'CopulaGAN', 'synthetic_var': 'synthetic_copulagan_final', 'results_var': 'copulagan_final_results', 'section': '5.1.5'},
+        {'name': 'TVAE', 'synthetic_var': 'synthetic_tvae_final', 'results_var': 'tvae_final_results', 'section': '5.1.6'}
+    ]
+    
+    evaluation_results = []
+    summary_data = []
+    
+    print(f"\n🔍 Searching for available optimized models...")
+    
+    for config in model_configs:
+        model_name = config['name']
+        synthetic_var = config['synthetic_var']
+        results_var = config['results_var']
+        section = config['section']
+        
+        print(f"\n{'='*60}")
+        print(f"📊 EVALUATING {model_name.upper()} OPTIMIZED MODEL ({section})")
+        print(f"{'='*60}")
+        
+        # Check if synthetic data is available
+        if synthetic_var in scope and scope[synthetic_var] is not None:
+            synthetic_data = scope[synthetic_var]
+            print(f"✅ Found {synthetic_var}: {synthetic_data.shape}")
+            
+            # Check if results are available
+            model_results = {}
+            if results_var in scope and scope[results_var] is not None:
+                model_results = scope[results_var]
+                print(f"✅ Found {results_var} with keys: {list(model_results.keys())}")
+            else:
+                print(f"⚠️  {results_var} not found - will create basic results")
+            
+            try:
+                # Create model-specific subdirectory
+                model_results_dir = f"{base_results_dir}/{model_name.upper()}"
+                os.makedirs(model_results_dir, exist_ok=True)
+                print(f"📁 Model directory: {model_results_dir}")
+                
+                # Run comprehensive evaluation using Section 3 function
+                evaluation_result = evaluate_synthetic_data_quality(
+                    real_data=real_data,
+                    synthetic_data=synthetic_data,
+                    model_name=f"{model_name}_optimized",
+                    target_column=target_column,
+                    section_number=section_number,
+                    dataset_identifier=dataset_id,
+                    save_files=True,
+                    display_plots=False,  # File output only
+                    verbose=True
+                )
+                
+                # Add model-specific results
+                evaluation_result.update({
+                    'model_name': model_name,
+                    'section': section,
+                    'synthetic_var': synthetic_var,
+                    'optimization_results': model_results
+                })
+                
+                evaluation_results.append(evaluation_result)
+                
+                # Create summary data entry
+                summary_entry = {
+                    'Model': model_name,
+                    'Section': section,
+                    'Objective_Score': model_results.get('objective_score', 'N/A'),
+                    'Similarity_Score': model_results.get('similarity_score', 'N/A'),
+                    'Accuracy_Score': model_results.get('accuracy_score', 'N/A'),
+                    'PCA_Variance_Explained': evaluation_result.get('pca_variance_explained', 'N/A'),
+                    'Synthetic_Samples': len(synthetic_data),
+                    'Status': 'Success',
+                    'Results_Directory': model_results_dir
+                }
+                summary_data.append(summary_entry)
+                
+                print(f"✅ {model_name} evaluation completed successfully!")
+                
+            except Exception as e:
+                print(f"❌ {model_name} evaluation failed: {str(e)}")
+                summary_entry = {
+                    'Model': model_name,
+                    'Section': section,
+                    'Status': 'Failed',
+                    'Error': str(e),
+                    'Results_Directory': 'N/A'
+                }
+                summary_data.append(summary_entry)
+                
+        else:
+            print(f"⚠️  {synthetic_var} not found - {section} may not have completed successfully")
+            summary_entry = {
+                'Model': model_name,
+                'Section': section,
+                'Status': 'Not Available',
+                'Error': f'{synthetic_var} not found in scope',
+                'Results_Directory': 'N/A'
+            }
+            summary_data.append(summary_entry)
+    
+    # Create batch summary
+    print(f"\n{'='*80}")
+    print(f"📊 SECTION {section_number} BATCH EVALUATION SUMMARY")
+    print(f"{'='*80}")
+    
+    if summary_data:
+        import pandas as pd
+        summary_df = pd.DataFrame(summary_data)
+        
+        # Display summary
+        print("📋 Model Evaluation Summary:")
+        print(summary_df.to_string(index=False))
+        
+        # Save summary to CSV
+        summary_file = f"{base_results_dir}/section5_optimized_models_summary.csv"
+        os.makedirs(base_results_dir, exist_ok=True)
+        summary_df.to_csv(summary_file, index=False)
+        print(f"\n📊 Batch summary saved to: {summary_file}")
+        
+        # Print final statistics
+        successful_models = len([s for s in summary_data if s['Status'] == 'Success'])
+        total_models = len(summary_data)
+        
+        print(f"\n🎯 Final Statistics:")
+        print(f"   • Total models evaluated: {total_models}")
+        print(f"   • Successful evaluations: {successful_models}")
+        print(f"   • Success rate: {successful_models/total_models*100:.1f}%")
+        print(f"   • Results directory: {base_results_dir}")
+        
+    else:
+        print("❌ No models found for evaluation")
+    
+    print(f"\n📈 Section {section_number} optimized model evaluation complete!")
+    print("🏁 Ready for final model comparison and selection!")
+
+    return {
+        'results_dir': base_results_dir,
+        'summary_data': summary_data,
+        'evaluation_results': evaluation_results,
+        'models_processed': len([s for s in summary_data if s['Status'] == 'Success']),
+        'total_models_checked': len(summary_data)
+    }
