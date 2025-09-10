@@ -397,25 +397,33 @@ def evaluate_hyperparameter_optimization_results(section_number=4, scope=None, t
     if target_column is None and 'TARGET_COLUMN' in scope:
         target_column = scope['TARGET_COLUMN']
     
-    # Get dataset identifier and results directory
-    dataset_id = scope.get('DATASET_IDENTIFIER', 'unknown-dataset')
-    results_dir = get_results_path(dataset_id, section_number)
+    # FIXED: Get dataset identifier from setup module (not from scope)
+    try:
+        import setup
+        dataset_id = getattr(setup, 'DATASET_IDENTIFIER', 'unknown-dataset')
+    except:
+        # Fallback to scope if setup module unavailable
+        dataset_id = scope.get('DATASET_IDENTIFIER', 'unknown-dataset')
+    
+    # Get base results directory for Section 4
+    base_results_dir = get_results_path(dataset_id, section_number)
     
     print(f"\n{'='*80}")
     print(f"SECTION {section_number} - HYPERPARAMETER OPTIMIZATION BATCH ANALYSIS")
     print(f"{'='*80}")
-    print(f"📁 Results directory: {results_dir}")
+    print(f"📁 Base results directory: {base_results_dir}")
     print(f"🎯 Target column: {target_column}")
+    print(f"📊 Dataset identifier: {dataset_id}")
     print()
     
-    # Define model configurations with their study variable names
+    # Define model configurations with study variables and directory names matching Section 3
     model_configs = [
-        {'name': 'CTGAN', 'study_var': 'ctgan_study', 'model_name': 'ctgan', 'section': '4.1.1'},
-        {'name': 'CTAB-GAN', 'study_var': 'ctabgan_study', 'model_name': 'ctabgan', 'section': '4.2.1'},
-        {'name': 'CTAB-GAN+', 'study_var': 'ctabganplus_study', 'model_name': 'ctabganplus', 'section': '4.3.1'},
-        {'name': 'GANerAid', 'study_var': 'ganeraid_study', 'model_name': 'ganeraid', 'section': '4.4.1'},
-        {'name': 'CopulaGAN', 'study_var': 'copulagan_study', 'model_name': 'copulagan', 'section': '4.5.1'},
-        {'name': 'TVAE', 'study_var': 'tvae_study', 'model_name': 'tvae', 'section': '4.6.1'}
+        {'name': 'CTGAN', 'study_var': 'ctgan_study', 'model_name': 'ctgan', 'section': '4.1.1', 'dir_name': 'CTGAN'},
+        {'name': 'CTAB-GAN', 'study_var': 'ctabgan_study', 'model_name': 'ctabgan', 'section': '4.2.1', 'dir_name': 'CTABGAN'},
+        {'name': 'CTAB-GAN+', 'study_var': 'ctabganplus_study', 'model_name': 'ctabganplus', 'section': '4.3.1', 'dir_name': 'CTABGANPLUS'},
+        {'name': 'GANerAid', 'study_var': 'ganeraid_study', 'model_name': 'ganeraid', 'section': '4.4.1', 'dir_name': 'GANERAID'},
+        {'name': 'CopulaGAN', 'study_var': 'copulagan_study', 'model_name': 'copulagan', 'section': '4.5.1', 'dir_name': 'COPULAGAN'},
+        {'name': 'TVAE', 'study_var': 'tvae_study', 'model_name': 'tvae', 'section': '4.6.1', 'dir_name': 'TVAE'}
     ]
     
     analysis_results = {}
@@ -426,6 +434,7 @@ def evaluate_hyperparameter_optimization_results(section_number=4, scope=None, t
         study_var = config['study_var']
         model_key = config['model_name']
         section = config['section']
+        dir_name = config['dir_name']
         
         print(f"\n🔍 {section}: {model_name} Hyperparameter Optimization Analysis")
         print("-" * 60)
@@ -437,12 +446,17 @@ def evaluate_hyperparameter_optimization_results(section_number=4, scope=None, t
                 
                 print(f"✅ {model_name} optimization study found")
                 
-                # Run hyperparameter analysis with file export
+                # Create model-specific subdirectory (matching Section 3 structure)
+                model_results_dir = f"{base_results_dir}/{dir_name}"
+                os.makedirs(model_results_dir, exist_ok=True)
+                print(f"📁 Model directory: {model_results_dir}")
+                
+                # Run hyperparameter analysis with model-specific directory
                 analysis_result = analyze_hyperparameter_optimization(
                     study_results=study_results,
                     model_name=model_key,
                     target_column=target_column,
-                    results_dir=results_dir,
+                    results_dir=model_results_dir,  # Use model-specific directory
                     export_figures=True,  # Export all figures to files
                     export_tables=True,   # Export all tables to CSV
                     display_plots=False   # Don't display inline - save to files only
@@ -466,7 +480,7 @@ def evaluate_hyperparameter_optimization_results(section_number=4, scope=None, t
                         'study_variable': study_var
                     })
                     
-                    print(f"✅ {model_name} analysis completed - files exported to {results_dir}")
+                    print(f"✅ {model_name} analysis completed - files exported to {model_results_dir}")
                     
             else:
                 print(f"⚠️  {model_name} optimization study not found (variable: {study_var})")
@@ -496,8 +510,8 @@ def evaluate_hyperparameter_optimization_results(section_number=4, scope=None, t
         print("📋 OPTIMIZATION RESULTS SUMMARY:")
         print(summary_df.to_string(index=False))
         
-        # Export summary to CSV
-        summary_file = f"{results_dir}/hyperparameter_optimization_summary.csv"
+        # Export summary to CSV in base results directory
+        summary_file = f"{base_results_dir}/hyperparameter_optimization_summary.csv"
         os.makedirs(os.path.dirname(summary_file), exist_ok=True)
         summary_df.to_csv(summary_file, index=False)
         print(f"\n💾 Summary exported to: {summary_file}")
@@ -516,12 +530,13 @@ def evaluate_hyperparameter_optimization_results(section_number=4, scope=None, t
         print("   Run hyperparameter optimization first (CHUNK_040, CHUNK_042, etc.)")
     
     print(f"\n✅ Section {section_number} hyperparameter optimization batch analysis completed!")
-    print(f"📁 All figures and tables exported to: {results_dir}")
+    print(f"📁 All figures and tables exported to: {base_results_dir}")
+    print(f"📊 Model-specific results in subdirectories: {[config['dir_name'] for config in model_configs]}")
     
     return {
         'analysis_results': analysis_results,
         'summary_data': summary_data,
-        'results_dir': results_dir
+        'results_dir': base_results_dir
     }
 
 # ============================================================================
