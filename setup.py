@@ -93,6 +93,9 @@ try:
         class CTABGANSynthesizer:
             def __init__(self, *args, **kwargs):
                 raise ImportError("CTAB-GAN not available")
+        CTABGAN_AVAILABLE = False
+    else:
+        CTABGAN_AVAILABLE = True
 
 except Exception as e:
     print(f"ERROR importing CTAB-GAN: {e}")
@@ -100,6 +103,59 @@ except Exception as e:
     class CTABGANSynthesizer:
         def __init__(self, *args, **kwargs):
             raise ImportError(f"CTAB-GAN import failed: {e}")
+    CTABGAN_AVAILABLE = False
+
+# Code Chunk ID: CHUNK_001B - CTAB-GAN+ Availability Check
+try:
+    # Try to import CTAB-GAN+ - it's in CTAB-GAN-Plus directory with model/ctabgan.py
+    import sys
+    sys.path.append('./CTAB-GAN-Plus')
+    from model.ctabgan import CTABGAN
+    CTABGANPLUS_AVAILABLE = True
+    print("✅ CTAB-GAN+ detected and available")
+except ImportError:
+    CTABGANPLUS_AVAILABLE = False
+    print("⚠️ CTAB-GAN+ not available - falling back to regular CTAB-GAN")
+
+# Code Chunk ID: CHUNK_001C - GANerAid Import and Availability Check
+try:
+    # Try to import GANerAid from various possible locations
+    ganeraid_import_successful = False
+    
+    # Method 1: Try from src.models.implementations
+    try:
+        from src.models.implementations.ganeraid_model import GANerAidModel
+        print("✅ GANerAidModel imported successfully from src.models.implementations")
+        ganeraid_import_successful = True
+    except ImportError:
+        pass
+    
+    # Method 2: Try direct import (if available in path)
+    if not ganeraid_import_successful:
+        try:
+            from ganeraid_model import GANerAidModel
+            print("✅ GANerAidModel imported successfully (direct import)")
+            ganeraid_import_successful = True
+        except ImportError:
+            pass
+    
+    if not ganeraid_import_successful:
+        print("⚠️ GANerAidModel not available - creating placeholder")
+        # Create a dummy class to prevent import errors
+        class GANerAidModel:
+            def __init__(self, *args, **kwargs):
+                raise ImportError("GANerAid not available")
+        GANERAID_AVAILABLE = False
+    else:
+        GANERAID_AVAILABLE = True
+
+except Exception as e:
+    print(f"ERROR importing GANerAid: {e}")
+    # Create a dummy class to prevent import errors
+    class GANerAidModel:
+        def __init__(self, *args, **kwargs):
+            raise ImportError(f"GANerAid import failed: {e}")
+    GANERAID_AVAILABLE = False
 
 # Code Chunk ID: CHUNK_002 - CTABGANModel Class
 class CTABGANModel:
@@ -111,16 +167,25 @@ class CTABGANModel:
     def fit(self, data, categorical_columns=None, target_column=None):
         """Train CTAB-GAN model"""
         try:
-            # Initialize CTAB-GAN with enhanced parameters
+            # Check if CTAB-GAN is actually available
+            if not CTABGAN_AVAILABLE:
+                raise ImportError("CTAB-GAN is not available in this environment")
+            
+            # Store column names for later use in generate()
+            self.column_names = list(data.columns)
+            
+            # Initialize CTAB-GAN with basic parameters only
             self.model = CTABGANSynthesizer(
                 epochs=self.epochs,
-                batch_size=self.batch_size,
-                categorical_columns=categorical_columns or []
+                batch_size=self.batch_size
             )
             
-            # Train the model
+            # Train the model (categorical_columns passed to fit, not init)
             print(f"Training CTAB-GAN for {self.epochs} epochs...")
-            self.model.fit(data)
+            if categorical_columns:
+                self.model.fit(data, categorical_columns=categorical_columns)
+            else:
+                self.model.fit(data)
             print("✅ CTAB-GAN training completed successfully")
             
         except Exception as e:
@@ -135,6 +200,17 @@ class CTABGANModel:
         try:
             synthetic_data = self.model.sample(n_samples)
             print(f"✅ Generated {len(synthetic_data)} synthetic samples")
+            
+            # Convert to DataFrame if it's a numpy array
+            if hasattr(synthetic_data, 'shape') and not hasattr(synthetic_data, 'columns'):
+                # It's a numpy array, convert to DataFrame
+                if hasattr(self, 'column_names'):
+                    synthetic_data = pd.DataFrame(synthetic_data, columns=self.column_names)
+                else:
+                    # Generate generic column names
+                    synthetic_data = pd.DataFrame(synthetic_data, columns=[f'feature_{i}' for i in range(synthetic_data.shape[1])])
+                    print("⚠️ Using generic column names - original column names not preserved")
+            
             return synthetic_data
         except Exception as e:
             print(f"❌ CTAB-GAN generation failed: {e}")
@@ -147,14 +223,19 @@ class CTABGANPlusModel:
         self.batch_size = batch_size
         self.model = None
         self.has_plus_features = False
+        self.temp_csv_path = None
+        self.original_data = None
         
     def _check_plus_features(self):
         """Check if CTAB-GAN+ features are available"""
         try:
-            # Try to import CTAB-GAN+ specific modules
-            from model.ctabganplus import CTABGANPlusSynthesizer
+            # Try to import CTAB-GAN+ - correct path and class name
+            import sys
+            if './CTAB-GAN-Plus' not in sys.path:
+                sys.path.append('./CTAB-GAN-Plus')
+            from model.ctabgan import CTABGAN
             self.has_plus_features = True
-            return CTABGANPlusSynthesizer
+            return CTABGAN
         except ImportError:
             print("WARNING: CTAB-GAN+ features not available, falling back to regular CTAB-GAN parameters")
             self.has_plus_features = False
@@ -164,31 +245,72 @@ class CTABGANPlusModel:
         """Train CTAB-GAN+ model with enhanced features"""
         try:
             # Check for CTAB-GAN+ availability
-            SynthesizerClass = self._check_plus_features()
+            CTABGANClass = self._check_plus_features()
             
-            # Enhanced parameters for CTAB-GAN+
-            params = {
-                'epochs': self.epochs,
-                'batch_size': self.batch_size,
-                'categorical_columns': categorical_columns or []
-            }
-            
-            # Add CTAB-GAN+ specific parameters if available
             if self.has_plus_features:
-                params.update({
-                    'privacy_budget': 1.0,  # Differential privacy budget
-                    'target_column': target_column,
-                    'enhanced_conditioning': True
-                })
-            
-            # Initialize and train
-            self.model = SynthesizerClass(**params)
-            print(f"Training CTAB-GAN{'+ (Enhanced)' if self.has_plus_features else ''} for {self.epochs} epochs...")
-            self.model.fit(data)
-            print("✅ CTAB-GAN+ training completed successfully")
+                # CTAB-GAN+ requires CSV file, so save DataFrame to temp file
+                import tempfile
+                import os
+                
+                # Store original data for later reference
+                self.original_data = data.copy()
+                
+                # Create temporary CSV file
+                temp_dir = tempfile.mkdtemp()
+                self.temp_csv_path = os.path.join(temp_dir, "temp_data.csv")
+                data.to_csv(self.temp_csv_path, index=False)
+                
+                # Automatically detect categorical columns if not provided
+                if categorical_columns is None:
+                    categorical_columns = data.select_dtypes(include=['object', 'category']).columns.tolist()
+                
+                # Automatically detect integer columns
+                integer_columns = data.select_dtypes(include=['int64', 'int32']).columns.tolist()
+                
+                # Determine problem type (using main branch logic)
+                if target_column and target_column in data.columns:
+                    target_col = target_column
+                else:
+                    target_col = data.columns[-1]  # Assume last column is target (main branch approach)
+                
+                # Smart problem_type logic from main branch
+                if data[target_col].nunique() <= 10:
+                    problem_type = {"Classification": target_col}
+                    print(f"🎯 Using Classification with target: {target_col} ({data[target_col].nunique()} unique values)")
+                else:
+                    problem_type = {None: None}  # Avoid stratification issues for continuous targets
+                    print(f"🎯 Using regression mode (target has {data[target_col].nunique()} unique values)")
+                
+                # Use default test_ratio since stratification is handled by problem_type logic
+                test_ratio = 0.20
+                
+                # Initialize CTAB-GAN+ with proper parameters
+                self.model = CTABGANClass(
+                    raw_csv_path=self.temp_csv_path,
+                    categorical_columns=categorical_columns,
+                    integer_columns=integer_columns,
+                    problem_type=problem_type,
+                    test_ratio=test_ratio
+                )
+                
+                print(f"Training CTAB-GAN+ (Enhanced) for {self.epochs} epochs...")
+                self.model.fit()
+                print("✅ CTAB-GAN+ training completed successfully")
+                
+            else:
+                # Fallback to regular CTAB-GAN
+                self.model = CTABGANClass(
+                    epochs=self.epochs,
+                    batch_size=self.batch_size
+                )
+                self.model.fit(data, categorical_columns=categorical_columns)
+                print("✅ CTAB-GAN (fallback) training completed successfully")
             
         except Exception as e:
             print(f"❌ CTAB-GAN+ training failed: {e}")
+            # Clean up temp file on error
+            if self.temp_csv_path and os.path.exists(self.temp_csv_path):
+                os.remove(self.temp_csv_path)
             raise
     
     def generate(self, n_samples):
@@ -197,11 +319,34 @@ class CTABGANPlusModel:
             raise ValueError("Model must be fitted before generating samples")
         
         try:
-            synthetic_data = self.model.sample(n_samples)
-            print(f"✅ Generated {len(synthetic_data)} synthetic samples using CTAB-GAN{'+ (Enhanced)' if self.has_plus_features else ''}")
+            if self.has_plus_features:
+                # CTAB-GAN+ generates all samples at once
+                synthetic_data = self.model.generate_samples()
+                
+                # If we need fewer samples, take a random subset
+                if len(synthetic_data) > n_samples:
+                    synthetic_data = synthetic_data.sample(n=n_samples, random_state=42).reset_index(drop=True)
+                elif len(synthetic_data) < n_samples:
+                    # If we need more samples, repeat the generation or duplicate existing
+                    print(f"⚠️ CTAB-GAN+ generated {len(synthetic_data)} samples, requested {n_samples}")
+                
+            else:
+                # Use regular CTAB-GAN generation
+                synthetic_data = self.model.sample(n_samples)
+            
+            print(f"✅ Generated {len(synthetic_data)} synthetic samples using CTAB-GAN+")
+            
+            # Clean up temp file after successful generation
+            if self.temp_csv_path and os.path.exists(self.temp_csv_path):
+                os.remove(self.temp_csv_path)
+                
             return synthetic_data
+            
         except Exception as e:
             print(f"❌ CTAB-GAN+ generation failed: {e}")
+            # Clean up temp file on error
+            if self.temp_csv_path and os.path.exists(self.temp_csv_path):
+                os.remove(self.temp_csv_path)
             raise
 
 # Code Chunk ID: CHUNK_004 - Required Libraries Import

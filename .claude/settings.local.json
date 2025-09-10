@@ -4,7 +4,10 @@
       "Bash(git clean:*)",
       "Bash(python:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(sed:*)",
+      "Bash(git clone:*)",
+      "Bash(git stash:*)"
     ],
     "deny": [],
     "ask": []
