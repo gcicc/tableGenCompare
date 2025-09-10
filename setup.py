@@ -397,8 +397,8 @@ def evaluate_hyperparameter_optimization_results(section_number=4, scope=None, t
     if target_column is None and 'TARGET_COLUMN' in scope:
         target_column = scope['TARGET_COLUMN']
     
-    # Get dataset identifier the same way as Section 3 batch evaluation
-    dataset_id = scope.get('DATASET_IDENTIFIER', 'unknown-dataset')
+    # Get dataset identifier directly from setup module (same as Section 2 & 3 pattern)
+    dataset_id = DATASET_IDENTIFIER or 'unknown-dataset'
     
     # Get base results directory for Section 4
     base_results_dir = get_results_path(dataset_id, section_number)
