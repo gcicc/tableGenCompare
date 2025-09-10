@@ -1416,14 +1416,13 @@ def analyze_hyperparameter_optimization(study_results, model_name,
         else:
             return param_data
     
-    # Enhanced Setup with Model-Specific Subdirectories (Following Section 3 Pattern)
+    # Enhanced Setup - Use provided results_dir directly (batch function provides model-specific directory)
     if results_dir is None:
-        base_results_dir = Path('./results')
-    else:
-        base_results_dir = Path(results_dir)
+        results_dir = Path('./results')
+    elif isinstance(results_dir, str):
+        results_dir = Path(results_dir)
+    # If results_dir is already a Path object, use it directly
     
-    # Use the provided results_dir directly (batch function provides model-specific directory)
-    results_dir = base_results_dir
     results_dir.mkdir(parents=True, exist_ok=True)
     
     print(f"🔍 ANALYZING {model_name.upper()} HYPERPARAMETER OPTIMIZATION")
