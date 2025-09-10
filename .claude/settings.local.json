@@ -9,7 +9,10 @@
       "Bash(git clone:*)",
       "Bash(git stash:*)",
       "Bash(git checkout:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(git push:*)",
+      "Bash(find:*)",
+      "Bash(rg:*)"
     ],
     "deny": [],
     "ask": []
