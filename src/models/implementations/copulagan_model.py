@@ -278,29 +278,47 @@ class CopulaGANModel(SyntheticDataModel):
             model_params['epochs'] = kwargs.get('epochs', self.model_config.get('epochs', epochs))
             model_params['batch_size'] = kwargs.get('batch_size', self.model_config.get('batch_size', batch_size))
             
-            # Learning rates
-            if 'generator_lr' in self.model_config:
-                model_params['generator_lr'] = self.model_config['generator_lr']
-            if 'discriminator_lr' in self.model_config:
-                model_params['discriminator_lr'] = self.model_config['discriminator_lr']
+            # Learning rates - check kwargs first, then model_config
+            model_params['generator_lr'] = kwargs.get('generator_lr', self.model_config.get('generator_lr'))
+            model_params['discriminator_lr'] = kwargs.get('discriminator_lr', self.model_config.get('discriminator_lr'))
             
-            # Network dimensions
-            if 'generator_dim' in self.model_config:
-                model_params['generator_dim'] = self.model_config['generator_dim']
-            if 'discriminator_dim' in self.model_config:
-                model_params['discriminator_dim'] = self.model_config['discriminator_dim']
+            # Network dimensions - check kwargs first, then model_config  
+            model_params['generator_dim'] = kwargs.get('generator_dim', self.model_config.get('generator_dim'))
+            model_params['discriminator_dim'] = kwargs.get('discriminator_dim', self.model_config.get('discriminator_dim'))
             
-            # Additional parameters
-            for param in ['pac', 'generator_decay', 'discriminator_decay']:
-                if param in self.model_config:
-                    model_params[param] = self.model_config[param]
+            # Additional parameters - check kwargs first, then model_config
+            for param in ['pac', 'generator_decay', 'discriminator_decay', 'verbose']:
+                value = kwargs.get(param, self.model_config.get(param))
+                if value is not None:
+                    model_params[param] = value
             
-            # Create CopulaGAN model
+            # Create CopulaGAN model with stable configuration
+            copula_params = {}
+            
+            # Ensure batch_size is divisible by pac to avoid assertion errors
+            batch_size = model_params.get('batch_size', 500)
+            pac = model_params.get('pac', 10)
+            
+            # Adjust batch_size to be divisible by pac
+            if batch_size % pac != 0:
+                adjusted_batch_size = ((batch_size // pac) + 1) * pac
+                logger.warning(f"Adjusting batch_size from {batch_size} to {adjusted_batch_size} to be divisible by pac={pac}")
+                copula_params['batch_size'] = adjusted_batch_size
+            else:
+                copula_params['batch_size'] = batch_size
+            
+            copula_params['pac'] = pac
+            
+            # Add other parameters
+            for param in ['epochs', 'generator_lr', 'discriminator_lr', 'generator_dim', 'discriminator_dim', 'generator_decay', 'discriminator_decay']:
+                if param in model_params:
+                    copula_params[param] = model_params[param]
+            
             self._copulagan_model = CopulaGANSynthesizer(
                 metadata=self._metadata,
                 enforce_min_max_values=True,
                 enforce_rounding=True,
-                **model_params
+                **copula_params
             )
             
             if verbose:
