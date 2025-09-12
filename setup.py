@@ -26,6 +26,32 @@ def get_results_path(dataset_identifier, section_number):
 DATASET_IDENTIFIER = None
 CURRENT_DATA_FILE = None
 
+# ============================================================================
+# ESSENTIAL IMPORTS - Available globally when using 'from setup import *'
+# ============================================================================
+# Core data science libraries needed by CHUNK_005 and other notebook chunks
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from scipy import stats
+from scipy.spatial.distance import jensenshannon
+from scipy.stats import wasserstein_distance
+
+# Core ML/preprocessing libraries
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.decomposition import PCA
+
+# Utility libraries
+import warnings
+warnings.filterwarnings('ignore')
+
+print("📊 Essential data science libraries imported successfully!")
+
 # Code Chunk ID: CHUNK_001 - CTAB-GAN Import and Compatibility
 # Import CTAB-GAN - try multiple installation paths with sklearn compatibility fix
 import sys
