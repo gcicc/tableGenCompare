@@ -12,10 +12,8 @@ print(f"Session timestamp captured: {SESSION_TIMESTAMP}")
 def extract_dataset_identifier(data_file_path):
     """Extract dataset identifier from file path or filename"""
     if isinstance(data_file_path, str):
-        # Extract filename without extension
         filename = os.path.basename(data_file_path)
         dataset_id = os.path.splitext(filename)[0].lower()
-        # Clean up common dataset naming patterns
         dataset_id = dataset_id.replace('_', '-').replace(' ', '-')
         return dataset_id
     return "unknown-dataset"
@@ -32,20 +30,16 @@ CURRENT_DATA_FILE = None
 # Import CTAB-GAN - try multiple installation paths with sklearn compatibility fix
 import sys
 import warnings
-import importlib.util
 
 # First, apply sklearn compatibility patch
 try:
     import sklearn
     print(f"Detected sklearn {sklearn.__version__} - applying compatibility patch...")
     
-    # Patch for sklearn 1.0+ compatibility
     from sklearn.mixture import GaussianMixture
     if not hasattr(GaussianMixture, 'n_components'):
-        # This shouldn't happen in modern sklearn, but keeping for safety
         print("WARNING: Unexpected sklearn version behavior detected")
     
-    # Import warnings to suppress sklearn deprecation warnings during CTAB-GAN import
     warnings.filterwarnings("ignore", category=FutureWarning)
     warnings.filterwarnings("ignore", category=DeprecationWarning)
     
@@ -59,7 +53,6 @@ try:
     # Try importing from various possible locations
     import_successful = False
     
-    # Method 1: Try standard import
     try:
         from model.ctabgan import CTABGANSynthesizer
         print("CTAB-GAN imported successfully")
@@ -67,7 +60,6 @@ try:
     except ImportError:
         pass
     
-    # Method 2: Try from CTAB-GAN directory 
     if not import_successful:
         try:
             sys.path.append('./CTAB-GAN')
@@ -77,7 +69,6 @@ try:
         except ImportError:
             pass
     
-    # Method 3: Try from current directory
     if not import_successful:
         try:
             sys.path.append('.')
@@ -89,7 +80,7 @@ try:
     
     if not import_successful:
         print("WARNING: Could not import CTAB-GAN. Please ensure it's properly installed.")
-        # Create a dummy class to prevent import errors
+        # Dummy class fallback
         class CTABGANSynthesizer:
             def __init__(self, *args, **kwargs):
                 raise ImportError("CTAB-GAN not available")
@@ -112,10 +103,10 @@ try:
     sys.path.append('./CTAB-GAN-Plus')
     from model.ctabgan import CTABGAN
     CTABGANPLUS_AVAILABLE = True
-    print("✅ CTAB-GAN+ detected and available")
+    print("[OK] CTAB-GAN+ detected and available")
 except ImportError:
     CTABGANPLUS_AVAILABLE = False
-    print("⚠️ CTAB-GAN+ not available - falling back to regular CTAB-GAN")
+    print("[WARNING] CTAB-GAN+ not available - falling back to regular CTAB-GAN")
 
 # Code Chunk ID: CHUNK_001C - GANerAid Import and Availability Check
 try:
@@ -125,7 +116,7 @@ try:
     # Method 1: Try from src.models.implementations
     try:
         from src.models.implementations.ganeraid_model import GANerAidModel
-        print("✅ GANerAidModel imported successfully from src.models.implementations")
+        print("[OK] GANerAidModel imported successfully from src.models.implementations")
         ganeraid_import_successful = True
     except ImportError:
         pass
@@ -134,14 +125,14 @@ try:
     if not ganeraid_import_successful:
         try:
             from ganeraid_model import GANerAidModel
-            print("✅ GANerAidModel imported successfully (direct import)")
+            print("[OK] GANerAidModel imported successfully (direct import)")
             ganeraid_import_successful = True
         except ImportError:
             pass
     
     if not ganeraid_import_successful:
-        print("⚠️ GANerAidModel not available - creating placeholder")
-        # Create a dummy class to prevent import errors
+        print("[WARNING] GANerAidModel not available - creating placeholder")
+        # Dummy class fallback
         class GANerAidModel:
             def __init__(self, *args, **kwargs):
                 raise ImportError("GANerAid not available")
@@ -186,10 +177,10 @@ class CTABGANModel:
                 self.model.fit(data, categorical_columns=categorical_columns)
             else:
                 self.model.fit(data)
-            print("✅ CTAB-GAN training completed successfully")
+            print("[OK] CTAB-GAN training completed successfully")
             
         except Exception as e:
-            print(f"❌ CTAB-GAN training failed: {e}")
+            print(f"[ERROR] CTAB-GAN training failed: {e}")
             raise
     
     def generate(self, n_samples):
@@ -199,7 +190,7 @@ class CTABGANModel:
         
         try:
             synthetic_data = self.model.sample(n_samples)
-            print(f"✅ Generated {len(synthetic_data)} synthetic samples")
+            print(f"[OK] Generated {len(synthetic_data)} synthetic samples")
             
             # Convert to DataFrame if it's a numpy array
             if hasattr(synthetic_data, 'shape') and not hasattr(synthetic_data, 'columns'):
@@ -209,11 +200,11 @@ class CTABGANModel:
                 else:
                     # Generate generic column names
                     synthetic_data = pd.DataFrame(synthetic_data, columns=[f'feature_{i}' for i in range(synthetic_data.shape[1])])
-                    print("⚠️ Using generic column names - original column names not preserved")
+                    print("[WARNING] Using generic column names - original column names not preserved")
             
             return synthetic_data
         except Exception as e:
-            print(f"❌ CTAB-GAN generation failed: {e}")
+            print(f"[ERROR] CTAB-GAN generation failed: {e}")
             raise
 
 # Code Chunk ID: CHUNK_003 - CTABGANPlusModel Class  
@@ -276,10 +267,10 @@ class CTABGANPlusModel:
                 # Smart problem_type logic from main branch
                 if data[target_col].nunique() <= 10:
                     problem_type = {"Classification": target_col}
-                    print(f"🎯 Using Classification with target: {target_col} ({data[target_col].nunique()} unique values)")
+                    print(f"[TARGET] Using Classification with target: {target_col} ({data[target_col].nunique()} unique values)")
                 else:
                     problem_type = {None: None}  # Avoid stratification issues for continuous targets
-                    print(f"🎯 Using regression mode (target has {data[target_col].nunique()} unique values)")
+                    print(f"[TARGET] Using regression mode (target has {data[target_col].nunique()} unique values)")
                 
                 # Use default test_ratio since stratification is handled by problem_type logic
                 test_ratio = 0.20
@@ -295,7 +286,7 @@ class CTABGANPlusModel:
                 
                 print(f"Training CTAB-GAN+ (Enhanced) for {self.epochs} epochs...")
                 self.model.fit()
-                print("✅ CTAB-GAN+ training completed successfully")
+                print("[OK] CTAB-GAN+ training completed successfully")
                 
             else:
                 # Fallback to regular CTAB-GAN
@@ -304,10 +295,10 @@ class CTABGANPlusModel:
                     batch_size=self.batch_size
                 )
                 self.model.fit(data, categorical_columns=categorical_columns)
-                print("✅ CTAB-GAN (fallback) training completed successfully")
+                print("[OK] CTAB-GAN (fallback) training completed successfully")
             
         except Exception as e:
-            print(f"❌ CTAB-GAN+ training failed: {e}")
+            print(f"[ERROR] CTAB-GAN+ training failed: {e}")
             # Clean up temp file on error
             if self.temp_csv_path and os.path.exists(self.temp_csv_path):
                 os.remove(self.temp_csv_path)
@@ -328,13 +319,13 @@ class CTABGANPlusModel:
                     synthetic_data = synthetic_data.sample(n=n_samples, random_state=42).reset_index(drop=True)
                 elif len(synthetic_data) < n_samples:
                     # If we need more samples, repeat the generation or duplicate existing
-                    print(f"⚠️ CTAB-GAN+ generated {len(synthetic_data)} samples, requested {n_samples}")
+                    print(f"[WARNING] CTAB-GAN+ generated {len(synthetic_data)} samples, requested {n_samples}")
                 
             else:
                 # Use regular CTAB-GAN generation
                 synthetic_data = self.model.sample(n_samples)
             
-            print(f"✅ Generated {len(synthetic_data)} synthetic samples using CTAB-GAN+")
+            print(f"[OK] Generated {len(synthetic_data)} synthetic samples using CTAB-GAN+")
             
             # Clean up temp file after successful generation
             if self.temp_csv_path and os.path.exists(self.temp_csv_path):
@@ -343,7 +334,7 @@ class CTABGANPlusModel:
             return synthetic_data
             
         except Exception as e:
-            print(f"❌ CTAB-GAN+ generation failed: {e}")
+            print(f"[ERROR] CTAB-GAN+ generation failed: {e}")
             # Clean up temp file on error
             if self.temp_csv_path and os.path.exists(self.temp_csv_path):
                 os.remove(self.temp_csv_path)
@@ -366,13 +357,11 @@ warnings.filterwarnings('ignore')
 plt.style.use('default')
 sns.set_palette("husl")
 
-print("✅ All required libraries imported successfully")
+print("[OK] All required libraries imported successfully")
 
 # Code Chunk ID: CHUNK_017 - Comprehensive Data Quality Evaluation Function
-# ============================================================================
 # COMPREHENSIVE DATA QUALITY EVALUATION FUNCTION
 # CRITICAL: Must be defined before Section 3.1 calls
-# ============================================================================
 
 def evaluate_hyperparameter_optimization_results(section_number=4, scope=None, target_column=None):
     """
@@ -403,28 +392,28 @@ def evaluate_hyperparameter_optimization_results(section_number=4, scope=None, t
     # First try: scope (notebook globals) - this is what works for Section 2 & 3  
     if 'DATASET_IDENTIFIER' in scope and scope['DATASET_IDENTIFIER']:
         dataset_id = scope['DATASET_IDENTIFIER']
-        print(f"📍 Using DATASET_IDENTIFIER from scope: {dataset_id}")
+        print(f"[LOCATION] Using DATASET_IDENTIFIER from scope: {dataset_id}")
     
     # Second try: setup module global variable
     elif DATASET_IDENTIFIER:
         dataset_id = DATASET_IDENTIFIER  
-        print(f"📍 Using DATASET_IDENTIFIER from setup module: {dataset_id}")
+        print(f"[LOCATION] Using DATASET_IDENTIFIER from setup module: {dataset_id}")
     
     # Fallback: extract from any available data files in scope
     else:
-        print("⚠️  DATASET_IDENTIFIER not found! Attempting extraction from scope...")
+        print("[WARNING]  DATASET_IDENTIFIER not found! Attempting extraction from scope...")
         # Look for common data file variables in notebook scope
         for var_name in ['data_file', 'DATA_FILE', 'current_data_file']:
             if var_name in scope and scope[var_name]:
                 dataset_id = extract_dataset_identifier(scope[var_name])
-                print(f"📍 Extracted DATASET_IDENTIFIER from {var_name}: {dataset_id}")
+                print(f"[LOCATION] Extracted DATASET_IDENTIFIER from {var_name}: {dataset_id}")
                 break
         
         if not dataset_id:
             dataset_id = 'unknown-dataset'
-            print(f"⚠️  Using fallback DATASET_IDENTIFIER: {dataset_id}")
+            print(f"[WARNING]  Using fallback DATASET_IDENTIFIER: {dataset_id}")
     
-    print(f"🎯 Final DATASET_IDENTIFIER for Section {section_number}: {dataset_id}")
+    print(f"[TARGET] Final DATASET_IDENTIFIER for Section {section_number}: {dataset_id}")
     
     # Get base results directory for Section 4
     base_results_dir = get_results_path(dataset_id, section_number)
@@ -432,9 +421,9 @@ def evaluate_hyperparameter_optimization_results(section_number=4, scope=None, t
     print(f"\n{'='*80}")
     print(f"SECTION {section_number} - HYPERPARAMETER OPTIMIZATION BATCH ANALYSIS")
     print(f"{'='*80}")
-    print(f"📁 Base results directory: {base_results_dir}")
-    print(f"🎯 Target column: {target_column}")
-    print(f"📊 Dataset identifier: {dataset_id}")
+    print(f"[FOLDER] Base results directory: {base_results_dir}")
+    print(f"[TARGET] Target column: {target_column}")
+    print(f"[CHART] Dataset identifier: {dataset_id}")
     print()
     
     # Define model configurations with directory names for 1:1 correspondence with Section 3
@@ -458,7 +447,7 @@ def evaluate_hyperparameter_optimization_results(section_number=4, scope=None, t
         section = config['section']
         dir_name = config['dir_name']
         
-        print(f"\n🔍 {section}: {model_name} Hyperparameter Optimization Analysis")
+        print(f"\n[SEARCH] {section}: {model_name} Hyperparameter Optimization Analysis")
         print("-" * 60)
         
         try:
@@ -466,12 +455,12 @@ def evaluate_hyperparameter_optimization_results(section_number=4, scope=None, t
             if study_var in scope and scope[study_var] is not None:
                 study_results = scope[study_var]
                 
-                print(f"✅ {model_name} optimization study found")
+                print(f"[OK] {model_name} optimization study found")
                 
                 # Create model-specific subdirectory (matching Section 3 structure)
                 model_results_dir = f"{base_results_dir}/{dir_name}"
                 os.makedirs(model_results_dir, exist_ok=True)
-                print(f"📁 Model directory: {model_results_dir}")
+                print(f"[FOLDER] Model directory: {model_results_dir}")
                 
                 # Run hyperparameter analysis with model-specific directory
                 analysis_result = analyze_hyperparameter_optimization(
@@ -502,15 +491,15 @@ def evaluate_hyperparameter_optimization_results(section_number=4, scope=None, t
                         'study_variable': study_var
                     })
                     
-                    print(f"✅ {model_name} analysis completed - files exported to {model_results_dir}")
+                    print(f"[OK] {model_name} analysis completed - files exported to {model_results_dir}")
                     
             else:
-                print(f"⚠️  {model_name} optimization study not found (variable: {study_var})")
+                print(f"[WARNING]  {model_name} optimization study not found (variable: {study_var})")
                 print(f"   Skipping {model_name} analysis")
                 
         except Exception as e:
-            print(f"❌ {model_name} analysis failed: {str(e)}")
-            print(f"🔍 Error details: {type(e).__name__}")
+            print(f"[ERROR] {model_name} analysis failed: {str(e)}")
+            print(f"[SEARCH] Error details: {type(e).__name__}")
             import traceback
             traceback.print_exc()
             continue
@@ -523,37 +512,37 @@ def evaluate_hyperparameter_optimization_results(section_number=4, scope=None, t
     if summary_data:
         summary_df = pd.DataFrame(summary_data)
         
-        print(f"📊 Models analyzed: {len(summary_data)}")
-        print(f"📈 Total optimization trials: {summary_df['total_trials'].sum()}")
-        print(f"✅ Successful trials: {summary_df['completed_trials'].sum()}")
+        print(f"[CHART] Models analyzed: {len(summary_data)}")
+        print(f"[STATS] Total optimization trials: {summary_df['total_trials'].sum()}")
+        print(f"[OK] Successful trials: {summary_df['completed_trials'].sum()}")
         print()
         
         # Display summary table
-        print("📋 OPTIMIZATION RESULTS SUMMARY:")
+        print("[INFO] OPTIMIZATION RESULTS SUMMARY:")
         print(summary_df.to_string(index=False))
         
         # Export summary to CSV in base results directory
         summary_file = f"{base_results_dir}/hyperparameter_optimization_summary.csv"
         os.makedirs(os.path.dirname(summary_file), exist_ok=True)
         summary_df.to_csv(summary_file, index=False)
-        print(f"\n💾 Summary exported to: {summary_file}")
+        print(f"\n[SAVE] Summary exported to: {summary_file}")
         
         # Find best performing model
         valid_scores = summary_df.dropna(subset=['best_score'])
         if not valid_scores.empty:
             best_model = valid_scores.loc[valid_scores['best_score'].idxmax()]
-            print(f"\n🏆 BEST PERFORMING MODEL: {best_model['model']}")
-            print(f"   • Score: {best_model['best_score']:.4f}")
-            print(f"   • Section: {best_model['section']}")
-            print(f"   • Trials completed: {best_model['completed_trials']}")
+            print(f"\n[BEST] BEST PERFORMING MODEL: {best_model['model']}")
+            print(f"   - Score: {best_model['best_score']:.4f}")
+            print(f"   - Section: {best_model['section']}")
+            print(f"   - Trials completed: {best_model['completed_trials']}")
     
     else:
-        print("⚠️  No optimization results found")
+        print("[WARNING]  No optimization results found")
         print("   Run hyperparameter optimization first (CHUNK_040, CHUNK_042, etc.)")
     
-    print(f"\n✅ Section {section_number} hyperparameter optimization batch analysis completed!")
-    print(f"📁 All figures and tables exported to: {base_results_dir}")
-    print(f"📊 Model-specific results in subdirectories: {[config['dir_name'] for config in model_configs]}")
+    print(f"\n[OK] Section {section_number} hyperparameter optimization batch analysis completed!")
+    print(f"[FOLDER] All figures and tables exported to: {base_results_dir}")
+    print(f"[CHART] Model-specific results in subdirectories: {[config['dir_name'] for config in model_configs]}")
     
     return {
         'analysis_results': analysis_results,
@@ -561,7 +550,6 @@ def evaluate_hyperparameter_optimization_results(section_number=4, scope=None, t
         'results_dir': base_results_dir
     }
 
-# ============================================================================
 
 from scipy import stats
 from scipy.spatial.distance import jensenshannon
@@ -609,10 +597,10 @@ def evaluate_synthetic_data_quality(real_data, synthetic_data, model_name, targe
         results_dir.mkdir(parents=True, exist_ok=True)
     
     if verbose:
-        print(f"🔍 {model_name.upper()} - COMPREHENSIVE DATA QUALITY EVALUATION")
+        print(f"[SEARCH] {model_name.upper()} - COMPREHENSIVE DATA QUALITY EVALUATION")
         print("=" * 60)
         if save_files:
-            print(f"📁 Output directory: {results_dir}")
+            print(f"[FOLDER] Output directory: {results_dir}")
     
     results = {
         'model': model_name,
@@ -628,7 +616,7 @@ def evaluate_synthetic_data_quality(real_data, synthetic_data, model_name, targe
     
     # 1. STATISTICAL SIMILARITY
     if verbose:
-        print("\n1️⃣ STATISTICAL SIMILARITY")
+        print("\n[1] STATISTICAL SIMILARITY")
         print("-" * 30)
     
     stat_results = []
@@ -653,7 +641,7 @@ def evaluate_synthetic_data_quality(real_data, synthetic_data, model_name, targe
             })
         except Exception as e:
             if verbose:
-                print(f"   ⚠️ Error analyzing {col}: {e}")
+                print(f"   [WARNING] Error analyzing {col}: {e}")
     
     if stat_results:
         stat_df = pd.DataFrame(stat_results)
@@ -666,11 +654,11 @@ def evaluate_synthetic_data_quality(real_data, synthetic_data, model_name, targe
             results['files_generated'].append(str(stat_file))
         
         if verbose:
-            print(f"   📊 Average Statistical Similarity: {avg_stat_similarity:.3f}")
+            print(f"   [CHART] Average Statistical Similarity: {avg_stat_similarity:.3f}")
     
     # 2. PCA COMPARISON ANALYSIS WITH OUTCOME VARIABLE COLOR-CODING
     if verbose:
-        print("\n2️⃣ PCA COMPARISON ANALYSIS WITH OUTCOME COLOR-CODING")
+        print("\n[2] PCA COMPARISON ANALYSIS WITH OUTCOME COLOR-CODING")
         print("-" * 50)
     
     pca_results = {}
@@ -757,7 +745,7 @@ def evaluate_synthetic_data_quality(real_data, synthetic_data, model_name, targe
                     plt.savefig(pca_plot_file, dpi=300, bbox_inches='tight')
                     results['files_generated'].append(str(pca_plot_file))
                     if verbose:
-                        print(f"   📊 PCA comparison plot saved: {pca_plot_file.name}")
+                        print(f"   [CHART] PCA comparison plot saved: {pca_plot_file.name}")
                 
                 if display_plots:
                     plt.show()
@@ -765,17 +753,17 @@ def evaluate_synthetic_data_quality(real_data, synthetic_data, model_name, targe
                     plt.close()
             
             if verbose:
-                print(f"   📊 PCA Overall Similarity: {pca_similarity:.3f}")
-                print(f"   📊 Explained Variance (PC1, PC2): {explained_variance_real[0]:.3f}, {explained_variance_real[1]:.3f}")
+                print(f"   [CHART] PCA Overall Similarity: {pca_similarity:.3f}")
+                print(f"   [CHART] Explained Variance (PC1, PC2): {explained_variance_real[0]:.3f}, {explained_variance_real[1]:.3f}")
                 
     except Exception as e:
         if verbose:
-            print(f"   ❌ PCA analysis failed: {e}")
+            print(f"   [ERROR] PCA analysis failed: {e}")
         pca_results = {'error': str(e)}
     
     # 3. DISTRIBUTION SIMILARITY WITH VISUALIZATIONS
     if verbose:
-        print("\n3️⃣ DISTRIBUTION SIMILARITY")
+        print("\n[3] DISTRIBUTION SIMILARITY")
         print("-" * 30)
     
     try:
@@ -846,15 +834,15 @@ def evaluate_synthetic_data_quality(real_data, synthetic_data, model_name, targe
                 results['avg_js_similarity'] = avg_js_similarity
                 
                 if verbose:
-                    print(f"   📊 Average Distribution Similarity: {avg_js_similarity:.3f}")
+                    print(f"   [CHART] Average Distribution Similarity: {avg_js_similarity:.3f}")
     
     except Exception as e:
         if verbose:
-            print(f"   ❌ Distribution analysis failed: {e}")
+            print(f"   [ERROR] Distribution analysis failed: {e}")
     
     # 4. CORRELATION STRUCTURE PRESERVATION
     if verbose:
-        print("\n4️⃣ CORRELATION STRUCTURE")
+        print("\n[4] CORRELATION STRUCTURE")
         print("-" * 30)
     
     try:
@@ -896,17 +884,17 @@ def evaluate_synthetic_data_quality(real_data, synthetic_data, model_name, targe
                 plt.close()
         
         if verbose:
-            print(f"   📊 Correlation Structure Preservation: {corr_preservation:.3f}")
+            print(f"   [CHART] Correlation Structure Preservation: {corr_preservation:.3f}")
             
     except Exception as e:
         if verbose:
-            print(f"   ❌ Correlation analysis failed: {e}")
+            print(f"   [ERROR] Correlation analysis failed: {e}")
         results['correlation_preservation'] = 0
     
     # 5. MACHINE LEARNING UTILITY
     if target_column and target_column in real_data.columns:
         if verbose:
-            print("\n5️⃣ MACHINE LEARNING UTILITY")
+            print("\n[5] MACHINE LEARNING UTILITY")
             print("-" * 30)
         
         try:
@@ -935,13 +923,13 @@ def evaluate_synthetic_data_quality(real_data, synthetic_data, model_name, targe
                 })
                 
                 if verbose:
-                    print(f"   📊 ML Utility (Cross-Accuracy): {ml_utility:.3f}")
-                    print(f"   📊 Real→Synth Accuracy: {synth_test_accuracy:.3f}")
-                    print(f"   📊 Synth→Real Accuracy: {real_test_accuracy:.3f}")
+                    print(f"   [CHART] ML Utility (Cross-Accuracy): {ml_utility:.3f}")
+                    print(f"   [CHART] Real->Synth Accuracy: {synth_test_accuracy:.3f}")
+                    print(f"   [CHART] Synth->Real Accuracy: {real_test_accuracy:.3f}")
             
         except Exception as e:
             if verbose:
-                print(f"   ❌ ML utility analysis failed: {e}")
+                print(f"   [ERROR] ML utility analysis failed: {e}")
     
     # 6. OVERALL QUALITY ASSESSMENT
     quality_scores = []
@@ -990,22 +978,20 @@ def evaluate_synthetic_data_quality(real_data, synthetic_data, model_name, targe
     
     if verbose:
         print("\n" + "=" * 60)
-        print(f"🏆 {model_name.upper()} OVERALL QUALITY SCORE: {overall_quality:.3f}")
-        print(f"📋 Quality Assessment: {quality_label}")
+        print(f"[BEST] {model_name.upper()} OVERALL QUALITY SCORE: {overall_quality:.3f}")
+        print(f"[INFO] Quality Assessment: {quality_label}")
         print("=" * 60)
         
         if save_files:
-            print(f"\n📁 Generated {len(results['files_generated'])} output files:")
+            print(f"\n[FOLDER] Generated {len(results['files_generated'])} output files:")
             for file_path in results['files_generated']:
-                print(f"   • {Path(file_path).name}")
+                print(f"   - {Path(file_path).name}")
     
     return results
 
-print("✅ Comprehensive data quality evaluation function loaded!")
+print("[OK] Comprehensive data quality evaluation function loaded!")
 
-# ============================================================================
 # BATCH EVALUATION SYSTEM FOR ALL SECTIONS
-# ============================================================================
 
 def evaluate_all_available_models(section_number, scope=None, models_to_evaluate=None, real_data=None, target_col=None):
     """
@@ -1047,15 +1033,15 @@ def enhanced_objective_function_v2(real_data, synthetic_data, target_column,
         Combined objective score (higher is better), similarity_score, accuracy_score
     """
     
-    print(f"🎯 Enhanced objective function using target column: '{target_column}'")
+    print(f"[TARGET] Enhanced objective function using target column: '{target_column}'")
     
     # CRITICAL FIX: Validate target column exists in both datasets
     if target_column not in real_data.columns:
-        print(f"❌ Target column '{target_column}' not found in real data columns: {list(real_data.columns)}")
+        print(f"[ERROR] Target column '{target_column}' not found in real data columns: {list(real_data.columns)}")
         return 0.0, 0.0, 0.0
     
     if target_column not in synthetic_data.columns:
-        print(f"❌ Target column '{target_column}' not found in synthetic data columns: {list(synthetic_data.columns)}")
+        print(f"[ERROR] Target column '{target_column}' not found in synthetic data columns: {list(synthetic_data.columns)}")
         return 0.0, 0.0, 0.0
     
     # 1. Similarity Component (60%)
@@ -1072,27 +1058,25 @@ def enhanced_objective_function_v2(real_data, synthetic_data, target_column,
                 
                 # Check for mixed data types in synthetic data
                 if synth_values.dtype == 'object' or synth_values.apply(lambda x: isinstance(x, str)).any():
-                    print(f"⚠️ Warning: {col} in synthetic data contains non-numeric values, attempting to convert...")
                     # Try to convert to numeric, replacing invalid values with NaN
                     synth_values = pd.to_numeric(synth_values, errors='coerce')
                     # Remove NaN values for EMD calculation
                     synth_values = synth_values.dropna()
                     real_values = real_values.dropna()
-                    print(f"✅ Converted {col}: {len(synth_values)} valid numeric values")
                 
                 # Ensure we have enough values for EMD calculation
                 if len(real_values) == 0 or len(synth_values) == 0:
-                    print(f"❌ Skipping {col}: insufficient valid numeric values")
+                    print(f"[ERROR] Skipping {col}: insufficient valid numeric values")
                     continue
                     
                 # Earth Mover's Distance (Wasserstein distance)
                 emd_score = wasserstein_distance(real_values, synth_values)
                 # Convert to similarity (lower EMD = higher similarity)
                 similarity_scores.append(1 / (1 + emd_score))
-                print(f"✅ {col}: EMD={emd_score:.4f}, Similarity={similarity_scores[-1]:.4f}")
+                # Collect similarity scores silently for summary
                 
             except Exception as e:
-                print(f"❌ Error calculating EMD for {col}: {e}")
+                print(f"[ERROR] Error calculating EMD for {col}: {e}")
                 print(f"   Real dtype: {real_data[col].dtype}, Synthetic dtype: {synthetic_data[col].dtype}")
                 continue
     
@@ -1116,25 +1100,29 @@ def enhanced_objective_function_v2(real_data, synthetic_data, target_column,
             # Correlation similarity (1 - distance)
             corr_distance = np.mean(np.abs(real_corr_flat - synth_corr_flat))
             similarity_scores.append(1 - corr_distance)
-            print(f"✅ Correlation similarity: {similarity_scores[-1]:.4f}")
+            # Store correlation similarity silently
         else:
-            print("⚠️ Insufficient valid numeric columns for correlation analysis")
+            print("[WARNING] Insufficient valid numeric columns for correlation analysis")
             
     except Exception as e:
         print(f"Warning: Correlation similarity failed: {e}")
     
     similarity_score = np.mean(similarity_scores) if similarity_scores else 0.5
     
+    # Print consolidated similarity summary
+    if similarity_scores:
+        print(f"[OK] Similarity Analysis: {len(similarity_scores)} metrics, Average: {similarity_score:.4f}")
+    
     # 2. Accuracy Component (40%) - TRTS Framework with DYNAMIC TARGET COLUMN FIX
     accuracy_scores = []
     
     try:
         # CRITICAL FIX: Robust column existence checking
-        print(f"🔧 Preparing TRTS evaluation with target column: '{target_column}'")
+        # Prepare TRTS evaluation silently
         
         # Ensure target column exists before proceeding
         if target_column not in real_data.columns or target_column not in synthetic_data.columns:
-            print(f"❌ Target column '{target_column}' missing. Real cols: {list(real_data.columns)[:5]}...")
+            print(f"[ERROR] Target column '{target_column}' missing. Real cols: {list(real_data.columns)[:5]}...")
             return similarity_score * similarity_weight, similarity_score, 0.0
         
         # Prepare features and target with robust error handling
@@ -1144,38 +1132,32 @@ def enhanced_objective_function_v2(real_data, synthetic_data, target_column,
             X_synth = synthetic_data.drop(columns=[target_column]) 
             y_synth = synthetic_data[target_column]
             
-            print(f"🔧 Data shapes - Real: X{X_real.shape}, y{y_real.shape}, Synthetic: X{X_synth.shape}, y{y_synth.shape}")
+            # Validate data shapes silently
             
         except KeyError as ke:
-            print(f"❌ KeyError in data preparation: {ke}")
+            print(f"[ERROR] KeyError in data preparation: {ke}")
             return similarity_score * similarity_weight, similarity_score, 0.0
         
         # CRITICAL FIX: Ensure consistent label types before any sklearn operations
-        print(f"🔧 Data type check - Real: {y_real.dtype}, Synthetic: {y_synth.dtype}")
-        
         # Convert all labels to same type (prefer numeric if possible)
         if y_real.dtype != y_synth.dtype:
-            print(f"⚠️ Data type mismatch detected - harmonizing types")
             if pd.api.types.is_numeric_dtype(y_real):
                 try:
                     y_synth = pd.to_numeric(y_synth, errors='coerce')
-                    print(f"✅ Converted synthetic labels to numeric")
                 except:
                     y_real = y_real.astype(str)
                     y_synth = y_synth.astype(str)
-                    print(f"✅ Converted both to string type")
             else:
                 y_real = y_real.astype(str)
                 y_synth = y_synth.astype(str)
-                print(f"✅ Converted both to string type")
         
         # Ensure we have matching features between datasets
         common_features = list(set(X_real.columns) & set(X_synth.columns))
         if len(common_features) == 0:
-            print("❌ No common features between real and synthetic data")
+            print("[ERROR] No common features between real and synthetic data")
             return similarity_score * similarity_weight, similarity_score, 0.0
         
-        print(f"🔧 Using {len(common_features)} common features for TRTS evaluation")
+        # Use common features for TRTS evaluation silently
         
         X_real = X_real[common_features]
         X_synth = X_synth[common_features]
@@ -1191,11 +1173,11 @@ def enhanced_objective_function_v2(real_data, synthetic_data, target_column,
                         le = LabelEncoder()
                         X_real[col] = le.fit_transform(X_real[col].astype(str))
                         X_synth[col] = le.transform(X_synth[col].astype(str))
-                        print(f"🔧 Label encoded column: {col}")
+                        print(f"[CONFIG] Label encoded column: {col}")
                     else:
-                        print(f"🔧 Converted to numeric: {col}")
+                        print(f"[CONFIG] Converted to numeric: {col}")
                 except Exception as e:
-                    print(f"⚠️ Could not process column {col}: {e}")
+                    print(f"[WARNING] Could not process column {col}: {e}")
                     # Drop problematic columns
                     X_real = X_real.drop(columns=[col])
                     X_synth = X_synth.drop(columns=[col])
@@ -1208,7 +1190,7 @@ def enhanced_objective_function_v2(real_data, synthetic_data, target_column,
         if X_real.isna().any().any() or X_synth.isna().any().any():
             X_real = X_real.fillna(0)
             X_synth = X_synth.fillna(0)
-            print("⚠️ Used zero-fill for remaining NaN values")
+            print("[WARNING] Used zero-fill for remaining NaN values")
         
         # TRTS: Train on Real, Test on Synthetic (and vice versa)
         from sklearn.model_selection import train_test_split
@@ -1217,7 +1199,7 @@ def enhanced_objective_function_v2(real_data, synthetic_data, target_column,
         
         # Ensure we have sufficient samples
         if len(X_real) < 10 or len(X_synth) < 10:
-            print("⚠️ Insufficient samples for TRTS evaluation")
+            print("[WARNING] Insufficient samples for TRTS evaluation")
             return similarity_score * similarity_weight, similarity_score, 0.5
         
         # TRTS 1: Train on Real, Test on Synthetic
@@ -1227,9 +1209,9 @@ def enhanced_objective_function_v2(real_data, synthetic_data, target_column,
             pred_synth = rf1.predict(X_synth)
             acc1 = accuracy_score(y_synth, pred_synth)
             accuracy_scores.append(acc1)
-            print(f"✅ TRTS (Real→Synthetic): {acc1:.4f}")
+            # Store TRTS result silently
         except Exception as e:
-            print(f"❌ TRTS (Real→Synthetic) failed: {e}")
+            print(f"[ERROR] TRTS (Real->Synthetic) failed: {e}")
         
         # TRTS 2: Train on Synthetic, Test on Real
         try:
@@ -1238,20 +1220,23 @@ def enhanced_objective_function_v2(real_data, synthetic_data, target_column,
             pred_real = rf2.predict(X_real)
             acc2 = accuracy_score(y_real, pred_real)
             accuracy_scores.append(acc2)
-            print(f"✅ TRTS (Synthetic→Real): {acc2:.4f}")
+            print(f"[OK] TRTS (Synthetic->Real): {acc2:.4f}")
         except Exception as e:
-            print(f"❌ TRTS (Synthetic→Real) failed: {e}")
+            print(f"[ERROR] TRTS (Synthetic->Real) failed: {e}")
             
     except Exception as e:
-        print(f"❌ Accuracy evaluation failed: {e}")
+        print(f"[ERROR] Accuracy evaluation failed: {e}")
         import traceback
-        print(f"🔍 Traceback: {traceback.format_exc()}")
+        print(f"[SEARCH] Traceback: {traceback.format_exc()}")
     
     # Calculate final scores
     accuracy_score_final = np.mean(accuracy_scores) if accuracy_scores else 0.5
     combined_score = (similarity_score * similarity_weight) + (accuracy_score_final * accuracy_weight)
     
-    print(f"📊 Final scores - Similarity: {similarity_score:.4f}, Accuracy: {accuracy_score_final:.4f}, Combined: {combined_score:.4f}")
+    # Print consolidated TRTS summary
+    if accuracy_scores:
+        print(f"[OK] TRTS Evaluation: {len(accuracy_scores)} scenarios, Average: {accuracy_score_final:.4f}")
+    print(f"[CHART] Combined Score: {combined_score:.4f} (Similarity: {similarity_score:.4f}, Accuracy: {accuracy_score_final:.4f})")
     
     return combined_score, similarity_score, accuracy_score_final
 
@@ -1329,12 +1314,12 @@ def analyze_hyperparameter_optimization(study_results, model_name,
     
     results_dir.mkdir(parents=True, exist_ok=True)
     
-    print(f"🔍 ANALYZING {model_name.upper()} HYPERPARAMETER OPTIMIZATION")
+    print(f"[SEARCH] ANALYZING {model_name.upper()} HYPERPARAMETER OPTIMIZATION")
     print("=" * 60)
     
     try:
         # 1. EXTRACT AND PROCESS TRIAL DATA
-        print("📊 1. TRIAL DATA EXTRACTION AND PROCESSING")
+        print("[CHART] 1. TRIAL DATA EXTRACTION AND PROCESSING")
         print("-" * 40)
         
         # Handle both Optuna Study objects and DataFrames
@@ -1362,35 +1347,35 @@ def analyze_hyperparameter_optimization(study_results, model_name,
             trials_df = study_results.copy()
         
         if trials_df.empty:
-            print("❌ No trial data available for analysis")
+            print("[ERROR] No trial data available for analysis")
             return {"error": "No trial data available"}
         
-        print(f"✅ Extracted {len(trials_df)} trials for analysis")
+        print(f"[OK] Extracted {len(trials_df)} trials for analysis")
         
         # Get parameter columns (those starting with 'params_')
         param_cols = [col for col in trials_df.columns if col.startswith('params_')]
         objective_col = 'value'
         
         if objective_col not in trials_df.columns:
-            print(f"❌ Objective column '{objective_col}' not found")
+            print(f"[ERROR] Objective column '{objective_col}' not found")
             return {"error": f"Objective column '{objective_col}' not found"}
         
-        print(f"📊 2. PARAMETER SPACE EXPLORATION ANALYSIS")
+        print(f"[CHART] 2. PARAMETER SPACE EXPLORATION ANALYSIS")
         print("-" * 40)
-        print(f"   • Found {len(param_cols)} hyperparameters: {param_cols}")
+        print(f"   - Found {len(param_cols)} hyperparameters: {param_cols}")
         
         # Filter out completed trials for analysis
         completed_trials = trials_df[trials_df['state'] == 'COMPLETE'] if 'state' in trials_df.columns else trials_df
         
         if completed_trials.empty:
-            print("❌ No completed trials available for analysis")
+            print("[ERROR] No completed trials available for analysis")
             return {"error": "No completed trials available"}
         
-        print(f"   • Using {len(completed_trials)} completed trials")
+        print(f"   - Using {len(completed_trials)} completed trials")
         
         # ENHANCED PARAMETER VS PERFORMANCE VISUALIZATION (WITH DTYPE FIX)
         if param_cols and (display_plots or export_figures):
-            print(f"📈 Creating parameter vs performance visualizations...")
+            print(f"[STATS] Creating parameter vs performance visualizations...")
             
             # Limit parameters for readability 
             n_params = min(6, len(param_cols))  # Limit to 6 for visualization
@@ -1431,10 +1416,10 @@ def analyze_hyperparameter_optimization(study_results, model_name,
                                                transform=axes[i].transAxes,
                                                bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8))
                             except Exception as corr_error:
-                                print(f"⚠️ Could not calculate correlation for {param_col}: {corr_error}")
+                                print(f"[WARNING] Could not calculate correlation for {param_col}: {corr_error}")
                                 
                         except Exception as plot_error:
-                            print(f"⚠️ Could not plot {param_col}: {plot_error}")
+                            print(f"[WARNING] Could not plot {param_col}: {plot_error}")
                             axes[i].text(0.5, 0.5, f'Plot Error\\n{param_col}', 
                                        transform=axes[i].transAxes, ha='center', va='center')
                             axes[i].set_title(f'{param_col} (Plot Error)', fontweight='bold')
@@ -1448,7 +1433,7 @@ def analyze_hyperparameter_optimization(study_results, model_name,
                 if export_figures:
                     param_plot_path = results_dir / f'{model_name}_parameter_analysis.png'
                     plt.savefig(param_plot_path, dpi=300, bbox_inches='tight')
-                    print(f"   📁 Parameter analysis plot saved: {param_plot_path}")
+                    print(f"   [FOLDER] Parameter analysis plot saved: {param_plot_path}")
                 
                 if display_plots:
                     plt.show()
@@ -1456,31 +1441,31 @@ def analyze_hyperparameter_optimization(study_results, model_name,
                     plt.close()
         
         # BEST TRIAL ANALYSIS
-        print(f"📊 3. BEST TRIAL ANALYSIS")
+        print(f"[CHART] 3. BEST TRIAL ANALYSIS")
         print("-" * 40)
         
         best_trial = completed_trials.loc[completed_trials[objective_col].idxmax()]
-        print(f"✅ Best Trial #{best_trial.get('number', 'Unknown')}")
-        print(f"   • Best Score: {best_trial[objective_col]:.4f}")
+        print(f"[OK] Best Trial #{best_trial.get('number', 'Unknown')}")
+        print(f"   - Best Score: {best_trial[objective_col]:.4f}")
         
         if 'duration' in best_trial:
             duration = best_trial['duration']
             if pd.isna(duration):
-                print(f"   • Duration: Not available")
+                print(f"   - Duration: Not available")
             else:
                 try:
                     if isinstance(duration, pd.Timedelta):
-                        print(f"   • Duration: {duration.total_seconds():.1f} seconds")
+                        print(f"   - Duration: {duration.total_seconds():.1f} seconds")
                     else:
-                        print(f"   • Duration: {duration}")
+                        print(f"   - Duration: {duration}")
                 except:
-                    print(f"   • Duration: {duration}")
+                    print(f"   - Duration: {duration}")
         
         # Best parameters
         best_params = {col.replace('params_', ''): best_trial[col] 
                       for col in param_cols if col in best_trial.index}
         
-        print(f"   • Best Parameters:")
+        print(f"   - Best Parameters:")
         for param, value in best_params.items():
             if isinstance(value, float):
                 print(f"     - {param}: {value:.4f}")
@@ -1488,7 +1473,7 @@ def analyze_hyperparameter_optimization(study_results, model_name,
                 print(f"     - {param}: {value}")
         
         # CONVERGENCE ANALYSIS
-        print(f"📊 4. CONVERGENCE ANALYSIS")
+        print(f"[CHART] 4. CONVERGENCE ANALYSIS")
         print("-" * 40)
         
         if len(completed_trials) > 1 and (display_plots or export_figures):
@@ -1516,7 +1501,7 @@ def analyze_hyperparameter_optimization(study_results, model_name,
             if export_figures:
                 convergence_plot_path = results_dir / f'{model_name}_convergence_analysis.png'
                 plt.savefig(convergence_plot_path, dpi=300, bbox_inches='tight')
-                print(f"   📁 Convergence plot saved: {convergence_plot_path}")
+                print(f"   [FOLDER] Convergence plot saved: {convergence_plot_path}")
             
             if display_plots:
                 plt.show()
@@ -1524,16 +1509,16 @@ def analyze_hyperparameter_optimization(study_results, model_name,
                 plt.close()
         
         # STATISTICAL SUMMARY
-        print(f"📊 5. STATISTICAL SUMMARY")
+        print(f"[CHART] 5. STATISTICAL SUMMARY")
         print("-" * 40)
         
         summary_stats = completed_trials[objective_col].describe()
-        print(f"✅ Performance Statistics:")
-        print(f"   • Mean Score: {summary_stats['mean']:.4f}")
-        print(f"   • Std Dev: {summary_stats['std']:.4f}")
-        print(f"   • Min Score: {summary_stats['min']:.4f}")
-        print(f"   • Max Score: {summary_stats['max']:.4f}")
-        print(f"   • Median Score: {summary_stats['50%']:.4f}")
+        print(f"[OK] Performance Statistics:")
+        print(f"   - Mean Score: {summary_stats['mean']:.4f}")
+        print(f"   - Std Dev: {summary_stats['std']:.4f}")
+        print(f"   - Min Score: {summary_stats['min']:.4f}")
+        print(f"   - Max Score: {summary_stats['max']:.4f}")
+        print(f"   - Median Score: {summary_stats['50%']:.4f}")
         
         # EXPORT RESULTS TABLES
         files_generated = []
@@ -1543,7 +1528,7 @@ def analyze_hyperparameter_optimization(study_results, model_name,
             trials_export_path = results_dir / f'{model_name}_trial_results.csv'
             completed_trials.to_csv(trials_export_path, index=False)
             files_generated.append(str(trials_export_path))
-            print(f"   📁 Trial results saved: {trials_export_path}")
+            print(f"   [FOLDER] Trial results saved: {trials_export_path}")
             
             # Export summary statistics
             summary_export_path = results_dir / f'{model_name}_optimization_summary.csv'
@@ -1555,7 +1540,7 @@ def analyze_hyperparameter_optimization(study_results, model_name,
             })
             summary_df.to_csv(summary_export_path, index=False)
             files_generated.append(str(summary_export_path))
-            print(f"   📁 Summary statistics saved: {summary_export_path}")
+            print(f"   [FOLDER] Summary statistics saved: {summary_export_path}")
         
         # PREPARE RETURN DATA
         analysis_results = {
@@ -1569,22 +1554,22 @@ def analyze_hyperparameter_optimization(study_results, model_name,
             'output_dir': str(results_dir)
         }
         
-        print(f"✅ {model_name.upper()} optimization analysis completed successfully!")
-        print(f"📁 Results saved to: {results_dir}")
+        print(f"[OK] {model_name.upper()} optimization analysis completed successfully!")
+        print(f"[FOLDER] Results saved to: {results_dir}")
         
         return analysis_results
         
     except Exception as e:
-        print(f"❌ Error in {model_name} hyperparameter optimization analysis: {str(e)}")
+        print(f"[ERROR] Error in {model_name} hyperparameter optimization analysis: {str(e)}")
         import traceback
         traceback.print_exc()
         return {"error": str(e)}
 
-print("✅ Batch evaluation system loaded!")
-print("✅ Enhanced objective function v2 with DYNAMIC TARGET COLUMN support defined!")
-print("✅ Enhanced hyperparameter optimization analysis function loaded!")
+print("[OK] Batch evaluation system loaded!")
+print("[OK] Enhanced objective function v2 with DYNAMIC TARGET COLUMN support defined!")
+print("[OK] Enhanced hyperparameter optimization analysis function loaded!")
 
-print("🎯 SETUP MODULE LOADED SUCCESSFULLY!")
+print("[TARGET] SETUP MODULE LOADED SUCCESSFULLY!")
 print("="*60)
 
 # Setup Imports - Global dependencies for objective functions
@@ -1605,32 +1590,32 @@ from sklearn.metrics import classification_report, accuracy_score
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from scipy.stats import wasserstein_distance  # CRITICAL: Required for EMD calculations
-print("✅ Enhanced objective function dependencies imported")
+print("[OK] Enhanced objective function dependencies imported")
 
 # Set style
 plt.style.use('default')
 sns.set_palette("husl")
-print("📦 Basic libraries imported successfully")
+print("[PACKAGE] Basic libraries imported successfully")
 
 # Import Optuna for hyperparameter optimization
 OPTUNA_AVAILABLE = False
 try:
     import optuna
     OPTUNA_AVAILABLE = True
-    print("✅ Optuna imported successfully")
+    print("[OK] Optuna imported successfully")
 except ImportError:
-    print("❌ Optuna not found - hyperparameter optimization not available")
+    print("[ERROR] Optuna not found - hyperparameter optimization not available")
 
 # Import CTGAN
 CTGAN_AVAILABLE = False
 try:
     from ctgan import CTGAN
     CTGAN_AVAILABLE = True
-    print("✅ CTGAN imported successfully")
+    print("[OK] CTGAN imported successfully")
 except ImportError:
-    print("❌ CTGAN not found")
+    print("[ERROR] CTGAN not found")
 
-print("🔧 Setup imports cell restored from main branch - wasserstein_distance now available globally")
+print("[CONFIG] Setup imports cell restored from main branch - wasserstein_distance now available globally")
 
 
 def evaluate_section5_optimized_models(section_number=5, scope=None, target_column=None):
@@ -1654,9 +1639,7 @@ def evaluate_section5_optimized_models(section_number=5, scope=None, target_colu
         target_col=target_column
     )
 
-# ============================================================================
 # PARAMETER MANAGEMENT FUNCTIONS FOR SECTION 4 & 5 INTEGRATION
-# ============================================================================
 
 def save_best_parameters_to_csv(scope=None, section_number=4, dataset_identifier=None):
     """
@@ -1693,9 +1676,9 @@ def save_best_parameters_to_csv(scope=None, section_number=4, dataset_identifier
     results_dir = get_results_path(dataset_identifier, section_number)
     os.makedirs(results_dir, exist_ok=True)
     
-    print(f"💾 SAVING BEST PARAMETERS FROM SECTION {section_number}")
+    print(f"[SAVE] SAVING BEST PARAMETERS FROM SECTION {section_number}")
     print("=" * 60)
-    print(f"📁 Target directory: {results_dir}")
+    print(f"[FOLDER] Target directory: {results_dir}")
     
     # Model study variable mappings
     model_studies = {
@@ -1711,7 +1694,7 @@ def save_best_parameters_to_csv(scope=None, section_number=4, dataset_identifier
     summary_rows = []
     
     for model_name, study_var in model_studies.items():
-        print(f"\n📊 Processing {model_name} parameters...")
+        print(f"\n[CHART] Processing {model_name} parameters...")
         
         try:
             if study_var in scope and scope[study_var] is not None:
@@ -1723,7 +1706,7 @@ def save_best_parameters_to_csv(scope=None, section_number=4, dataset_identifier
                     best_score = best_trial.value
                     trial_number = best_trial.number
                     
-                    print(f"✅ Found {model_name}: {len(best_params)} parameters, score: {best_score:.4f}")
+                    print(f"[OK] Found {model_name}: {len(best_params)} parameters, score: {best_score:.4f}")
                     
                     # Flatten parameters for CSV format
                     for param_name, param_value in best_params.items():
@@ -1783,13 +1766,13 @@ def save_best_parameters_to_csv(scope=None, section_number=4, dataset_identifier
                     })
                     
                 else:
-                    print(f"⚠️  {model_name}: No best_trial found")
+                    print(f"[WARNING]  {model_name}: No best_trial found")
                     
             else:
-                print(f"⚠️  {model_name}: Study variable '{study_var}' not found")
+                print(f"[WARNING]  {model_name}: Study variable '{study_var}' not found")
                 
         except Exception as e:
-            print(f"❌ {model_name}: Error processing - {str(e)}")
+            print(f"[ERROR] {model_name}: Error processing - {str(e)}")
     
     # Save results to CSV files
     files_saved = []
@@ -1800,8 +1783,8 @@ def save_best_parameters_to_csv(scope=None, section_number=4, dataset_identifier
         params_file = f"{results_dir}/best_parameters.csv"
         params_df.to_csv(params_file, index=False)
         files_saved.append(params_file)
-        print(f"\n✅ Parameters saved: {params_file}")
-        print(f"   • Total parameter entries: {len(parameter_rows)}")
+        print(f"\n[OK] Parameters saved: {params_file}")
+        print(f"   - Total parameter entries: {len(parameter_rows)}")
         
         # Summary file
         if summary_rows:
@@ -1809,19 +1792,19 @@ def save_best_parameters_to_csv(scope=None, section_number=4, dataset_identifier
             summary_file = f"{results_dir}/best_parameters_summary.csv"
             summary_df.to_csv(summary_file, index=False)
             files_saved.append(summary_file)
-            print(f"✅ Summary saved: {summary_file}")
-            print(f"   • Models processed: {len(summary_rows)}")
+            print(f"[OK] Summary saved: {summary_file}")
+            print(f"   - Models processed: {len(summary_rows)}")
     
     else:
-        print("❌ No parameters found to save!")
+        print("[ERROR] No parameters found to save!")
         return {
             'success': False,
             'message': 'No parameters found',
             'files_saved': []
         }
     
-    print(f"\n💾 Parameter saving completed!")
-    print(f"📁 Files saved to: {results_dir}")
+    print(f"\n[SAVE] Parameter saving completed!")
+    print(f"[FOLDER] Files saved to: {results_dir}")
     
     return {
         'success': True,
@@ -1867,9 +1850,9 @@ def load_best_parameters_from_csv(section_number=4, dataset_identifier=None, fal
     results_dir = get_results_path(dataset_identifier, section_number)
     params_file = f"{results_dir}/best_parameters.csv"
     
-    print(f"📖 LOADING BEST PARAMETERS FROM SECTION {section_number}")
+    print(f"[LOAD] LOADING BEST PARAMETERS FROM SECTION {section_number}")
     print("=" * 60)
-    print(f"📁 Looking for: {params_file}")
+    print(f"[FOLDER] Looking for: {params_file}")
     
     parameters = {}
     load_source = "unknown"
@@ -1877,7 +1860,7 @@ def load_best_parameters_from_csv(section_number=4, dataset_identifier=None, fal
     # Try loading from CSV first
     if os.path.exists(params_file):
         try:
-            print(f"✅ Found parameter CSV file")
+            print(f"[OK] Found parameter CSV file")
             params_df = pd.read_csv(params_file)
             
             # Reconstruct parameter dictionaries per model
@@ -1918,20 +1901,20 @@ def load_best_parameters_from_csv(section_number=4, dataset_identifier=None, fal
                 model_key = model_name.lower().replace('-', '').replace('+', 'plus')
                 parameters[model_key] = model_params
                 
-                print(f"✅ Loaded {model_name}: {len(model_params)} parameters")
+                print(f"[OK] Loaded {model_name}: {len(model_params)} parameters")
             
             load_source = "CSV file"
             
         except Exception as e:
-            print(f"❌ Error reading CSV file: {str(e)}")
+            print(f"[ERROR] Error reading CSV file: {str(e)}")
             parameters = {}
     
     else:
-        print(f"⚠️  Parameter CSV file not found")
+        print(f"[WARNING]  Parameter CSV file not found")
     
     # Fallback to memory if CSV loading failed or not found
     if not parameters and fallback_to_memory:
-        print(f"\n🔄 Falling back to in-memory study variables...")
+        print(f"\n[PROCESS] Falling back to in-memory study variables...")
         
         model_studies = {
             'CTGAN': ('ctgan_study', 'ctgan'),
@@ -1949,19 +1932,19 @@ def load_best_parameters_from_csv(section_number=4, dataset_identifier=None, fal
                 if hasattr(study, 'best_trial') and study.best_trial:
                     parameters[model_key] = study.best_trial.params
                     memory_loaded += 1
-                    print(f"✅ {model_name}: Loaded from memory ({len(study.best_trial.params)} params)")
+                    print(f"[OK] {model_name}: Loaded from memory ({len(study.best_trial.params)} params)")
         
         if memory_loaded > 0:
             load_source = "memory fallback"
         else:
-            print(f"❌ No parameters found in memory either")
+            print(f"[ERROR] No parameters found in memory either")
             load_source = "none"
     
-    print(f"\n📖 Parameter loading completed!")
-    print(f"🔍 Source: {load_source}")
-    print(f"📊 Models loaded: {len(parameters)}")
+    print(f"\n[LOAD] Parameter loading completed!")
+    print(f"[SEARCH] Source: {load_source}")
+    print(f"[CHART] Models loaded: {len(parameters)}")
     for model_key, params in parameters.items():
-        print(f"   • {model_key}: {len(params)} parameters")
+        print(f"   - {model_key}: {len(params)} parameters")
     
     return {
         'parameters': parameters,
@@ -1996,10 +1979,10 @@ def get_model_parameters(model_name, section_number=4, dataset_identifier=None, 
     model_key = model_name.lower().replace('-', '').replace('+', 'plus')
     
     if model_key in param_data['parameters']:
-        print(f"✅ {model_name.upper()} parameters loaded from {param_data['source']}")
+        print(f"[OK] {model_name.upper()} parameters loaded from {param_data['source']}")
         return param_data['parameters'][model_key]
     else:
-        print(f"❌ {model_name.upper()} parameters not found")
+        print(f"[ERROR] {model_name.upper()} parameters not found")
         return None
 
 def compare_parameters_sources(scope=None, section_number=4, dataset_identifier=None, verbose=True):
@@ -2020,7 +2003,7 @@ def compare_parameters_sources(scope=None, section_number=4, dataset_identifier=
         scope = globals()
     
     if verbose:
-        print(f"🔍 COMPARING PARAMETER SOURCES")
+        print(f"[SEARCH] COMPARING PARAMETER SOURCES")
         print("=" * 50)
     
     # Load from CSV (without memory fallback)
@@ -2059,8 +2042,8 @@ def compare_parameters_sources(scope=None, section_number=4, dataset_identifier=
     }
     
     if verbose:
-        print(f"📁 CSV source: {csv_data['source']}")
-        print(f"🧠 Memory models: {len(memory_params)}")
+        print(f"[FOLDER] CSV source: {csv_data['source']}")
+        print(f"[MEMORY] Memory models: {len(memory_params)}")
     
     # Check for matches and differences
     all_models = set(csv_data['parameters'].keys()) | set(memory_params.keys())
@@ -2089,24 +2072,22 @@ def compare_parameters_sources(scope=None, section_number=4, dataset_identifier=
             
             if verbose:
                 match_pct = len(matches) / len(all_param_keys) * 100 if all_param_keys else 0
-                print(f"   • {model_key.upper()}: {match_pct:.1f}% match ({len(matches)}/{len(all_param_keys)} params)")
+                print(f"   - {model_key.upper()}: {match_pct:.1f}% match ({len(matches)}/{len(all_param_keys)} params)")
                 if differences and verbose:
                     print(f"     Differences: {list(differences.keys())}")
         
         elif csv_params:
             if verbose:
-                print(f"   • {model_key.upper()}: CSV only ({len(csv_params)} params)")
+                print(f"   - {model_key.upper()}: CSV only ({len(csv_params)} params)")
         elif mem_params:
             if verbose:
-                print(f"   • {model_key.upper()}: Memory only ({len(mem_params)} params)")
+                print(f"   - {model_key.upper()}: Memory only ({len(mem_params)} params)")
     
     return comparison_results
 
-print("✅ Parameter management functions added to setup.py!")
+print("[OK] Parameter management functions added to setup.py!")
 
-# ============================================================================
 # COMPREHENSIVE TRTS (TRAIN REAL TEST SYNTHETIC) FRAMEWORK
-# ============================================================================
 
 def comprehensive_trts_analysis(real_data, synthetic_data, target_column, 
                                test_size=0.2, random_state=42, n_estimators=100,
@@ -2139,7 +2120,7 @@ def comprehensive_trts_analysis(real_data, synthetic_data, target_column,
     from sklearn.preprocessing import LabelEncoder
     
     if verbose:
-        print("🔬 COMPREHENSIVE TRTS FRAMEWORK ANALYSIS")
+        print("[ANALYSIS] COMPREHENSIVE TRTS FRAMEWORK ANALYSIS")
         print("=" * 60)
     
     # Prepare data
@@ -2149,15 +2130,15 @@ def comprehensive_trts_analysis(real_data, synthetic_data, target_column,
     y_synth = synthetic_data[target_column]
     
     if verbose:
-        print(f"📊 Data shapes:")
-        print(f"   • Real: {X_real.shape}, Target unique values: {y_real.nunique()}")
-        print(f"   • Synthetic: {X_synth.shape}, Target unique values: {y_synth.nunique()}")
+        print(f"[CHART] Data shapes:")
+        print(f"   - Real: {X_real.shape}, Target unique values: {y_real.nunique()}")
+        print(f"   - Synthetic: {X_synth.shape}, Target unique values: {y_synth.nunique()}")
     
     # Ensure common features
     common_features = list(set(X_real.columns) & set(X_synth.columns))
     if len(common_features) == 0:
         if verbose:
-            print("❌ No common features between datasets")
+            print("[ERROR] No common features between datasets")
         return {'error': 'No common features'}
     
     X_real = X_real[common_features]
@@ -2186,7 +2167,7 @@ def comprehensive_trts_analysis(real_data, synthetic_data, target_column,
     X_synth = X_synth.fillna(X_synth.median())
     
     if verbose:
-        print(f"   • Using {len(common_features)} common features")
+        print(f"   - Using {len(common_features)} common features")
     
     # Split real data for TRTR scenario
     X_real_train, X_real_test, y_real_train, y_real_test = train_test_split(
@@ -2202,7 +2183,7 @@ def comprehensive_trts_analysis(real_data, synthetic_data, target_column,
     
     # SCENARIO 1: TRTR - Train Real, Test Real (Baseline)
     if verbose:
-        print(f"\n🔄 1. TRTR - Train Real, Test Real (Baseline)")
+        print(f"\n[PROCESS] 1. TRTR - Train Real, Test Real (Baseline)")
     
     start_time = time.time()
     try:
@@ -2220,15 +2201,15 @@ def comprehensive_trts_analysis(real_data, synthetic_data, target_column,
         }
         
         if verbose:
-            print(f"   ✅ TRTR Accuracy: {trtr_accuracy:.4f} (Time: {trtr_time:.3f}s)")
+            print(f"   [OK] TRTR Accuracy: {trtr_accuracy:.4f} (Time: {trtr_time:.3f}s)")
     except Exception as e:
         results['TRTR'] = {'accuracy': 0.0, 'error': str(e), 'status': 'failed'}
         if verbose:
-            print(f"   ❌ TRTR failed: {e}")
+            print(f"   [ERROR] TRTR failed: {e}")
     
     # SCENARIO 2: TRTS - Train Real, Test Synthetic
     if verbose:
-        print(f"🔄 2. TRTS - Train Real, Test Synthetic")
+        print(f"[PROCESS] 2. TRTS - Train Real, Test Synthetic")
     
     start_time = time.time()
     try:
@@ -2246,15 +2227,15 @@ def comprehensive_trts_analysis(real_data, synthetic_data, target_column,
         }
         
         if verbose:
-            print(f"   ✅ TRTS Accuracy: {trts_accuracy:.4f} (Time: {trts_time:.3f}s)")
+            print(f"   [OK] TRTS Accuracy: {trts_accuracy:.4f} (Time: {trts_time:.3f}s)")
     except Exception as e:
         results['TRTS'] = {'accuracy': 0.0, 'error': str(e), 'status': 'failed'}
         if verbose:
-            print(f"   ❌ TRTS failed: {e}")
+            print(f"   [ERROR] TRTS failed: {e}")
     
     # SCENARIO 3: TSTR - Train Synthetic, Test Real  
     if verbose:
-        print(f"🔄 3. TSTR - Train Synthetic, Test Real")
+        print(f"[PROCESS] 3. TSTR - Train Synthetic, Test Real")
     
     start_time = time.time()
     try:
@@ -2272,15 +2253,15 @@ def comprehensive_trts_analysis(real_data, synthetic_data, target_column,
         }
         
         if verbose:
-            print(f"   ✅ TSTR Accuracy: {tstr_accuracy:.4f} (Time: {tstr_time:.3f}s)")
+            print(f"   [OK] TSTR Accuracy: {tstr_accuracy:.4f} (Time: {tstr_time:.3f}s)")
     except Exception as e:
         results['TSTR'] = {'accuracy': 0.0, 'error': str(e), 'status': 'failed'}
         if verbose:
-            print(f"   ❌ TSTR failed: {e}")
+            print(f"   [ERROR] TSTR failed: {e}")
     
     # SCENARIO 4: TSTS - Train Synthetic, Test Synthetic
     if verbose:
-        print(f"🔄 4. TSTS - Train Synthetic, Test Synthetic")
+        print(f"[PROCESS] 4. TSTS - Train Synthetic, Test Synthetic")
     
     start_time = time.time()
     try:
@@ -2298,11 +2279,11 @@ def comprehensive_trts_analysis(real_data, synthetic_data, target_column,
         }
         
         if verbose:
-            print(f"   ✅ TSTS Accuracy: {tsts_accuracy:.4f} (Time: {tsts_time:.3f}s)")
+            print(f"   [OK] TSTS Accuracy: {tsts_accuracy:.4f} (Time: {tsts_time:.3f}s)")
     except Exception as e:
         results['TSTS'] = {'accuracy': 0.0, 'error': str(e), 'status': 'failed'}
         if verbose:
-            print(f"   ❌ TSTS failed: {e}")
+            print(f"   [ERROR] TSTS failed: {e}")
     
     # Calculate summary metrics
     successful_scenarios = [k for k, v in results.items() if v.get('status') == 'success']
@@ -2319,10 +2300,10 @@ def comprehensive_trts_analysis(real_data, synthetic_data, target_column,
         }
         
         if verbose:
-            print(f"\n📊 Summary Statistics:")
-            print(f"   • Successful scenarios: {len(successful_scenarios)}/4")
-            print(f"   • Average accuracy: {np.mean(accuracies):.4f} (±{np.std(accuracies):.4f})")
-            print(f"   • Total training time: {sum(times):.3f}s")
+            print(f"\n[CHART] Summary Statistics:")
+            print(f"   - Successful scenarios: {len(successful_scenarios)}/4")
+            print(f"   - Average accuracy: {np.mean(accuracies):.4f} (+/-{np.std(accuracies):.4f})")
+            print(f"   - Total training time: {sum(times):.3f}s")
     
     return results
 
@@ -2405,7 +2386,7 @@ def create_trts_visualizations(trts_results_dict, model_names, results_dir,
             })
     
     if not model_data:
-        print("❌ No valid TRTS data for visualization")
+        print("[ERROR] No valid TRTS data for visualization")
         return {'error': 'No valid data'}
     
     # Create comprehensive visualization (4 subplots like sample2.png)
@@ -2484,7 +2465,7 @@ def create_trts_visualizations(trts_results_dict, model_names, results_dir,
         plot_file = results_path / 'trts_comprehensive_analysis.png'
         plt.savefig(plot_file, dpi=300, bbox_inches='tight')
         files_generated.append(str(plot_file))
-        print(f"📊 TRTS comprehensive plot saved: {plot_file}")
+        print(f"[CHART] TRTS comprehensive plot saved: {plot_file}")
         
         # Save summary tables as CSV
         summary_file = results_path / 'trts_summary_metrics.csv'
@@ -2495,7 +2476,7 @@ def create_trts_visualizations(trts_results_dict, model_names, results_dir,
         scenario_df.to_csv(detailed_file, index=False)
         files_generated.append(str(detailed_file))
         
-        print(f"📁 TRTS tables saved: {len(files_generated)} files")
+        print(f"[FOLDER] TRTS tables saved: {len(files_generated)} files")
     
     if display_plots:
         plt.show()
@@ -2512,11 +2493,9 @@ def create_trts_visualizations(trts_results_dict, model_names, results_dir,
         }
     }
 
-print("✅ Comprehensive TRTS framework functions added to setup.py!")
+print("[OK] Comprehensive TRTS framework functions added to setup.py!")
 
-# ============================================================================
 # UNIFIED EVALUATION FUNCTION FOR CODE REDUCTION AND CONSISTENCY
-# ============================================================================
 
 def evaluate_trained_models(section_number, variable_pattern, scope=None, models_to_evaluate=None, 
                            real_data=None, target_col=None):
@@ -2540,14 +2519,14 @@ def evaluate_trained_models(section_number, variable_pattern, scope=None, models
     """
     
     if scope is None:
-        print("❌ ERROR: scope parameter required! Pass globals() from notebook")
+        print("[ERROR] ERROR: scope parameter required! Pass globals() from notebook")
         return {}
     
     # Get data and target from scope if not provided
     if real_data is None:
         real_data = scope.get('data')
         if real_data is None:
-            print("❌ ERROR: 'data' variable not found in scope")
+            print("[ERROR] ERROR: 'data' variable not found in scope")
             return {}
     
     if target_col is None:
@@ -2555,7 +2534,7 @@ def evaluate_trained_models(section_number, variable_pattern, scope=None, models
         if target_col is None:
             target_col = scope.get('TARGET_COLUMN')
         if target_col is None:
-            print("❌ ERROR: 'target_column' or 'TARGET_COLUMN' variable not found in scope")
+            print("[ERROR] ERROR: 'target_column' or 'TARGET_COLUMN' variable not found in scope")
             return {}
 
     dataset_id = scope.get('DATASET_IDENTIFIER', 'unknown-dataset')
@@ -2582,7 +2561,7 @@ def evaluate_trained_models(section_number, variable_pattern, scope=None, models
             'TVAE': 'synthetic_tvae_final'
         }
     else:
-        print(f"❌ ERROR: Unknown variable_pattern '{variable_pattern}'. Use 'standard' or 'final'")
+        print(f"[ERROR] ERROR: Unknown variable_pattern '{variable_pattern}'. Use 'standard' or 'final'")
         return {}
     
     # Find available models in scope
@@ -2593,18 +2572,18 @@ def evaluate_trained_models(section_number, variable_pattern, scope=None, models
             if models_to_evaluate is None or model_name in models_to_evaluate or model_name.lower() in [m.lower() for m in models_to_evaluate]:
                 available_models[model_name] = scope[var_name]
     
-    print(f"🔍 UNIFIED BATCH EVALUATION - SECTION {section_number}")
+    print(f"[SEARCH] UNIFIED BATCH EVALUATION - SECTION {section_number}")
     print("=" * 60)
-    print(f"📋 Dataset: {dataset_id}")
-    print(f"📋 Target column: {target_col}")
-    print(f"📋 Variable pattern: {variable_pattern}")
-    print(f"📋 Found {len(available_models)} trained models:")
+    print(f"[INFO] Dataset: {dataset_id}")
+    print(f"[INFO] Target column: {target_col}")
+    print(f"[INFO] Variable pattern: {variable_pattern}")
+    print(f"[INFO] Found {len(available_models)} trained models:")
     for model_name in available_models.keys():
-        print(f"   ✅ {model_name}")
+        print(f"   [OK] {model_name}")
     
     if not available_models:
         available_vars = [var for var in model_checks.values() if var in scope]
-        print("❌ No synthetic datasets found!")
+        print("[ERROR] No synthetic datasets found!")
         print("   Train some models first before running batch evaluation")
         if available_vars:
             print(f"   Found variables: {available_vars}")
@@ -2631,10 +2610,10 @@ def evaluate_trained_models(section_number, variable_pattern, scope=None, models
             )
             
             evaluation_results[model_name] = results
-            print(f"✅ {model_name} evaluation completed successfully!")
+            print(f"[OK] {model_name} evaluation completed successfully!")
             
         except Exception as e:
-            print(f"❌ {model_name} evaluation failed: {e}")
+            print(f"[ERROR] {model_name} evaluation failed: {e}")
             evaluation_results[model_name] = {'error': str(e)}
     
     # Create summary comparison
@@ -2675,15 +2654,13 @@ def evaluate_trained_models(section_number, variable_pattern, scope=None, models
                 os.makedirs(summary_path, exist_ok=True)
                 summary_file = f"{summary_path}/batch_evaluation_summary.csv"
                 summary_df.to_csv(summary_file, index=False)
-                print(f"\n📊 Batch summary saved to: {summary_file}")
+                print(f"\n[CHART] Batch summary saved to: {summary_file}")
                 
         except Exception as e:
-            print(f"⚠️ Could not save batch summary: {e}")
+            print(f"[WARNING] Could not save batch summary: {e}")
     
-    # ============================================================================
-    # ADD COMPREHENSIVE TRTS ANALYSIS (SAME AS BOTH ORIGINAL FUNCTIONS)
-    # ============================================================================
-    
+        # ADD COMPREHENSIVE TRTS ANALYSIS (SAME AS BOTH ORIGINAL FUNCTIONS)
+        
     print(f"\n{'='*25} COMPREHENSIVE TRTS ANALYSIS {'='*25}")
     
     if len(available_models) >= 1:
@@ -2691,7 +2668,7 @@ def evaluate_trained_models(section_number, variable_pattern, scope=None, models
         trts_results = {}
         
         for model_name, synthetic_data in available_models.items():
-            print(f"\n🔬 Running TRTS analysis for {model_name}...")
+            print(f"\n[ANALYSIS] Running TRTS analysis for {model_name}...")
             
             try:
                 trts_result = comprehensive_trts_analysis(
@@ -2711,7 +2688,7 @@ def evaluate_trained_models(section_number, variable_pattern, scope=None, models
                     evaluation_results[model_name]['trts_analysis'] = trts_result
                 
             except Exception as e:
-                print(f"❌ TRTS analysis failed for {model_name}: {e}")
+                print(f"[ERROR] TRTS analysis failed for {model_name}: {e}")
                 trts_results[model_name] = {'error': str(e)}
         
         # Create TRTS visualizations
@@ -2721,7 +2698,7 @@ def evaluate_trained_models(section_number, variable_pattern, scope=None, models
                 dataset_display_name = dataset_id.replace('-', ' ').title()
                 suffix = " (Optimized Models)" if variable_pattern == 'final' else ""
                 
-                print(f"\n📊 Creating TRTS visualizations...")
+                print(f"\n[CHART] Creating TRTS visualizations...")
                 viz_results = create_trts_visualizations(
                     trts_results_dict=trts_results,
                     model_names=list(trts_results.keys()),
@@ -2732,10 +2709,10 @@ def evaluate_trained_models(section_number, variable_pattern, scope=None, models
                 )
                 
                 if 'files_generated' in viz_results:
-                    print(f"✅ TRTS visualization files generated:")
+                    print(f"[OK] TRTS visualization files generated:")
                     for file_path in viz_results['files_generated']:
                         file_name = file_path.split('/')[-1] if '/' in file_path else file_path.split('\\')[-1]
-                        print(f"   📁 {file_name}")
+                        print(f"   [FOLDER] {file_name}")
                     
                     # Add visualization files to results
                     for model_name in evaluation_results:
@@ -2746,18 +2723,18 @@ def evaluate_trained_models(section_number, variable_pattern, scope=None, models
                 # Display TRTS summary
                 if 'summary_stats' in viz_results:
                     stats = viz_results['summary_stats']
-                    print(f"\n📈 TRTS Analysis Summary:")
-                    print(f"   • Models analyzed: {stats.get('models_analyzed', 0)}")
-                    print(f"   • Average combined score: {stats.get('avg_combined_score', 0):.4f}")
-                    print(f"   • Best performing model: {stats.get('best_model', 'Unknown')}")
-                    print(f"   • Total scenarios tested: {stats.get('total_scenarios_tested', 0)}")
+                    print(f"\n[STATS] TRTS Analysis Summary:")
+                    print(f"   - Models analyzed: {stats.get('models_analyzed', 0)}")
+                    print(f"   - Average combined score: {stats.get('avg_combined_score', 0):.4f}")
+                    print(f"   - Best performing model: {stats.get('best_model', 'Unknown')}")
+                    print(f"   - Total scenarios tested: {stats.get('total_scenarios_tested', 0)}")
                 
             except Exception as e:
-                print(f"❌ TRTS visualization failed: {e}")
+                print(f"[ERROR] TRTS visualization failed: {e}")
     
     else:
-        print("⚠️ Need at least 1 model for TRTS analysis")
+        print("[WARNING] Need at least 1 model for TRTS analysis")
     
     return evaluation_results
 
-print("✅ Unified evaluation function added to setup.py!")
+print("[OK] Unified evaluation function added to setup.py!")
