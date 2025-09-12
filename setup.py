@@ -1032,7 +1032,7 @@ def evaluate_all_available_models(section_number, scope=None, models_to_evaluate
 
 # Code Chunk ID: CHUNK_037 - Enhanced Objective Function v2
 def enhanced_objective_function_v2(real_data, synthetic_data, target_column, 
-                                 similarity_weight=0.6, accuracy_weight=0.4):
+                                 similarity_weight=0.6, accuracy_weight=0.4, verbose=False):
     """
     Enhanced objective function: 60% similarity + 40% accuracy with DYNAMIC TARGET COLUMN FIX
     
@@ -1042,6 +1042,7 @@ def enhanced_objective_function_v2(real_data, synthetic_data, target_column,
         target_column: Name of target column (DYNAMIC - works with any dataset)
         similarity_weight: Weight for similarity component (default 0.6)
         accuracy_weight: Weight for accuracy component (default 0.4)
+        verbose: Print detailed per-feature EMD and similarity scores (default False)
 
     Returns:
         Combined objective score (higher is better), similarity_score, accuracy_score
@@ -1089,7 +1090,8 @@ def enhanced_objective_function_v2(real_data, synthetic_data, target_column,
                 emd_score = wasserstein_distance(real_values, synth_values)
                 # Convert to similarity (lower EMD = higher similarity)
                 similarity_scores.append(1 / (1 + emd_score))
-                print(f"✅ {col}: EMD={emd_score:.4f}, Similarity={similarity_scores[-1]:.4f}")
+                if verbose:
+                    print(f"✅ {col}: EMD={emd_score:.4f}, Similarity={similarity_scores[-1]:.4f}")
                 
             except Exception as e:
                 print(f"❌ Error calculating EMD for {col}: {e}")

@@ -1,168 +1,302 @@
 # Clinical Synthetic Data Generation Framework
 
-A comprehensive multi-model comparison and hyperparameter optimization framework for generating high-quality synthetic clinical data using state-of-the-art Generative Adversarial Networks (GANs).
+A comprehensive framework for generating and evaluating synthetic clinical data using multiple state-of-the-art generative models. This project provides a systematic approach to comparing different synthetic data generation techniques with rigorous evaluation metrics.
 
-## 🚀 **STREAMLINED VERSION** - Recent Improvements
+## 🚀 Features
 
-This branch features significant **streamlining and automation** improvements over the main branch:
+### Supported Models
+- **CTGAN** - Conditional Generative Adversarial Networks
+- **CTAB-GAN** - Conditional Tabular GAN with two-stage training
+- **CTAB-GAN+** - Enhanced version with privacy-preserving features
+- **GANerAid** - Specialized GAN for clinical data
+- **CopulaGAN** - Copula-based generative adversarial networks
+- **TVAE** - Tabular Variational Autoencoder
 
-### ✨ **Section 4 Hyperparameter Analysis - Streamlined**
-- **Before**: 6 individual analysis chunks (CHUNK_041, CHUNK_043, CHUNK_045, CHUNK_047, CHUNK_049, CHUNK_051)
-- **After**: Single batch analysis chunk (CHUNK_052) with automated processing
-- **Benefit**: **90% reduction** in repetitive code while preserving all functionality
+### Key Capabilities
+- **Automated Hyperparameter Optimization** using Optuna
+- **Comprehensive Evaluation Framework** with multiple metrics
+- **TRTS Framework** (Train Real Test Synthetic) for ML utility assessment
+- **Modular Architecture** with factory pattern for easy model extensibility
+- **Clinical Data Focus** with specialized handling for medical datasets
 
-### 📁 **Enhanced File Export System**
-- **Comprehensive file output**: All figures and tables automatically exported to organized directories
-- **Standardized structure**: Following consistent patterns established in Sections 2 & 3
-- **CSV exports**: DataFrames with hyperparameter results, best trials, and optimization summaries
-- **PNG exports**: All optimization plots, parameter importance charts, and correlation matrices
+## 📊 Evaluation Metrics
 
-### 🔧 **Modular Architecture**
-- **Centralized functions**: Core logic moved to `setup.py` for better maintainability
-- **Batch processing**: `evaluate_hyperparameter_optimization_results()` function handles all models
-- **Error resilience**: Graceful handling of missing or failed optimizations
-- **Cross-model summary**: Automatic best model identification and performance comparison
+### Statistical Similarity
+- **Earth Mover's Distance (EMD)** for distribution comparison
+- **Correlation Structure Preservation** analysis
+- **Statistical Moment Matching** (mean, std, skewness, kurtosis)
 
-## Overview
+### Machine Learning Utility
+- **TRTS Framework**: Train Real, Test Synthetic
+- **Cross-Accuracy Evaluation** between real and synthetic data
+- **Classification Performance** preservation
 
-This framework provides a systematic approach to evaluating and optimizing multiple synthetic data generation models, enabling researchers and practitioners to select the best-performing model for their specific clinical datasets.
+### Comprehensive Quality Assessment
+- **Overall Quality Score** (0.6 × similarity + 0.4 × accuracy)
+- **PCA-based Analysis** with outcome variable visualization
+- **Distribution Similarity** using Jensen-Shannon divergence
 
-## Key Features
+## 🛠 Installation
 
-- **Multi-Model Support**: Comprehensive comparison of 6 leading synthetic data generation models
-- **Advanced Hyperparameter Optimization**: Automated tuning using Optuna framework  
-- **Enhanced Evaluation Metrics**: Combined similarity and accuracy scoring with TRTS methodology
-- **Production-Ready Implementation**: Robust error handling and computational efficiency
-- **Comprehensive Analysis**: Detailed visualizations and statistical assessments
-- **🆕 Streamlined Notebook**: Automated batch processing reduces code repetition by 90%
-- **🆕 Complete File Export**: All figures and tables automatically saved to organized directories
-- **🆕 Modular Architecture**: Centralized functions in setup.py for enhanced maintainability
+### Prerequisites
+```bash
+# Core dependencies
+pip install pandas numpy scikit-learn
+pip install torch torchvision torchaudio
+pip install optuna plotly seaborn matplotlib
 
-## Supported Models
+# Synthetic data libraries
+pip install sdv ctgan
+pip install rdt
 
-- **CTGAN**: Conditional Tabular GAN for mixed-type data
-- **CTAB-GAN**: Conditional Tabular GAN with advanced conditioning
-- **CTAB-GAN+**: Enhanced version with improved performance
-- **GANerAid**: Medical data-focused GAN implementation  
-- **CopulaGAN**: Copula-based approach for complex distributions
-- **TVAE**: Tabular Variational Autoencoder
+# Additional dependencies
+pip install scipy statsmodels
+pip install jupyter ipykernel
+```
 
-## Framework Structure
+### Model-Specific Setup
 
-### 1. Setup and Configuration
-- Environment initialization
-- Library imports and dependencies
-- Configuration parameters
+#### CTAB-GAN Setup
+```bash
+# Clone CTAB-GAN repository
+git clone https://github.com/Team-TUD/CTAB-GAN.git
+cd CTAB-GAN
+pip install -e .
+```
 
-### 2. Data Loading and Pre-processing
-- **2.1 Data Loading**: Initial data ingestion and preprocessing
-- **2.2 Visual Summaries**: Comprehensive dataset exploration and visualization
+#### CTAB-GAN+ Setup
+```bash
+# Clone CTAB-GAN+ repository  
+git clone https://github.com/Team-TUD/CTAB-GAN-Plus.git
+cd CTAB-GAN-Plus
+pip install -e .
+```
 
-### 3. Demo All Models with Default Parameters
-- **3.1 CTGAN Demo**: Baseline performance assessment with quality evaluation
-- **3.2 CTAB-GAN Demo**: Standard CTAB-GAN implementation
-- **3.3 CTAB-GAN+ Demo**: Enhanced CTAB-GAN variant
-- **3.4 GANerAid Demo**: Medical data specialized model
-- **3.5 CopulaGAN Demo**: Copula-based generation approach
-- **3.6 TVAE Demo**: Variational autoencoder baseline
+## 📁 Project Structure
 
-### 4. Hyperparameter Tuning for Each Model ⚡ **STREAMLINED**
-Comprehensive optimization for all models with **automated batch analysis**:
-- **4.1 CTGAN Optimization**: Advanced parameter tuning with PAC compatibility
-- **4.2 CTAB-GAN Optimization**: Model-specific parameter optimization
-- **4.3 CTAB-GAN+ Optimization**: Enhanced variant tuning
-- **4.4 GANerAid Optimization**: Medical data focused optimization
-- **4.5 CopulaGAN Optimization**: Distribution-aware parameter tuning
-- **4.6 TVAE Optimization**: Autoencoder architecture optimization
-- **🆕 4.7 Automated Batch Analysis**: Single-chunk processing of all optimization results
-  - **Replaces**: 6 individual analysis chunks with 1 streamlined batch processor
-  - **Exports**: All figures and tables to organized file structure  
-  - **Identifies**: Best performing model across all optimization studies
-  - **Generates**: Comprehensive summary CSV with all hyperparameter results
+```
+├── src/
+│   ├── models/
+│   │   ├── base_model.py              # Abstract base class
+│   │   ├── model_factory.py           # Factory for model creation
+│   │   └── implementations/
+│   │       ├── ctgan_model.py         # CTGAN implementation
+│   │       ├── ctabgan_model.py       # CTAB-GAN implementation
+│   │       ├── ctabganplus_model.py   # CTAB-GAN+ implementation
+│   │       ├── ganeraid_model.py      # GANerAid implementation
+│   │       ├── copulagan_model.py     # CopulaGAN implementation
+│   │       └── tvae_model.py          # TVAE implementation
+│   └── evaluation/
+│       └── trts_framework.py          # TRTS evaluation framework
+├── data/
+│   ├── alzheimers_disease_data.csv
+│   ├── Breast_cancer_data.csv
+│   ├── liver_train.csv
+│   └── Pakistani_Diabetes_Dataset.csv
+├── doc/
+│   ├── Model-descriptions.md          # Detailed model descriptions
+│   └── Objective-function.md          # Evaluation methodology
+├── results/                           # Generated results and plots
+├── setup.py                           # Core framework functions
+└── Clinical_Synthetic_Data_Generation_Framework_Generalized.ipynb
+```
 
-### 5. Best Model Analysis
-- **5.1 Comprehensive Model Evaluation**: Detailed comparison and selection
-- **PCA Analysis**: Principal component analysis for best performing model
-- **Final Summary**: Conclusions and recommendations
+## 🏃 Quick Start
 
-## Methodology
+### 1. Basic Usage
+
+```python
+from src.models.model_factory import ModelFactory
+import pandas as pd
+
+# Load your data
+data = pd.read_csv('data/Pakistani_Diabetes_Dataset.csv')
+
+# Create and train a model
+model = ModelFactory.create("ctgan", random_state=42)
+model.train(data, target_column='Outcome', epochs=100)
+
+# Generate synthetic data
+synthetic_data = model.generate(n_samples=1000)
+```
+
+### 2. Hyperparameter Optimization
+
+```python
+import optuna
+from setup import enhanced_objective_function_v2
+
+def objective(trial):
+    # Define hyperparameter search space
+    params = {
+        'epochs': trial.suggest_int('epochs', 100, 1000),
+        'batch_size': trial.suggest_categorical('batch_size', [64, 128, 256]),
+        'generator_lr': trial.suggest_loguniform('generator_lr', 1e-5, 1e-3)
+    }
+    
+    # Train model with trial parameters
+    model = ModelFactory.create("ctgan")
+    model.set_config(params)
+    model.train(data, target_column='Outcome')
+    
+    # Generate and evaluate
+    synthetic_data = model.generate(len(data))
+    score, similarity, accuracy = enhanced_objective_function_v2(
+        data, synthetic_data, 'Outcome'
+    )
+    
+    return score
+
+# Run optimization
+study = optuna.create_study(direction='maximize')
+study.optimize(objective, n_trials=50)
+```
+
+### 3. Comprehensive Evaluation
+
+```python
+from setup import evaluate_synthetic_data_quality
+
+# Evaluate synthetic data quality
+results = evaluate_synthetic_data_quality(
+    real_data=data,
+    synthetic_data=synthetic_data,
+    model_name="CTGAN",
+    target_column="Outcome",
+    section_number=3,
+    save_files=True,
+    display_plots=False
+)
+
+print(f"Overall Quality Score: {results['overall_quality']:.4f}")
+print(f"Statistical Similarity: {results['avg_similarity']:.4f}")
+print(f"ML Utility: {results['ml_utility']:.4f}")
+```
+
+## 📈 Using the Jupyter Notebook
+
+The main notebook `Clinical_Synthetic_Data_Generation_Framework_Generalized.ipynb` provides:
+
+1. **Section 1-2**: Setup and Data Loading
+2. **Section 3**: Model Demonstrations and Basic Evaluation
+3. **Section 4**: Hyperparameter Optimization for all models
+4. **Section 5**: Advanced Analysis and Comparison
+
+### Running the Complete Framework
+
+1. **Configure your dataset**:
+```python
+# User Configuration
+DATASET_NAME = "Pakistani Diabetes Dataset"
+DATA_FILE = "data/Pakistani_Diabetes_Dataset.csv"
+TARGET_COLUMN = "Outcome"
+CATEGORICAL_COLUMNS = ['Gender', 'his', 'vision', 'Exr', 'dipsia', 'uria', 'neph']
+MISSING_STRATEGY = "median"  # or "mice", "drop"
+```
+
+2. **Execute sections sequentially** for complete analysis
+
+## 🔬 Evaluation Framework
+
+### TRTS (Train Real, Test Synthetic)
+The framework implements a comprehensive TRTS evaluation:
+
+- **TRTR**: Train Real → Test Real (baseline)
+- **TRTS**: Train Real → Test Synthetic (forward utility)
+- **TSTR**: Train Synthetic → Test Real (reverse utility)  
+- **TSTS**: Train Synthetic → Test Synthetic (consistency)
 
 ### Enhanced Objective Function
-The framework uses a sophisticated evaluation approach combining:
-- **Similarity Score (60%)**: Univariate and bivariate distribution matching using Earth Mover's Distance and correlation analysis
-- **Accuracy Score (40%)**: TRTS (Train-on-Real-Test-on-Synthetic) methodology for downstream task performance
+Combines multiple evaluation criteria:
+```
+Objective Score = 0.6 × Similarity Score + 0.4 × Accuracy Score
+```
 
-### Optimization Framework
-- **Optuna Integration**: Advanced hyperparameter optimization with pruning
-- **Production-Ready Ranges**: Carefully selected parameter spaces for computational efficiency
-- **Cross-Validation**: Robust validation methodology for parameter selection
+Where:
+- **Similarity Score**: EMD + Correlation preservation
+- **Accuracy Score**: TRTS/TRTR ratio
 
-## 🔧 **Streamlining Technical Details**
+## 📊 Available Datasets
 
-### Automated Batch Processing
-The streamlined version introduces `evaluate_hyperparameter_optimization_results()` function that:
-- **Processes all models**: Automatically detects and analyzes available optimization studies
-- **Handles errors gracefully**: Continues processing if individual models fail
-- **Exports systematically**: Saves all plots and tables to standardized directory structure
-- **Provides summaries**: Creates comprehensive CSV summaries and identifies best performers
+The framework includes several clinical datasets:
+- **Pakistani Diabetes Dataset** - Diabetes prediction
+- **Alzheimer's Disease Data** - Cognitive assessment
+- **Breast Cancer Data** - Cancer diagnosis
+- **Liver Disease Data** - Hepatic condition prediction
 
-### File Organization
+## 🎛 Configuration Options
+
+### Model Parameters
+Each model supports extensive hyperparameter customization:
+- Training epochs and batch size
+- Learning rates (generator/discriminator)
+- Network architectures
+- Regularization parameters
+
+### Evaluation Settings
+- Verbose output control
+- File saving preferences  
+- Plot generation options
+- Result organization by dataset/timestamp
+
+## 📝 Results and Outputs
+
+The framework generates comprehensive results:
+- **CSV files** with detailed metrics
+- **Visualization plots** (PCA, correlation heatmaps, distributions)
+- **Parameter optimization history**
+- **Model comparison tables**
+
+Results are organized by dataset and timestamp:
 ```
 results/
-├── dataset-name/
-│   ├── YYYY-MM-DD/
-│   │   ├── Section-4/
-│   │   │   ├── ctgan_optimization_analysis.png
-│   │   │   ├── ctgan_hyperparameter_importance.png
-│   │   │   ├── ctgan_best_trials.csv
-│   │   │   ├── [similar files for all models]
-│   │   │   └── hyperparameter_optimization_summary.csv
+└── pakistani-diabetes-dataset/
+    └── 2025-09-12/
+        ├── Section-3/
+        ├── Section-4/
+        └── Section-5/
 ```
 
-### Code Efficiency Gains
-- **Lines of code**: Reduced from ~1,500 to ~150 lines (90% reduction)  
-- **Maintainability**: Single function vs 6 separate chunks
-- **Consistency**: Standardized processing across all models
-- **Error handling**: Centralized exception management
+## 🤝 Contributing
 
-## Technical Appendices
+Contributions are welcome! Areas for enhancement:
+- Additional generative models
+- New evaluation metrics
+- Dataset-specific optimizations
+- Performance improvements
 
-### Appendix 1: Model Descriptions
-Conceptual overview of each synthetic data generation model and their theoretical foundations.
+## 📚 References
 
-### Appendix 2: Optuna Optimization
-Detailed explanation of the hyperparameter optimization methodology with CTGAN example implementation.
+- **CTGAN**: [Modeling Tabular data using Conditional GAN](https://arxiv.org/abs/1907.00503)
+- **CTAB-GAN**: [CTAB-GAN: Effective Table Data Synthesizing](https://arxiv.org/abs/2102.08369)
+- **SDV**: [The Synthetic Data Vault](https://sdv.dev/)
 
-### Appendix 3: Enhanced Objective Function
-Theoretical foundation and mathematical formulation of the evaluation framework.
+## 📄 License
 
-### Appendix 4: Hyperparameter Design
-Rationale behind parameter space design and validation methodology.
+This project is open source. Please see individual model repositories for their specific licensing terms.
 
-## Getting Started
+## 🔧 Troubleshooting
 
-1. **Data Preparation**: Load your clinical dataset following the preprocessing guidelines
-2. **Model Selection**: Run all models with default parameters for initial comparison
-3. **Optimization**: Execute hyperparameter optimization for promising models
-4. **Evaluation**: Compare results using comprehensive metrics and visualizations
-5. **Production**: Deploy the best-performing model for synthetic data generation
+### Common Issues
 
-## Requirements
+1. **CTAB-GAN Import Error**:
+   - Ensure CTAB-GAN is properly installed and in Python path
+   - Check sklearn version compatibility
 
-- Python 3.8+
-- CUDA-compatible GPU (recommended)
-- Required libraries: SDV, CTGAN, Optuna, scikit-learn, pandas, numpy, matplotlib, seaborn
+2. **Memory Issues**:
+   - Reduce batch size or dataset size for initial testing
+   - Use GPU if available for large datasets
 
-## Performance Considerations
+3. **Hyperparameter Optimization Timeout**:
+   - Reduce number of trials or epochs for faster testing
+   - Use pruning to eliminate poor trials early
 
-- **Computational Efficiency**: Optimized parameter ranges for reasonable execution times
-- **Memory Management**: Batch processing and memory-efficient implementations
-- **Scalability**: Framework designed for datasets of varying sizes
+### Getting Help
 
-## Contributing
+- Check the documentation in `doc/`
+- Review the example notebook for usage patterns
+- Ensure all dependencies are properly installed
 
-This framework is designed for extensibility. New models can be integrated by following the established evaluation and optimization patterns.
+---
 
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
+**Note**: This framework is designed for research and educational purposes. Ensure proper validation before using synthetic data in production scenarios.

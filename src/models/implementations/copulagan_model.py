@@ -278,9 +278,9 @@ class CopulaGANModel(SyntheticDataModel):
             model_params['epochs'] = kwargs.get('epochs', self.model_config.get('epochs', epochs))
             model_params['batch_size'] = kwargs.get('batch_size', self.model_config.get('batch_size', batch_size))
             
-            # Learning rates - check kwargs first, then model_config
-            model_params['generator_lr'] = kwargs.get('generator_lr', self.model_config.get('generator_lr'))
-            model_params['discriminator_lr'] = kwargs.get('discriminator_lr', self.model_config.get('discriminator_lr'))
+            # Learning rates - check kwargs first, then model_config, then defaults
+            model_params['generator_lr'] = kwargs.get('generator_lr', self.model_config.get('generator_lr', 2e-4))
+            model_params['discriminator_lr'] = kwargs.get('discriminator_lr', self.model_config.get('discriminator_lr', 2e-4))
             
             # Network dimensions - check kwargs first, then model_config  
             model_params['generator_dim'] = kwargs.get('generator_dim', self.model_config.get('generator_dim'))
