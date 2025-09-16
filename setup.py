@@ -50,7 +50,7 @@ from sklearn.decomposition import PCA
 import warnings
 warnings.filterwarnings('ignore')
 
-print("📊 Essential data science libraries imported successfully!")
+print("[OK] Essential data science libraries imported successfully!")
 
 # Code Chunk ID: CHUNK_001 - CTAB-GAN Import and Compatibility
 # Import CTAB-GAN - try multiple installation paths with sklearn compatibility fix
@@ -174,6 +174,167 @@ except Exception as e:
             raise ImportError(f"GANerAid import failed: {e}")
     GANERAID_AVAILABLE = False
 
+# ============================================================================
+# CATEGORICAL COLUMN DETECTION UTILITY - For Section 3 & 4 Consistency
+# ============================================================================
+
+def get_categorical_columns_for_models():
+    """
+    Robust categorical column detection for consistent model training.
+    Works across Section 3 demos AND Section 4 hyperparameter optimization.
+
+    Returns:
+        list: List of categorical column names, or empty list if no categorical columns
+              NEVER returns None to prevent 'NoneType' object is not iterable errors
+    """
+    # Try to get from global scope first (set in CHUNK_014)
+    if 'categorical_columns' in globals():
+        cats = globals()['categorical_columns']
+        # Return the list if it has items, empty list if None or empty
+        return cats if cats is not None else []
+
+    # Fallback: auto-detect from data
+    if 'data' in globals() and globals()['data'] is not None:
+        try:
+            auto_detected = globals()['data'].select_dtypes(include=['object']).columns.tolist()
+            # Remove target column if it's in categorical columns
+            if 'TARGET_COLUMN' in globals() and globals()['TARGET_COLUMN'] and globals()['TARGET_COLUMN'] in auto_detected:
+                auto_detected.remove(globals()['TARGET_COLUMN'])
+            return auto_detected
+        except Exception as e:
+            print(f"[WARNING] Auto-detection of categorical columns failed: {e}")
+            return []
+
+    # Always return empty list, never None
+    return []
+
+def clean_and_preprocess_data(data, categorical_columns=None):
+    """
+    Comprehensive data cleaning and preprocessing to prevent model training errors.
+    Handles NaN/None values, categorical encoding, and data type validation.
+
+    Args:
+        data (pd.DataFrame): Input dataset
+        categorical_columns (list, optional): List of categorical column names
+
+    Returns:
+        tuple: (cleaned_data, categorical_columns, encoders_dict)
+    """
+    import pandas as pd
+    import numpy as np
+    from sklearn.preprocessing import LabelEncoder
+
+    # Work on a copy to avoid modifying original data
+    cleaned_data = data.copy()
+    encoders_dict = {}
+
+    # Auto-detect categorical columns if not provided
+    if categorical_columns is None:
+        categorical_columns = get_categorical_columns_for_models()
+
+    print(f"[DATA_CLEANING] Processing {len(cleaned_data)} rows, {len(cleaned_data.columns)} columns")
+    print(f"[DATA_CLEANING] Categorical columns: {categorical_columns}")
+
+    # Step 1: Handle missing values
+    missing_counts = cleaned_data.isnull().sum()
+    if missing_counts.sum() > 0:
+        print(f"[DATA_CLEANING] Found {missing_counts.sum()} missing values across {(missing_counts > 0).sum()} columns")
+
+        for col in cleaned_data.columns:
+            if missing_counts[col] > 0:
+                if col in categorical_columns or cleaned_data[col].dtype == 'object':
+                    # Fill categorical missing values with mode or 'Unknown'
+                    mode_val = cleaned_data[col].mode()
+                    fill_val = mode_val[0] if len(mode_val) > 0 else 'Unknown'
+                    cleaned_data[col].fillna(fill_val, inplace=True)
+                    print(f"[DATA_CLEANING] Filled {missing_counts[col]} missing values in categorical column '{col}' with '{fill_val}'")
+                else:
+                    # Fill numerical missing values with median
+                    median_val = cleaned_data[col].median()
+                    if pd.isna(median_val):
+                        median_val = 0.0  # Fallback if all values are NaN
+                    cleaned_data[col].fillna(median_val, inplace=True)
+                    print(f"[DATA_CLEANING] Filled {missing_counts[col]} missing values in numerical column '{col}' with {median_val}")
+
+    # Step 2: Encode categorical variables
+    for col in categorical_columns:
+        if col in cleaned_data.columns and cleaned_data[col].dtype == 'object':
+            try:
+                # Convert to string to handle any remaining None/NaN values
+                cleaned_data[col] = cleaned_data[col].astype(str)
+
+                # Apply label encoding
+                le = LabelEncoder()
+                cleaned_data[col] = le.fit_transform(cleaned_data[col])
+                encoders_dict[col] = le
+
+                print(f"[DATA_CLEANING] Label encoded column '{col}' ({len(le.classes_)} unique values)")
+            except Exception as e:
+                print(f"[DATA_CLEANING] Warning: Failed to encode column '{col}': {e}")
+
+    # Step 3: Ensure all numerical columns are proper numeric types
+    for col in cleaned_data.columns:
+        if col not in categorical_columns:
+            try:
+                # Try to convert to numeric, forcing errors to NaN
+                cleaned_data[col] = pd.to_numeric(cleaned_data[col], errors='coerce')
+
+                # Fill any new NaN values created by conversion with 0
+                if cleaned_data[col].isnull().any():
+                    nan_count = cleaned_data[col].isnull().sum()
+                    cleaned_data[col].fillna(0.0, inplace=True)
+                    print(f"[DATA_CLEANING] Converted and filled {nan_count} non-numeric values in column '{col}'")
+            except Exception as e:
+                print(f"[DATA_CLEANING] Warning: Failed to convert column '{col}' to numeric: {e}")
+
+    # Step 4: Final validation
+    remaining_nulls = cleaned_data.isnull().sum().sum()
+    if remaining_nulls > 0:
+        print(f"[DATA_CLEANING] Warning: {remaining_nulls} null values remain after cleaning")
+
+    print(f"[DATA_CLEANING] Data cleaning completed successfully")
+    print(f"[DATA_CLEANING] Final shape: {cleaned_data.shape}")
+    print(f"[DATA_CLEANING] Data types: {dict(cleaned_data.dtypes)}")
+
+    return cleaned_data, categorical_columns, encoders_dict
+
+def prepare_data_for_any_model(data, categorical_columns=None, model_name="Model"):
+    """
+    Universal data preparation function that can be called from notebooks.
+    Handles all the preprocessing needed for robust model training.
+
+    Args:
+        data (pd.DataFrame): Input dataset
+        categorical_columns (list, optional): List of categorical column names
+        model_name (str): Name of the model for logging purposes
+
+    Returns:
+        tuple: (cleaned_data, categorical_columns_used, preprocessing_info)
+    """
+    print(f"\n[{model_name.upper()}] Preparing data for training...")
+
+    # Apply comprehensive preprocessing
+    cleaned_data, categorical_cols_used, encoders_dict = clean_and_preprocess_data(
+        data, categorical_columns
+    )
+
+    # Create preprocessing info for potential reverse transformation
+    preprocessing_info = {
+        'encoders': encoders_dict,
+        'categorical_columns': categorical_cols_used,
+        'original_columns': list(data.columns),
+        'cleaned_shape': cleaned_data.shape,
+        'original_shape': data.shape
+    }
+
+    print(f"[{model_name.upper()}] Data preparation completed:")
+    print(f"   • Original shape: {data.shape}")
+    print(f"   • Cleaned shape: {cleaned_data.shape}")
+    print(f"   • Categorical columns: {categorical_cols_used}")
+    print(f"   • Missing values handled: {(data.isnull().sum().sum() - cleaned_data.isnull().sum().sum())}")
+
+    return cleaned_data, categorical_cols_used, preprocessing_info
+
 # Code Chunk ID: CHUNK_002 - CTABGANModel Class
 class CTABGANModel:
     def __init__(self, epochs=100, batch_size=500):
@@ -182,56 +343,91 @@ class CTABGANModel:
         self.model = None
         
     def fit(self, data, categorical_columns=None, target_column=None):
-        """Train CTAB-GAN model"""
+        """Train CTAB-GAN model with robust data preprocessing"""
         try:
             # Check if CTAB-GAN is actually available
             if not CTABGAN_AVAILABLE:
                 raise ImportError("CTAB-GAN is not available in this environment")
-            
-            # Store column names for later use in generate()
-            self.column_names = list(data.columns)
-            
+
+            # Store original column names for later use in generate()
+            self.original_columns = list(data.columns)
+
+            # CRITICAL FIX: Clean and preprocess data before training
+            print("[CTABGAN] Applying comprehensive data preprocessing...")
+            cleaned_data, categorical_cols, self.encoders = clean_and_preprocess_data(
+                data, categorical_columns
+            )
+
+            # Store preprocessing info for reverse transformation
+            self.categorical_columns = categorical_cols
+            print(f"[CTABGAN] Using categorical columns: {categorical_cols}")
+            print(f"[CTABGAN] Data shape after preprocessing: {cleaned_data.shape}")
+
             # Initialize CTAB-GAN with basic parameters only
             self.model = CTABGANSynthesizer(
                 epochs=self.epochs,
                 batch_size=self.batch_size
             )
-            
-            # Train the model (categorical_columns passed to fit, not init)
-            print(f"Training CTAB-GAN for {self.epochs} epochs...")
-            if categorical_columns:
-                self.model.fit(data, categorical_columns=categorical_columns)
+
+            # Train the model with preprocessed data
+            print(f"[CTABGAN] Training CTAB-GAN for {self.epochs} epochs...")
+            if categorical_cols:
+                self.model.fit(cleaned_data, categorical_columns=categorical_cols)
             else:
-                self.model.fit(data)
+                self.model.fit(cleaned_data)
             print("[OK] CTAB-GAN training completed successfully")
-            
+
         except Exception as e:
             print(f"[ERROR] CTAB-GAN training failed: {e}")
-            raise
+            print(f"   Error type: {type(e).__name__}")
+            print(f"   Full error: {str(e)}")
+            raise RuntimeError(f"CTAB-GAN training error: {str(e)}")
     
     def generate(self, n_samples):
-        """Generate synthetic samples"""
+        """Generate synthetic samples with reverse preprocessing"""
         if self.model is None:
             raise ValueError("Model must be fitted before generating samples")
-        
+
         try:
+            # Generate raw synthetic data
             synthetic_data = self.model.sample(n_samples)
-            print(f"[OK] Generated {len(synthetic_data)} synthetic samples")
-            
+            print(f"[CTABGAN] Generated {len(synthetic_data)} raw synthetic samples")
+
             # Convert to DataFrame if it's a numpy array
             if hasattr(synthetic_data, 'shape') and not hasattr(synthetic_data, 'columns'):
-                # It's a numpy array, convert to DataFrame
-                if hasattr(self, 'column_names'):
-                    synthetic_data = pd.DataFrame(synthetic_data, columns=self.column_names)
+                if hasattr(self, 'original_columns'):
+                    synthetic_data = pd.DataFrame(synthetic_data, columns=self.original_columns)
                 else:
-                    # Generate generic column names
                     synthetic_data = pd.DataFrame(synthetic_data, columns=[f'feature_{i}' for i in range(synthetic_data.shape[1])])
                     print("[WARNING] Using generic column names - original column names not preserved")
-            
+
+            # Apply reverse encoding for categorical columns
+            if hasattr(self, 'encoders') and self.encoders:
+                print("[CTABGAN] Applying reverse encoding to categorical columns...")
+                for col, encoder in self.encoders.items():
+                    if col in synthetic_data.columns:
+                        try:
+                            # Ensure values are integers for label encoder
+                            synthetic_data[col] = synthetic_data[col].round().astype(int)
+
+                            # Handle out-of-range values by clipping to valid range
+                            valid_range = range(len(encoder.classes_))
+                            synthetic_data[col] = synthetic_data[col].clip(
+                                lower=min(valid_range), upper=max(valid_range)
+                            )
+
+                            # Apply inverse transform
+                            synthetic_data[col] = encoder.inverse_transform(synthetic_data[col])
+                            print(f"[CTABGAN] Reverse encoded column '{col}'")
+                        except Exception as enc_error:
+                            print(f"[WARNING] Could not reverse encode column '{col}': {enc_error}")
+
+            print(f"[OK] CTAB-GAN generation completed: {synthetic_data.shape}")
             return synthetic_data
+
         except Exception as e:
             print(f"[ERROR] CTAB-GAN generation failed: {e}")
-            raise
+            raise RuntimeError(f"CTAB-GAN generation error: {str(e)}")
 
 # Code Chunk ID: CHUNK_003 - CTABGANPlusModel Class  
 class CTABGANPlusModel:
@@ -259,112 +455,163 @@ class CTABGANPlusModel:
             return CTABGANSynthesizer
     
     def fit(self, data, categorical_columns=None, target_column=None):
-        """Train CTAB-GAN+ model with enhanced features"""
+        """Train CTAB-GAN+ model with robust data preprocessing"""
         try:
             # Check for CTAB-GAN+ availability
             CTABGANClass = self._check_plus_features()
-            
+
             if self.has_plus_features:
-                # CTAB-GAN+ requires CSV file, so save DataFrame to temp file
-                import tempfile
-                import os
-                
                 # Store original data for later reference
                 self.original_data = data.copy()
-                
-                # Create temporary CSV file
+                self.original_columns = list(data.columns)
+
+                # CRITICAL FIX: Clean and preprocess data before training
+                print("[CTABGAN+] Applying comprehensive data preprocessing...")
+                cleaned_data, categorical_cols, self.encoders = clean_and_preprocess_data(
+                    data, categorical_columns
+                )
+
+                # Store preprocessing info for potential reverse transformation
+                self.categorical_columns = categorical_cols
+                print(f"[CTABGAN+] Using categorical columns: {categorical_cols}")
+                print(f"[CTABGAN+] Data shape after preprocessing: {cleaned_data.shape}")
+
+                # CTAB-GAN+ requires CSV file, so save cleaned DataFrame to temp file
+                import tempfile
+                import os
+
                 temp_dir = tempfile.mkdtemp()
-                self.temp_csv_path = os.path.join(temp_dir, "temp_data.csv")
-                data.to_csv(self.temp_csv_path, index=False)
-                
-                # Automatically detect categorical columns if not provided
-                if categorical_columns is None:
-                    categorical_columns = data.select_dtypes(include=['object', 'category']).columns.tolist()
-                
-                # Automatically detect integer columns
-                integer_columns = data.select_dtypes(include=['int64', 'int32']).columns.tolist()
-                
+                self.temp_csv_path = os.path.join(temp_dir, "temp_cleaned_data.csv")
+                cleaned_data.to_csv(self.temp_csv_path, index=False)
+
+                # Automatically detect integer columns from cleaned data
+                integer_columns = cleaned_data.select_dtypes(include=['int64', 'int32']).columns.tolist()
+
                 # Determine problem type (using main branch logic)
-                if target_column and target_column in data.columns:
+                if target_column and target_column in cleaned_data.columns:
                     target_col = target_column
                 else:
-                    target_col = data.columns[-1]  # Assume last column is target (main branch approach)
-                
+                    target_col = cleaned_data.columns[-1]  # Assume last column is target
+
                 # Smart problem_type logic from main branch
-                if data[target_col].nunique() <= 10:
+                if cleaned_data[target_col].nunique() <= 10:
                     problem_type = {"Classification": target_col}
-                    print(f"[TARGET] Using Classification with target: {target_col} ({data[target_col].nunique()} unique values)")
+                    print(f"[CTABGAN+] Using Classification with target: {target_col} ({cleaned_data[target_col].nunique()} unique values)")
                 else:
                     problem_type = {None: None}  # Avoid stratification issues for continuous targets
-                    print(f"[TARGET] Using regression mode (target has {data[target_col].nunique()} unique values)")
-                
+                    print(f"[CTABGAN+] Using regression mode (target has {cleaned_data[target_col].nunique()} unique values)")
+
                 # Use default test_ratio since stratification is handled by problem_type logic
                 test_ratio = 0.20
-                
-                # Initialize CTAB-GAN+ with proper parameters
+
+                # Initialize CTAB-GAN+ with proper parameters using cleaned data
                 self.model = CTABGANClass(
                     raw_csv_path=self.temp_csv_path,
-                    categorical_columns=categorical_columns,
+                    categorical_columns=categorical_cols,
                     integer_columns=integer_columns,
                     problem_type=problem_type,
                     test_ratio=test_ratio
                 )
-                
-                print(f"Training CTAB-GAN+ (Enhanced) for {self.epochs} epochs...")
+
+                print(f"[CTABGAN+] Training CTAB-GAN+ (Enhanced) for {self.epochs} epochs...")
                 self.model.fit()
                 print("[OK] CTAB-GAN+ training completed successfully")
                 
             else:
-                # Fallback to regular CTAB-GAN
+                # Fallback to regular CTAB-GAN with preprocessing
+                print("[CTABGAN+] Falling back to regular CTAB-GAN with preprocessing...")
+                self.original_columns = list(data.columns)
+
+                # Apply same preprocessing for consistency
+                cleaned_data, categorical_cols, self.encoders = clean_and_preprocess_data(
+                    data, categorical_columns
+                )
+                self.categorical_columns = categorical_cols
+
                 self.model = CTABGANClass(
                     epochs=self.epochs,
                     batch_size=self.batch_size
                 )
-                self.model.fit(data, categorical_columns=categorical_columns)
+
+                if categorical_cols:
+                    self.model.fit(cleaned_data, categorical_columns=categorical_cols)
+                else:
+                    self.model.fit(cleaned_data)
                 print("[OK] CTAB-GAN (fallback) training completed successfully")
-            
+
         except Exception as e:
             print(f"[ERROR] CTAB-GAN+ training failed: {e}")
+            print(f"   Error type: {type(e).__name__}")
+            print(f"   Full error: {str(e)}")
             # Clean up temp file on error
-            if self.temp_csv_path and os.path.exists(self.temp_csv_path):
+            if hasattr(self, 'temp_csv_path') and self.temp_csv_path and os.path.exists(self.temp_csv_path):
                 os.remove(self.temp_csv_path)
-            raise
+            raise RuntimeError(f"CTAB-GAN+ training error: {str(e)}")
     
     def generate(self, n_samples):
-        """Generate synthetic samples using CTAB-GAN+"""
+        """Generate synthetic samples using CTAB-GAN+ with reverse preprocessing"""
         if self.model is None:
             raise ValueError("Model must be fitted before generating samples")
-        
+
         try:
             if self.has_plus_features:
                 # CTAB-GAN+ generates all samples at once
                 synthetic_data = self.model.generate_samples()
-                
+                print(f"[CTABGAN+] Generated {len(synthetic_data)} raw synthetic samples")
+
                 # If we need fewer samples, take a random subset
                 if len(synthetic_data) > n_samples:
                     synthetic_data = synthetic_data.sample(n=n_samples, random_state=42).reset_index(drop=True)
                 elif len(synthetic_data) < n_samples:
-                    # If we need more samples, repeat the generation or duplicate existing
                     print(f"[WARNING] CTAB-GAN+ generated {len(synthetic_data)} samples, requested {n_samples}")
-                
+
             else:
-                # Use regular CTAB-GAN generation
+                # Use regular CTAB-GAN generation with preprocessing support
                 synthetic_data = self.model.sample(n_samples)
-            
-            print(f"[OK] Generated {len(synthetic_data)} synthetic samples using CTAB-GAN+")
-            
+                print(f"[CTABGAN+] Generated {len(synthetic_data)} raw synthetic samples (fallback mode)")
+
+                # Convert to DataFrame if it's a numpy array (fallback mode)
+                if hasattr(synthetic_data, 'shape') and not hasattr(synthetic_data, 'columns'):
+                    if hasattr(self, 'original_columns'):
+                        synthetic_data = pd.DataFrame(synthetic_data, columns=self.original_columns)
+                    else:
+                        synthetic_data = pd.DataFrame(synthetic_data, columns=[f'feature_{i}' for i in range(synthetic_data.shape[1])])
+
+            # Apply reverse encoding for categorical columns
+            if hasattr(self, 'encoders') and self.encoders:
+                print("[CTABGAN+] Applying reverse encoding to categorical columns...")
+                for col, encoder in self.encoders.items():
+                    if col in synthetic_data.columns:
+                        try:
+                            # Ensure values are integers for label encoder
+                            synthetic_data[col] = synthetic_data[col].round().astype(int)
+
+                            # Handle out-of-range values by clipping to valid range
+                            valid_range = range(len(encoder.classes_))
+                            synthetic_data[col] = synthetic_data[col].clip(
+                                lower=min(valid_range), upper=max(valid_range)
+                            )
+
+                            # Apply inverse transform
+                            synthetic_data[col] = encoder.inverse_transform(synthetic_data[col])
+                            print(f"[CTABGAN+] Reverse encoded column '{col}'")
+                        except Exception as enc_error:
+                            print(f"[WARNING] Could not reverse encode column '{col}': {enc_error}")
+
+            print(f"[OK] CTAB-GAN+ generation completed: {synthetic_data.shape}")
+
             # Clean up temp file after successful generation
-            if self.temp_csv_path and os.path.exists(self.temp_csv_path):
+            if hasattr(self, 'temp_csv_path') and self.temp_csv_path and os.path.exists(self.temp_csv_path):
                 os.remove(self.temp_csv_path)
-                
+
             return synthetic_data
-            
+
         except Exception as e:
             print(f"[ERROR] CTAB-GAN+ generation failed: {e}")
             # Clean up temp file on error
-            if self.temp_csv_path and os.path.exists(self.temp_csv_path):
+            if hasattr(self, 'temp_csv_path') and self.temp_csv_path and os.path.exists(self.temp_csv_path):
                 os.remove(self.temp_csv_path)
-            raise
+            raise RuntimeError(f"CTAB-GAN+ generation error: {str(e)}")
 
 # Code Chunk ID: CHUNK_004 - Required Libraries Import
 # Import required libraries
