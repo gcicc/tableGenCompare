@@ -100,6 +100,8 @@ class CTABGANPlusModel(SyntheticDataModel):
         
         # Extract training parameters (CTAB-GAN+ specific)
         epochs = kwargs.get("epochs", self.model_config.get("epochs", 400))
+        batch_size = kwargs.get("batch_size", self.model_config.get("batch_size", 256))
+        test_ratio = kwargs.get("test_ratio", self.model_config.get("test_ratio", 0.2))
         categorical_columns = kwargs.get("categorical_columns", None)
         integer_columns = kwargs.get("integer_columns", None)
         mixed_columns = kwargs.get("mixed_columns", {})
@@ -148,7 +150,7 @@ class CTABGANPlusModel(SyntheticDataModel):
             try:
                 self._ctabganplus_model = CTABGAN(
                     raw_csv_path=temp_csv_path,
-                    test_ratio=self.model_config.get("test_ratio", 0.2),
+                    test_ratio=test_ratio,
                     categorical_columns=categorical_columns,
                     log_columns=log_columns,
                     mixed_columns=mixed_columns,
@@ -160,6 +162,20 @@ class CTABGANPlusModel(SyntheticDataModel):
                 logger.error(f"Failed to initialize CTAB-GAN+: {e}")
                 raise
             
+            # FIXED: Train the model with proper parameter handling
+            # The CTABGAN model doesn't accept training parameters in fit(),
+            # so we need to set them on the synthesizer before training
+            logger.info(f"Training CTAB-GAN+ with epochs={epochs}, batch_size={batch_size}")
+
+            # Access the underlying synthesizer and set training parameters
+            if hasattr(self._ctabganplus_model, 'synthesizer'):
+                synthesizer = self._ctabganplus_model.synthesizer
+                if hasattr(synthesizer, 'epochs'):
+                    synthesizer.epochs = epochs
+                if hasattr(synthesizer, 'batch_size'):
+                    synthesizer.batch_size = batch_size
+                logger.info("✅ Training parameters set on synthesizer")
+
             # Train the model
             self._ctabganplus_model.fit()
             

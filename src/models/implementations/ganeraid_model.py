@@ -246,6 +246,65 @@ class GANerAidModel(SyntheticDataModel):
         epochs = kwargs.get("epochs", self.model_config.get("epochs", 5000))
         verbose = kwargs.get("verbose", True)
         aug_factor = kwargs.get("aug_factor", 1)
+
+        # FIXED: Extract GANerAid-specific hyperparameters and validate constraints
+        batch_size = kwargs.get("batch_size", self.model_config.get("batch_size", 100))
+        nr_of_rows = kwargs.get("nr_of_rows", self.model_config.get("nr_of_rows", 15))
+        hidden_feature_space = kwargs.get("hidden_feature_space", self.model_config.get("hidden_feature_space", 200))
+        lr_d = kwargs.get("lr_d", self.model_config.get("lr_d", 0.0005))
+        lr_g = kwargs.get("lr_g", self.model_config.get("lr_g", 0.0005))
+        binary_noise = kwargs.get("binary_noise", self.model_config.get("binary_noise", 0.2))
+
+        # Critical constraint validation for GANerAid
+        dataset_size = len(data)
+        logger.info(f"Validating GANerAid constraints: dataset_size={dataset_size}, nr_of_rows={nr_of_rows}")
+
+        # Constraint 1: nr_of_rows must be less than dataset size
+        if nr_of_rows >= dataset_size:
+            nr_of_rows = min(15, dataset_size - 1)
+            logger.warning(f"nr_of_rows adjusted: {kwargs.get('nr_of_rows', 'default')} -> {nr_of_rows} (dataset constraint)")
+
+        # Constraint 2: hidden_feature_space should be divisible by nr_of_rows to avoid dimension issues
+        if hidden_feature_space % nr_of_rows != 0:
+            # Find the closest nr_of_rows that makes hidden_feature_space divisible
+            original_nr_of_rows = nr_of_rows
+            found_compatible = False
+
+            # Try values from nr_of_rows down to 1
+            for candidate in range(nr_of_rows, 0, -1):
+                if (hidden_feature_space % candidate == 0 and
+                    candidate < dataset_size and
+                    batch_size % candidate == 0):  # Also ensure batch compatibility
+                    nr_of_rows = candidate
+                    found_compatible = True
+                    break
+
+            if not found_compatible:
+                # Find any valid divisor of hidden_feature_space that works
+                divisors = [i for i in range(1, hidden_feature_space + 1) if hidden_feature_space % i == 0]
+                valid_divisors = [d for d in divisors if d < dataset_size and batch_size % d == 0]
+
+                if valid_divisors:
+                    nr_of_rows = max(valid_divisors)  # Use largest valid divisor
+                    logger.warning(f"Using largest valid divisor: nr_of_rows = {nr_of_rows}")
+                else:
+                    # Last resort: adjust hidden_feature_space to be compatible
+                    logger.error(f"CRITICAL: No compatible nr_of_rows found for hidden_feature_space={hidden_feature_space}, batch_size={batch_size}")
+                    # Use a smaller hidden_feature_space that's compatible
+                    compatible_hidden = 100  # Safe default that has many divisors
+                    logger.warning(f"Adjusting hidden_feature_space: {hidden_feature_space} -> {compatible_hidden}")
+                    hidden_feature_space = compatible_hidden
+                    nr_of_rows = min(5, dataset_size - 1)
+
+            logger.warning(f"nr_of_rows adjusted for dimension compatibility: {original_nr_of_rows} -> {nr_of_rows}")
+            logger.info(f"Final validation: hidden_feature_space={hidden_feature_space} % nr_of_rows={nr_of_rows} = {hidden_feature_space % nr_of_rows}")
+
+        # Constraint 3: batch_size should be compatible
+        if batch_size % nr_of_rows != 0:
+            logger.warning(f"Batch size compatibility: batch_size={batch_size} % nr_of_rows={nr_of_rows} = {batch_size % nr_of_rows}")
+
+        logger.info(f"✅ Final GANerAid parameters: batch_size={batch_size}, nr_of_rows={nr_of_rows}, dataset_size={dataset_size}")
+        logger.info(f"   Dimension checks: hidden_divisible={hidden_feature_space % nr_of_rows == 0}, size_safe={nr_of_rows < dataset_size}")
         
         logger.info(f"Starting GANerAid training with {epochs} epochs")
         training_start = datetime.now()
@@ -255,16 +314,17 @@ class GANerAidModel(SyntheticDataModel):
             processed_data = self._preprocess_categorical_data(data)
             logger.info(f"Data preprocessing completed. Shape: {data.shape} -> {processed_data.shape}")
             
-            # Initialize GANerAid model with current configuration
+            # Initialize GANerAid model with validated parameters
             self._ganeraid_model = GANerAid(
                 device=self.device_obj,
-                lr_d=self.model_config["lr_d"],
-                lr_g=self.model_config["lr_g"],  
-                hidden_feature_space=self.model_config["hidden_feature_space"],
-                batch_size=self.model_config["batch_size"],
-                nr_of_rows=self.model_config["nr_of_rows"],
-                binary_noise=self.model_config["binary_noise"]
+                lr_d=lr_d,
+                lr_g=lr_g,
+                hidden_feature_space=hidden_feature_space,
+                batch_size=batch_size,
+                nr_of_rows=nr_of_rows,
+                binary_noise=binary_noise
             )
+            logger.info(f"✅ GANerAid initialized with validated parameters")
             
             # Train the model on preprocessed data
             self._training_history = self._ganeraid_model.fit(
@@ -292,7 +352,12 @@ class GANerAidModel(SyntheticDataModel):
                 "preprocessing_applied": len(self._categorical_columns) > 0,
                 "verbose": verbose,
                 "aug_factor": aug_factor,
-                "device": str(self.device_obj)
+                "device": str(self.device_obj),
+                # Add corrected parameters for constraint validation debugging
+                "final_batch_size": batch_size,
+                "final_nr_of_rows": nr_of_rows,
+                "final_hidden_feature_space": hidden_feature_space,
+                "constraint_validation_applied": True
             }
             
             # Add convergence analysis if history is available

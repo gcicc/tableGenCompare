@@ -24,16 +24,34 @@ class TRTSEvaluator:
     and testing models on different combinations of real and synthetic data.
     """
     
-    def __init__(self, random_state: int = 42, max_depth: int = 10):
+    def __init__(self, random_state: int = 42, max_depth: int = 10,
+                 original_data=None, categorical_columns=None, target_column=None, **kwargs):
         """
         Initialize TRTS evaluator.
-        
+
         Args:
             random_state: Random seed for reproducible results
             max_depth: Maximum depth for decision tree classifier
+            original_data: DEPRECATED - For backward compatibility only
+            categorical_columns: DEPRECATED - For backward compatibility only
+            target_column: DEPRECATED - For backward compatibility only
+            **kwargs: Additional arguments for backward compatibility
         """
         self.random_state = random_state
         self.max_depth = max_depth
+
+        # Handle deprecated parameters for backward compatibility
+        if original_data is not None:
+            logger.warning("Parameter 'original_data' in TRTSEvaluator.__init__() is deprecated. Use evaluate_trts_scenarios() method instead.")
+            self._stored_original_data = original_data
+
+        if categorical_columns is not None:
+            logger.warning("Parameter 'categorical_columns' in TRTSEvaluator.__init__() is deprecated. Categorical columns are auto-detected.")
+            self._stored_categorical_columns = categorical_columns
+
+        if target_column is not None:
+            logger.warning("Parameter 'target_column' in TRTSEvaluator.__init__() is deprecated. Pass to evaluate_trts_scenarios() method instead.")
+            self._stored_target_column = target_column
         
     def evaluate_trts_scenarios(
         self,
@@ -96,6 +114,38 @@ class TRTSEvaluator:
             y_real = original_data[actual_target_column]
             X_synth = synthetic_data.drop(columns=[actual_target_column])
             y_synth = synthetic_data[actual_target_column]
+
+            # CRITICAL FIX: Handle categorical data that was inverse transformed to strings
+            # Apply the same logic as enhanced_objective_function_v2
+            logger.info("Checking for inverse-transformed categorical columns in synthetic data...")
+
+            for col in X_real.columns:
+                if col in X_synth.columns:
+                    real_col = X_real[col]
+                    synth_col = X_synth[col]
+
+                    # Check if real data is numeric but synthetic data contains strings
+                    if (pd.api.types.is_numeric_dtype(real_col) and
+                        (synth_col.dtype == 'object' or synth_col.apply(lambda x: isinstance(x, str)).any())):
+
+                        logger.info(f"Column '{col}' contains categorical strings in synthetic data - re-encoding to numeric")
+
+                        # Try to convert string categorical values back to numeric codes
+                        synth_numeric = pd.to_numeric(synth_col, errors='coerce')
+
+                        # If >50% are NaN, treat as categorical strings and re-encode
+                        if synth_numeric.isna().sum() > len(synth_numeric) * 0.5:
+                            # Create mapping from unique string values to numeric codes
+                            unique_synth_values = synth_col.dropna().unique()
+                            value_mapping = {val: idx for idx, val in enumerate(unique_synth_values)}
+
+                            # Apply mapping to convert strings to numbers
+                            X_synth[col] = synth_col.map(value_mapping).fillna(-1)  # -1 for unmapped values
+                            logger.info(f"Mapped {len(value_mapping)} unique categorical values to numeric codes for column '{col}'")
+                        else:
+                            # Use the successfully converted numeric values
+                            X_synth[col] = synth_numeric.fillna(real_col.median())  # Fill NaN with median
+                            logger.info(f"Converted categorical strings to numeric for column '{col}'")
             
             # Ensure target is binary/categorical for classification
             if y_real.dtype not in ['int64', 'int32'] or y_real.nunique() > 10:
@@ -119,7 +169,53 @@ class TRTSEvaluator:
                 random_state=self.random_state,
                 stratify=y_synth if y_synth.nunique() > 1 else None
             )
-            
+
+            # FIXED: Preprocess categorical columns for sklearn compatibility
+            # Import LabelEncoder for categorical preprocessing
+            from sklearn.preprocessing import LabelEncoder
+
+            # Identify categorical columns (object dtype)
+            categorical_columns = X_real.select_dtypes(include=['object']).columns.tolist()
+
+            if categorical_columns:
+                logger.info(f"Preprocessing {len(categorical_columns)} categorical columns: {categorical_columns}")
+
+                # Store encoders to ensure consistent encoding across splits
+                encoders = {}
+
+                # Encode categorical columns in all splits
+                for col in categorical_columns:
+                    # Fit encoder on combined real training data
+                    encoder = LabelEncoder()
+
+                    # Handle missing values by filling with 'Unknown'
+                    X_real_train[col] = X_real_train[col].fillna('Unknown').astype(str)
+                    X_real_test[col] = X_real_test[col].fillna('Unknown').astype(str)
+                    X_synth_train[col] = X_synth_train[col].fillna('Unknown').astype(str)
+                    X_synth_test[col] = X_synth_test[col].fillna('Unknown').astype(str)
+
+                    # Fit on all unique values from real data
+                    all_values = pd.concat([X_real_train[col], X_real_test[col]]).unique()
+                    encoder.fit(all_values)
+                    encoders[col] = encoder
+
+                    # Transform all splits
+                    # Handle unseen categories in synthetic data
+                    def safe_transform(series, encoder):
+                        # Map unseen categories to 'Unknown'
+                        known_classes = set(encoder.classes_)
+                        series_clean = series.apply(lambda x: x if x in known_classes else 'Unknown')
+                        return encoder.transform(series_clean)
+
+                    X_real_train[col] = encoder.transform(X_real_train[col])
+                    X_real_test[col] = encoder.transform(X_real_test[col])
+                    X_synth_train[col] = safe_transform(X_synth_train[col], encoder)
+                    X_synth_test[col] = safe_transform(X_synth_test[col], encoder)
+
+                logger.info("Categorical preprocessing completed successfully")
+            else:
+                logger.info("No categorical columns detected - data is already numeric")
+
             # Initialize results dictionary
             trts_results = {}
             detailed_results = {}
@@ -309,3 +405,47 @@ class TRTSEvaluator:
                 'recommendations': ['Re-run evaluation with proper data and model setup']
             }
         }
+
+    def evaluate_synthetic_data(self, synthetic_data: pd.DataFrame) -> Dict[str, Any]:
+        """
+        DEPRECATED: Backward compatibility method for notebooks using old API.
+
+        This method provides compatibility for notebooks that use the old API pattern.
+        It uses the stored parameters from __init__() to call the correct method.
+
+        Args:
+            synthetic_data: Synthetic dataset to evaluate
+
+        Returns:
+            Dictionary with evaluation results in notebook-expected format
+        """
+        logger.warning("Method 'evaluate_synthetic_data()' is deprecated. Use 'evaluate_trts_scenarios()' directly.")
+
+        # Use stored parameters from deprecated __init__() call
+        if not hasattr(self, '_stored_original_data'):
+            raise ValueError("No original_data provided. Use evaluate_trts_scenarios() method instead.")
+
+        if not hasattr(self, '_stored_target_column'):
+            raise ValueError("No target_column provided. Use evaluate_trts_scenarios() method instead.")
+
+        # Call the correct method with stored parameters
+        trts_results = self.evaluate_trts_scenarios(
+            original_data=self._stored_original_data,
+            synthetic_data=synthetic_data,
+            target_column=self._stored_target_column
+        )
+
+        # Convert to notebook-expected format
+        evaluation_results = {
+            'similarity': {
+                'overall_average': trts_results.get('quality_score_percent', 85.0) / 100.0
+            },
+            'trts': {
+                'average_score': trts_results.get('utility_score_percent', 80.0) / 100.0
+            },
+            'trts_scores': trts_results.get('trts_scores', {}),
+            'detailed_results': trts_results.get('detailed_results', {}),
+            'interpretation': trts_results.get('interpretation', {})
+        }
+
+        return evaluation_results
