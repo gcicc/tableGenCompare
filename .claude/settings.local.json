@@ -15,7 +15,9 @@
       "Bash(rg:*)",
       "Bash(awk:*)",
       "mcp__ide__executeCode",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(git branch:*)",
+      "Bash(git ls-tree:*)"
     ],
     "deny": [],
     "ask": []
