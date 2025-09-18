@@ -256,21 +256,77 @@ def clean_and_preprocess_data(data, categorical_columns=None):
                     cleaned_data[col].fillna(median_val, inplace=True)
                     print(f"[DATA_CLEANING] Filled {missing_counts[col]} missing values in numerical column '{col}' with {median_val}")
 
-    # Step 2: Encode categorical variables
+    # Step 2: Smart categorical encoding (binary vs one-hot vs label encoding)
     for col in categorical_columns:
         if col in cleaned_data.columns and cleaned_data[col].dtype == 'object':
             try:
                 # Convert to string to handle any remaining None/NaN values
                 cleaned_data[col] = cleaned_data[col].astype(str)
 
-                # Apply label encoding
-                le = LabelEncoder()
-                cleaned_data[col] = le.fit_transform(cleaned_data[col])
-                encoders_dict[col] = le
+                # Get unique values count for encoding strategy
+                unique_count = cleaned_data[col].nunique()
+                unique_values = cleaned_data[col].unique()
 
-                print(f"[DATA_CLEANING] Label encoded column '{col}' ({len(le.classes_)} unique values)")
+                if unique_count == 2:
+                    # Binary encoding: Use LabelEncoder for 0/1 encoding
+                    le = LabelEncoder()
+                    cleaned_data[col] = le.fit_transform(cleaned_data[col])
+                    encoders_dict[col] = {
+                        'type': 'binary',
+                        'encoder': le,
+                        'original_column': col
+                    }
+                    print(f"[DATA_CLEANING] Binary encoded column '{col}' (2 values: {list(unique_values)} → 0/1)")
+
+                elif unique_count <= 10:
+                    # Multi-level encoding: Use one-hot encoding
+                    # First apply label encoding to get numeric values
+                    le = LabelEncoder()
+                    temp_encoded = le.fit_transform(cleaned_data[col])
+
+                    # Create one-hot encoded columns
+                    one_hot_df = pd.get_dummies(cleaned_data[col], prefix=col, dtype=int)
+
+                    # Store the original column and add one-hot columns
+                    original_col_data = cleaned_data[col].copy()
+                    cleaned_data = cleaned_data.drop(columns=[col])
+                    cleaned_data = pd.concat([cleaned_data, one_hot_df], axis=1)
+
+                    # Store encoding info for reverse transformation
+                    encoders_dict[col] = {
+                        'type': 'onehot',
+                        'encoder': le,
+                        'original_column': col,
+                        'onehot_columns': list(one_hot_df.columns),
+                        'original_values': list(unique_values)
+                    }
+                    print(f"[DATA_CLEANING] One-hot encoded column '{col}' ({unique_count} values → {len(one_hot_df.columns)} columns)")
+
+                else:
+                    # High-cardinality: Use label encoding (fallback to current approach)
+                    le = LabelEncoder()
+                    cleaned_data[col] = le.fit_transform(cleaned_data[col])
+                    encoders_dict[col] = {
+                        'type': 'label',
+                        'encoder': le,
+                        'original_column': col
+                    }
+                    print(f"[DATA_CLEANING] Label encoded column '{col}' ({unique_count} unique values)")
+
             except Exception as e:
                 print(f"[DATA_CLEANING] Warning: Failed to encode column '{col}': {e}")
+                # Fallback to simple label encoding
+                try:
+                    le = LabelEncoder()
+                    cleaned_data[col] = le.fit_transform(cleaned_data[col].astype(str))
+                    encoders_dict[col] = {
+                        'type': 'label_fallback',
+                        'encoder': le,
+                        'original_column': col
+                    }
+                    print(f"[DATA_CLEANING] Fallback label encoding applied to '{col}'")
+                except Exception as fallback_error:
+                    print(f"[DATA_CLEANING] Error: Failed to encode column '{col}' even with fallback: {fallback_error}")
 
     # Step 3: Ensure all numerical columns are proper numeric types
     for col in cleaned_data.columns:
@@ -382,7 +438,108 @@ class CTABGANModel:
             print(f"   Error type: {type(e).__name__}")
             print(f"   Full error: {str(e)}")
             raise RuntimeError(f"CTAB-GAN training error: {str(e)}")
-    
+
+    def _apply_smart_reverse_encoding(self, synthetic_data):
+        """
+        Apply smart reverse encoding based on encoding type used during preprocessing.
+        Handles binary, one-hot, and label encoding types.
+        """
+        try:
+            for col, encoder_info in self.encoders.items():
+                if isinstance(encoder_info, dict):
+                    # New smart encoding format
+                    encoding_type = encoder_info.get('type', 'label')
+                    original_col = encoder_info.get('original_column', col)
+                    encoder = encoder_info.get('encoder')
+
+                    if encoding_type == 'binary':
+                        # Binary encoding: simple label encoder reverse
+                        if original_col in synthetic_data.columns:
+                            try:
+                                # Ensure values are integers and in valid range
+                                synthetic_data[original_col] = synthetic_data[original_col].round().astype(int)
+                                valid_range = range(len(encoder.classes_))
+                                synthetic_data[original_col] = synthetic_data[original_col].clip(
+                                    lower=min(valid_range), upper=max(valid_range)
+                                )
+                                # Apply inverse transform
+                                synthetic_data[original_col] = encoder.inverse_transform(synthetic_data[original_col])
+                                print(f"[CTABGAN] Binary reverse encoded column '{original_col}'")
+                            except Exception as e:
+                                print(f"[WARNING] Binary reverse encoding failed for '{original_col}': {e}")
+
+                    elif encoding_type == 'onehot':
+                        # One-hot encoding: reconstruct original categorical column
+                        onehot_columns = encoder_info.get('onehot_columns', [])
+                        if all(oh_col in synthetic_data.columns for oh_col in onehot_columns):
+                            try:
+                                # Get one-hot data and find the maximum value column for each row
+                                onehot_data = synthetic_data[onehot_columns].values
+
+                                # Convert to probabilities (handle values outside 0-1 range)
+                                onehot_data = np.clip(onehot_data, 0, 1)
+
+                                # Find the column with maximum value for each row
+                                max_indices = np.argmax(onehot_data, axis=1)
+
+                                # Map back to original categorical values
+                                original_values = encoder_info.get('original_values', [])
+                                if len(original_values) == len(onehot_columns):
+                                    # Use original values if available
+                                    reconstructed_values = [original_values[i] for i in max_indices]
+                                else:
+                                    # Use encoder classes as fallback
+                                    reconstructed_values = [encoder.classes_[i] for i in max_indices]
+
+                                # Add reconstructed column and remove one-hot columns
+                                synthetic_data[original_col] = reconstructed_values
+                                synthetic_data = synthetic_data.drop(columns=onehot_columns)
+                                print(f"[CTABGAN] One-hot reverse encoded column '{original_col}' (removed {len(onehot_columns)} one-hot columns)")
+
+                            except Exception as e:
+                                print(f"[WARNING] One-hot reverse encoding failed for '{original_col}': {e}")
+
+                    elif encoding_type in ['label', 'label_fallback']:
+                        # Label encoding: standard reverse transform
+                        if original_col in synthetic_data.columns:
+                            try:
+                                # Ensure values are integers and in valid range
+                                synthetic_data[original_col] = synthetic_data[original_col].round().astype(int)
+                                valid_range = range(len(encoder.classes_))
+                                synthetic_data[original_col] = synthetic_data[original_col].clip(
+                                    lower=min(valid_range), upper=max(valid_range)
+                                )
+                                # Apply inverse transform
+                                synthetic_data[original_col] = encoder.inverse_transform(synthetic_data[original_col])
+                                print(f"[CTABGAN] Label reverse encoded column '{original_col}'")
+                            except Exception as e:
+                                print(f"[WARNING] Label reverse encoding failed for '{original_col}': {e}")
+
+                else:
+                    # Legacy encoding format (backward compatibility)
+                    if col in synthetic_data.columns:
+                        try:
+                            # Ensure values are integers for label encoder
+                            synthetic_data[col] = synthetic_data[col].round().astype(int)
+
+                            # Handle out-of-range values by clipping to valid range
+                            valid_range = range(len(encoder_info.classes_))
+                            synthetic_data[col] = synthetic_data[col].clip(
+                                lower=min(valid_range), upper=max(valid_range)
+                            )
+
+                            # Apply inverse transform
+                            synthetic_data[col] = encoder_info.inverse_transform(synthetic_data[col])
+                            print(f"[CTABGAN] Legacy reverse encoded column '{col}'")
+                        except Exception as enc_error:
+                            print(f"[WARNING] Legacy reverse encoding failed for '{col}': {enc_error}")
+
+            return synthetic_data
+
+        except Exception as e:
+            print(f"[ERROR] Smart reverse encoding failed: {e}")
+            return synthetic_data
+
     def generate(self, n_samples):
         """Generate synthetic samples with reverse preprocessing"""
         if self.model is None:
@@ -401,26 +558,10 @@ class CTABGANModel:
                     synthetic_data = pd.DataFrame(synthetic_data, columns=[f'feature_{i}' for i in range(synthetic_data.shape[1])])
                     print("[WARNING] Using generic column names - original column names not preserved")
 
-            # Apply reverse encoding for categorical columns
+            # Apply smart reverse encoding for categorical columns
             if hasattr(self, 'encoders') and self.encoders:
-                print("[CTABGAN] Applying reverse encoding to categorical columns...")
-                for col, encoder in self.encoders.items():
-                    if col in synthetic_data.columns:
-                        try:
-                            # Ensure values are integers for label encoder
-                            synthetic_data[col] = synthetic_data[col].round().astype(int)
-
-                            # Handle out-of-range values by clipping to valid range
-                            valid_range = range(len(encoder.classes_))
-                            synthetic_data[col] = synthetic_data[col].clip(
-                                lower=min(valid_range), upper=max(valid_range)
-                            )
-
-                            # Apply inverse transform
-                            synthetic_data[col] = encoder.inverse_transform(synthetic_data[col])
-                            print(f"[CTABGAN] Reverse encoded column '{col}'")
-                        except Exception as enc_error:
-                            print(f"[WARNING] Could not reverse encode column '{col}': {enc_error}")
+                print("[CTABGAN] Applying smart reverse encoding to categorical columns...")
+                synthetic_data = self._apply_smart_reverse_encoding(synthetic_data)
 
             print(f"[OK] CTAB-GAN generation completed: {synthetic_data.shape}")
             return synthetic_data
@@ -504,18 +645,68 @@ class CTABGANPlusModel:
                 # Use default test_ratio since stratification is handled by problem_type logic
                 test_ratio = 0.20
 
-                # Initialize CTAB-GAN+ with proper parameters using cleaned data
-                self.model = CTABGANClass(
-                    raw_csv_path=self.temp_csv_path,
-                    categorical_columns=categorical_cols,
-                    integer_columns=integer_columns,
-                    problem_type=problem_type,
-                    test_ratio=test_ratio
-                )
+                # Add data validation for CTAB-GAN+ robustness
+                print("[CTABGAN+] Validating data for robust training...")
 
-                print(f"[CTABGAN+] Training CTAB-GAN+ (Enhanced) for {self.epochs} epochs...")
-                self.model.fit()
-                print("[OK] CTAB-GAN+ training completed successfully")
+                # Validate data dimensions and content
+                if cleaned_data.shape[0] < 100:
+                    print(f"[WARNING] Small dataset ({cleaned_data.shape[0]} rows) may cause layer dimension issues")
+
+                if cleaned_data.shape[1] < 2:
+                    raise ValueError("Dataset must have at least 2 columns for CTAB-GAN+ training")
+
+                # Validate no infinite or extremely large values that could cause layer issues
+                numeric_cols = cleaned_data.select_dtypes(include=[np.number]).columns
+                for col in numeric_cols:
+                    if cleaned_data[col].isinf().any():
+                        print(f"[WARNING] Infinite values detected in {col}, replacing with finite values")
+                        cleaned_data[col] = cleaned_data[col].replace([np.inf, -np.inf],
+                                                                      [cleaned_data[col].max(), cleaned_data[col].min()])
+
+                    # Check for extremely large values that might cause numeric issues
+                    max_val = abs(cleaned_data[col]).max()
+                    if max_val > 1e6:
+                        print(f"[WARNING] Very large values in {col} (max: {max_val}), normalizing...")
+                        cleaned_data[col] = cleaned_data[col] / max_val
+
+                # Re-save the validated data
+                cleaned_data.to_csv(self.temp_csv_path, index=False)
+
+                # Initialize CTAB-GAN+ with proper parameters using validated data
+                print("[CTABGAN+] Initializing CTAB-GAN+ with validated parameters...")
+                try:
+                    self.model = CTABGANClass(
+                        raw_csv_path=self.temp_csv_path,
+                        categorical_columns=categorical_cols,
+                        integer_columns=integer_columns,
+                        problem_type=problem_type,
+                        test_ratio=test_ratio
+                    )
+
+                    print(f"[CTABGAN+] Training CTAB-GAN+ (Enhanced) for {self.epochs} epochs...")
+                    self.model.fit()
+                    print("[OK] CTAB-GAN+ training completed successfully")
+
+                except Exception as model_error:
+                    print(f"[ERROR] CTAB-GAN+ initialization failed: {model_error}")
+                    if "NoneType" in str(model_error) and "int" in str(model_error):
+                        print("[RECOVERY] Attempting fallback with adjusted parameters...")
+                        # Try with simpler categorical configuration
+                        try:
+                            self.model = CTABGANClass(
+                                raw_csv_path=self.temp_csv_path,
+                                categorical_columns=[],  # Remove categorical columns as fallback
+                                integer_columns=integer_columns,
+                                problem_type={None: None},  # Simplify problem type
+                                test_ratio=0.15  # Use smaller test ratio
+                            )
+                            self.model.fit()
+                            print("[OK] CTAB-GAN+ training completed with fallback parameters")
+                        except Exception as fallback_error:
+                            print(f"[ERROR] Fallback also failed: {fallback_error}")
+                            raise model_error
+                    else:
+                        raise model_error
                 
             else:
                 # Fallback to regular CTAB-GAN with preprocessing
@@ -547,7 +738,108 @@ class CTABGANPlusModel:
             if hasattr(self, 'temp_csv_path') and self.temp_csv_path and os.path.exists(self.temp_csv_path):
                 os.remove(self.temp_csv_path)
             raise RuntimeError(f"CTAB-GAN+ training error: {str(e)}")
-    
+
+    def _apply_smart_reverse_encoding(self, synthetic_data):
+        """
+        Apply smart reverse encoding based on encoding type used during preprocessing.
+        Handles binary, one-hot, and label encoding types.
+        """
+        try:
+            for col, encoder_info in self.encoders.items():
+                if isinstance(encoder_info, dict):
+                    # New smart encoding format
+                    encoding_type = encoder_info.get('type', 'label')
+                    original_col = encoder_info.get('original_column', col)
+                    encoder = encoder_info.get('encoder')
+
+                    if encoding_type == 'binary':
+                        # Binary encoding: simple label encoder reverse
+                        if original_col in synthetic_data.columns:
+                            try:
+                                # Ensure values are integers and in valid range
+                                synthetic_data[original_col] = synthetic_data[original_col].round().astype(int)
+                                valid_range = range(len(encoder.classes_))
+                                synthetic_data[original_col] = synthetic_data[original_col].clip(
+                                    lower=min(valid_range), upper=max(valid_range)
+                                )
+                                # Apply inverse transform
+                                synthetic_data[original_col] = encoder.inverse_transform(synthetic_data[original_col])
+                                print(f"[CTABGAN+] Binary reverse encoded column '{original_col}'")
+                            except Exception as e:
+                                print(f"[WARNING] Binary reverse encoding failed for '{original_col}': {e}")
+
+                    elif encoding_type == 'onehot':
+                        # One-hot encoding: reconstruct original categorical column
+                        onehot_columns = encoder_info.get('onehot_columns', [])
+                        if all(oh_col in synthetic_data.columns for oh_col in onehot_columns):
+                            try:
+                                # Get one-hot data and find the maximum value column for each row
+                                onehot_data = synthetic_data[onehot_columns].values
+
+                                # Convert to probabilities (handle values outside 0-1 range)
+                                onehot_data = np.clip(onehot_data, 0, 1)
+
+                                # Find the column with maximum value for each row
+                                max_indices = np.argmax(onehot_data, axis=1)
+
+                                # Map back to original categorical values
+                                original_values = encoder_info.get('original_values', [])
+                                if len(original_values) == len(onehot_columns):
+                                    # Use original values if available
+                                    reconstructed_values = [original_values[i] for i in max_indices]
+                                else:
+                                    # Use encoder classes as fallback
+                                    reconstructed_values = [encoder.classes_[i] for i in max_indices]
+
+                                # Add reconstructed column and remove one-hot columns
+                                synthetic_data[original_col] = reconstructed_values
+                                synthetic_data = synthetic_data.drop(columns=onehot_columns)
+                                print(f"[CTABGAN+] One-hot reverse encoded column '{original_col}' (removed {len(onehot_columns)} one-hot columns)")
+
+                            except Exception as e:
+                                print(f"[WARNING] One-hot reverse encoding failed for '{original_col}': {e}")
+
+                    elif encoding_type in ['label', 'label_fallback']:
+                        # Label encoding: standard reverse transform
+                        if original_col in synthetic_data.columns:
+                            try:
+                                # Ensure values are integers and in valid range
+                                synthetic_data[original_col] = synthetic_data[original_col].round().astype(int)
+                                valid_range = range(len(encoder.classes_))
+                                synthetic_data[original_col] = synthetic_data[original_col].clip(
+                                    lower=min(valid_range), upper=max(valid_range)
+                                )
+                                # Apply inverse transform
+                                synthetic_data[original_col] = encoder.inverse_transform(synthetic_data[original_col])
+                                print(f"[CTABGAN+] Label reverse encoded column '{original_col}'")
+                            except Exception as e:
+                                print(f"[WARNING] Label reverse encoding failed for '{original_col}': {e}")
+
+                else:
+                    # Legacy encoding format (backward compatibility)
+                    if col in synthetic_data.columns:
+                        try:
+                            # Ensure values are integers for label encoder
+                            synthetic_data[col] = synthetic_data[col].round().astype(int)
+
+                            # Handle out-of-range values by clipping to valid range
+                            valid_range = range(len(encoder_info.classes_))
+                            synthetic_data[col] = synthetic_data[col].clip(
+                                lower=min(valid_range), upper=max(valid_range)
+                            )
+
+                            # Apply inverse transform
+                            synthetic_data[col] = encoder_info.inverse_transform(synthetic_data[col])
+                            print(f"[CTABGAN+] Legacy reverse encoded column '{col}'")
+                        except Exception as enc_error:
+                            print(f"[WARNING] Legacy reverse encoding failed for '{col}': {enc_error}")
+
+            return synthetic_data
+
+        except Exception as e:
+            print(f"[ERROR] Smart reverse encoding failed: {e}")
+            return synthetic_data
+
     def generate(self, n_samples):
         """Generate synthetic samples using CTAB-GAN+ with reverse preprocessing"""
         if self.model is None:
@@ -577,26 +869,10 @@ class CTABGANPlusModel:
                     else:
                         synthetic_data = pd.DataFrame(synthetic_data, columns=[f'feature_{i}' for i in range(synthetic_data.shape[1])])
 
-            # Apply reverse encoding for categorical columns
+            # Apply smart reverse encoding for categorical columns
             if hasattr(self, 'encoders') and self.encoders:
-                print("[CTABGAN+] Applying reverse encoding to categorical columns...")
-                for col, encoder in self.encoders.items():
-                    if col in synthetic_data.columns:
-                        try:
-                            # Ensure values are integers for label encoder
-                            synthetic_data[col] = synthetic_data[col].round().astype(int)
-
-                            # Handle out-of-range values by clipping to valid range
-                            valid_range = range(len(encoder.classes_))
-                            synthetic_data[col] = synthetic_data[col].clip(
-                                lower=min(valid_range), upper=max(valid_range)
-                            )
-
-                            # Apply inverse transform
-                            synthetic_data[col] = encoder.inverse_transform(synthetic_data[col])
-                            print(f"[CTABGAN+] Reverse encoded column '{col}'")
-                        except Exception as enc_error:
-                            print(f"[WARNING] Could not reverse encode column '{col}': {enc_error}")
+                print("[CTABGAN+] Applying smart reverse encoding to categorical columns...")
+                synthetic_data = self._apply_smart_reverse_encoding(synthetic_data)
 
             print(f"[OK] CTAB-GAN+ generation completed: {synthetic_data.shape}")
 
@@ -3431,3 +3707,94 @@ def reload_trts_evaluator():
         return False
 
 print("[OK] Nuclear reload function available: call reload_trts_evaluator() in notebooks!")
+
+# CATEGORICAL DATA SUMMARY FUNCTION FOR END OF SECTION 2
+# ============================================================================
+
+def display_categorical_summary(data, categorical_columns=None, target_column=None):
+    """
+    Display comprehensive categorical data processing summary for end of Section 2.
+    Provides transparency on how categorical variables will be handled in Sections 3 & 4.
+
+    Parameters:
+    - data: pandas DataFrame with processed data
+    - categorical_columns: list of categorical column names (auto-detected if None)
+    - target_column: target column name to exclude from categorical analysis
+
+    Usage:
+    Call at the end of Section 2 in notebooks:
+    display_categorical_summary(data, categorical_columns, TARGET_COLUMN)
+    """
+    print("\n" + "="*60)
+    print("📋 CATEGORICAL DATA PROCESSING SUMMARY")
+    print("="*60)
+
+    # Auto-detect categorical columns if not provided
+    if categorical_columns is None:
+        categorical_columns = []
+        for col in data.columns:
+            if data[col].dtype == 'object' or data[col].dtype.name == 'category':
+                if col != target_column:  # Exclude target column
+                    categorical_columns.append(col)
+        if categorical_columns:
+            print(f"🔍 Auto-detected categorical columns: {categorical_columns}")
+
+    if categorical_columns:
+        print(f"✅ Found {len(categorical_columns)} categorical column(s):")
+
+        for col in categorical_columns:
+            if col in data.columns:
+                unique_count = data[col].nunique()
+                unique_values = data[col].unique()
+
+                # Show limited values for display
+                display_values = list(unique_values[:5])
+                if len(unique_values) > 5:
+                    display_values.append("...")
+
+                # Determine encoding strategy
+                if unique_count == 2:
+                    strategy = "BINARY (0/1 encoding)"
+                    icon = "📊"
+                elif unique_count <= 10:
+                    strategy = "MULTI-LEVEL (one-hot encoding)"
+                    icon = "📊"
+                else:
+                    strategy = "HIGH-CARDINALITY (label encoding)"
+                    icon = "📊"
+
+                print(f"   {icon} {col}: {strategy}")
+                print(f"      └─ {unique_count} unique values: {display_values}")
+
+                # Check for missing values
+                missing_count = data[col].isnull().sum()
+                if missing_count > 0:
+                    print(f"      └─ ⚠️  {missing_count} missing values detected - will be handled during preprocessing")
+                else:
+                    print(f"      └─ ✅ No missing values")
+            else:
+                print(f"   ❌ {col}: Column not found in dataset")
+    else:
+        print("✅ No categorical columns detected - all features are numeric")
+        print("   🔢 All data will be processed as continuous variables")
+
+    # Final dataset summary
+    print(f"\n📊 Final dataset ready for Sections 3 & 4:")
+    print(f"   • Shape: {data.shape}")
+    print(f"   • Total features: {len(data.columns)}")
+    if target_column and target_column in data.columns:
+        print(f"   • Target column: {target_column} ({data[target_column].nunique()} unique values)")
+        feature_count = len(data.columns) - 1
+    else:
+        feature_count = len(data.columns)
+    print(f"   • Features for modeling: {feature_count}")
+    print(f"   • Categorical features: {len(categorical_columns) if categorical_columns else 0}")
+    print(f"   • Numeric features: {len(data.select_dtypes(include=[np.number]).columns)}")
+
+    # Memory usage summary
+    memory_mb = data.memory_usage(deep=True).sum() / 1024 / 1024
+    print(f"   • Memory usage: {memory_mb:.1f} MB")
+
+    print("="*60)
+    print("🚀 Data preprocessing complete - ready for synthetic data generation!")
+    print("="*60)
