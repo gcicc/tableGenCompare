@@ -16,47 +16,50 @@ All working as expected to end of section 4 and produced all output as expected.
 
 
 - `C:\Users\gcicc\claudeproj\tableGenCompare\SynthethicTableGenerator-Liver.ipynb`
+CHUNK_024 has issue now: c:\Users\gcicc\claudeproj\tableGenCompare\SynthethicTableGenerator-Liver.ipynb 
+We are still getting warnings like:
 CTGAN CHUNK_040
+I 2025-09-18 13:20:48,003] A new study created in memory with name: no-name-b0b59ffc-23a6-4c95-b834-3505710e4ee0
+🔄 Loading clean subset data for Section 4...
+✅ Clean data loaded: 5000 rows, 11 columns
+✅ Missing values: 0
+✅ Target column 'Result' distribution:
+Result
+1    3571
+2    1429
+Name: count, dtype: int64
+✅ Data validation passed: 0 missing values confirmed
+🔧 SECTION 4.1: CTGAN HYPERPARAMETER OPTIMIZATION
+================================================================================
+🔄 Creating CTGAN optimization study...
+📊 Dataset info: 5000 rows, 11 columns
+📊 Target column 'Result' unique values: 2
+
+⚠️  Adjusted PAC from 6 to 5 for batch_size 1000
+✅ PAC validation: 1000 % 5 = 0
+
+🔄 CTGAN Trial 1: epochs=95, batch_size=1000, pac=5, lr=1.16e-05
+🎯 Using target column: 'Result'
+✅ Using CTGAN from ctgan package
+Gen. (-2.15) | Discrim. (-0.03): 100%|██████████| 95/95 [00:29<00:00,  3.22it/s]
+⏱️ Training completed in 35.0 seconds
+📊 Generated synthetic data: (5000, 11)
+[TARGET] Enhanced objective function using target column: 'Result'
+[OK] Similarity Analysis: 10/10 valid metrics, Average: 0.5230
 [WARNING] Could not process column Gender of the patient: y contains previously unseen labels: 'nan'
-CTAB-GAN CHUNK_042
-[WARNING] Could not process column Gender of the patient: y contains previously unseen labels: 'nan'
+[I 2025-09-18 13:21:23,788] Trial 0 finished with value: 0.5644117730245581 and parameters: {'epochs': 95, 'batch_size': 1000, 'pac': 6, 'generator_lr': 1.155334332028494e-05, 'discriminator_lr': 2.91354195170619e-05, 'generator_dim': (128, 128), 'discriminator_dim': (256, 256), 'generator_decay': 2.0726989063903726e-07, 'discriminator_decay': 1.6687466341381087e-05, 'log_frequency': True, 'verbose': True}. Best is trial 0 with value: 0.5644117730245581.
+[OK] TRTS (Synthetic->Real): 0.6864
+[OK] TRTS Evaluation: 2 scenarios, Average: 0.6265
+[CHART] Combined Score: 0.5644 (Similarity: 0.5230, Accuracy: 0.6265)
+🎯 Trial 1 Results:
+   • Combined Score: 0.5644
+   • Similarity: 0.5230
+   • Accuracy: 0.6265
+⚠️  Adjusted PAC from 8 to 5 for batch_size 100
+✅ PAC validation: 100 % 5 = 0
 
-CHUNK_044
-🔄 CTAB-GAN+ Trial 1: epochs=300, batch_size=128, test_ratio=0.150
-ERROR	src.models.implementations.ctabganplus_model:ctabganplus_model.py:train()- CTAB-GAN+ training failed: unsupported operand type(s) for //: 'NoneType' and 'int'
-Traceback (most recent call last):
-  File "c:\Users\gcicc\claudeproj\tableGenCompare\src\models\implementations\ctabganplus_model.py", line 180, in train
-    self._ctabganplus_model.fit()
-  File "c:\Users\gcicc\claudeproj\tableGenCompare\src\models\implementations\..\..\..\CTAB-GAN\model\ctabgan.py", line 59, in fit
-    self.synthesizer.fit(train_data=self.data_prep.df, categorical = self.data_prep.column_types["categorical"],
-  File "c:\Users\gcicc\claudeproj\tableGenCompare\./CTAB-GAN\model\synthesizer\ctabgan_synthesizer.py", line 626, in fit
-    layers_G = determine_layers_gen(self.gside, self.random_dim+self.cond_generator.n_opt, self.num_channels)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "c:\Users\gcicc\claudeproj\tableGenCompare\./CTAB-GAN\model\synthesizer\ctabgan_synthesizer.py", line 459, in determine_layers_gen
-    layer_dims = [(1, side), (num_channels, side // 2)]
-                                            ~~~~~^^~~
-TypeError: unsupported operand type(s) for //: 'NoneType' and 'int'
 
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "C:\Users\gcicc\AppData\Local\Temp\ipykernel_22280\4130900770.py", line 45, in ctabganplus_objective
-    result = model.train(data,
-            ^^^^^^^^^^^^^^^^^
-  File "c:\Users\gcicc\claudeproj\tableGenCompare\src\models\implementations\ctabganplus_model.py", line 218, in train
-    raise RuntimeError(f"Training failed: {e}")
-RuntimeError: Training failed: unsupported operand type(s) for //: 'NoneType' and 'int'
-[I 2025-09-18 00:53:46,470] Trial 0 finished with value: 0.0 and parameters: {'epochs': 300, 'batch_size': 128, 'test_ratio': 0.15}. Best is trial 0 with value: 0.0.
-❌ Trial 1 failed: Training failed: unsupported operand type(s) for //: 'NoneType' and 'int'
-
-CHUNK_046
-[WARNING] Could not process column Gender of the patient: y contains previously unseen labels: 'nan'
-
-CHUNK_048
-[WARNING] Could not process column Gender of the patient: y contains previously unseen labels: 'nan'
-
-CHUNK_050
-[WARNING] Could not process column Gender of the patient: y contains previously unseen labels: 'nan'
+The data set used in Section 3 and Section 4 should be the dataset formed and sampled from following MICE imputation section. Therefore there should be no missing values in the dataset used in Section 3 and 4.
 
 - `C:\Users\gcicc\claudeproj\tableGenCompare\SynthethicTableGenerator-Pakistani.ipynb`
 All working as expected to end of section 4 and produced all output as expected. 

@@ -658,7 +658,7 @@ class CTABGANPlusModel:
                 # Validate no infinite or extremely large values that could cause layer issues
                 numeric_cols = cleaned_data.select_dtypes(include=[np.number]).columns
                 for col in numeric_cols:
-                    if cleaned_data[col].isinf().any():
+                    if np.isinf(cleaned_data[col]).any():
                         print(f"[WARNING] Infinite values detected in {col}, replacing with finite values")
                         cleaned_data[col] = cleaned_data[col].replace([np.inf, -np.inf],
                                                                       [cleaned_data[col].max(), cleaned_data[col].min()])
