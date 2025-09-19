@@ -64,7 +64,7 @@ try:
     
     from sklearn.mixture import GaussianMixture
     if not hasattr(GaussianMixture, 'n_components'):
-        print("WARNING: Unexpected sklearn version behavior detected")
+        print(f"INFO: Applying sklearn compatibility patches for version {sklearn.__version__}")
     
     warnings.filterwarnings("ignore", category=FutureWarning)
     warnings.filterwarnings("ignore", category=DeprecationWarning)

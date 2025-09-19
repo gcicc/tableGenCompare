@@ -15,6 +15,7 @@ import warnings
 from typing import Dict, List, Optional, Any, Tuple, Union
 import pandas as pd
 import numpy as np
+import importlib.util
 
 # Try to import SDV CopulaGAN
 try:
