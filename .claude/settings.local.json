@@ -20,7 +20,9 @@
       "Bash(git ls-tree:*)",
       "Bash(for line_num in 2850 2995 3107 3215 3398 3524)",
       "Bash(do echo \"Line $line_num:\")",
-      "Bash(done)"
+      "Bash(done)",
+      "Read(//c/**)",
+      "Bash(del temp_corrected_source.txt)"
     ],
     "deny": [],
     "ask": []
