@@ -22,23 +22,11 @@
    "id": "b2eccda2",
    "metadata": {},
    "source": [
-    "- Section 1 prepares the environment and sources setup.py.\n",
+    "- Section 1 sets the project up. \n",
     "- Section 2 reads in the dataset and produces an initial suite of EDA. \n",
-    "  - 2.1.1 - user needs to adapt for incoming dataset\n",
-    "  - 2.1.2 - user should review to ensure target colummns and categorical columns are properly identified\n",
-    "  - 2.1.3 - user should confirm that data has loaded properly\n",
-    "  - 2.1.4 - if your data has missing values, MICE is employed; user should review\n",
-    "  - CHUNK_2_1_4_C: This code samples 500 rows to be used in rest of notebook for purposes of testing; comment out this code for production.\n",
-    "  - 2.1.5 - Exploratory data analysis\n",
-    "- Section 3 demonstrates the performance of each metholodogy with some default hyperparameters. \n",
-    "   - 3.1.1-3.1.6 Subsections for each method\n",
-    "   - 3.2 batch processing of figures/tables from section 3 \n",
-    "- Section 4 runs hyperparameter optimization. \n",
-    "   - 4.1.1-4.1.6 Subsections for each method\n",
-    "   - 4.2 batch processing of figures/tables from section 4 describing the optimization process \n",
-    "- Section 5 re-runs each model with their respective best hyperparameters. \n",
-    "   - 5.1.1-5.1.6 re-run each model using the best hyperparameters identified in Section 4.1.1-4.1.6, resp.\n",
-    "   - 5.2 batch processing of figures/tables from Section 5.\n",
+    "- Section 3 demonstrates the performance of each metholodogy with ambiguous collection of hyperparameters. This section provides output regarding the the training process of those individual runs. \n",
+    "- Section 4 runs hyperparameter optimization. Graphics describe the hyperparameter optimization process. \n",
+    "- Section 5 re-runs each model with their respective best hyperparameters. Detailed summaries of each model are provided in respective subsections. A final summaries of metrics across methods facilitate identifying the best of the best.\n",
     "\n",
     "\n",
     "Refer to readme.md, doc\\Model-descriptions.md, doc\\Objective-function.md."
@@ -126,7 +114,7 @@
     }
    ],
    "source": [
-    "# Code Chunk ID: CHUNK_1_0_0_A - Import Setup Module\n",
+    "# Code Chunk ID: CHUNK_001 - Import Setup Module\n",
     "# Import all functionality from setup.py\n",
     "from setup import *\n",
     "\n",
@@ -206,7 +194,7 @@
     }
    ],
    "source": [
-    "# Code Chunk ID: CHUNK_2_1_1_A\n",
+    "# Code Chunk ID: CHUNK_005\n",
     "# =================== USER CONFIGURATION ===================\n",
     "# 📝 CONFIGURE YOUR DATASET: Update these settings for your data\n",
     "DATA_FILE = 'data/liver_train.csv'            # Path to your CSV file\n",
@@ -348,7 +336,7 @@
     }
    ],
    "source": [
-    "# Code Chunk ID: CHUNK_2_1_2_A\n",
+    "# Code Chunk ID: CHUNK_006\n",
     "# Column Name Standardization and Dataset Analysis Utilities\n",
     "import re\n",
     "import pandas as pd\n",
@@ -559,14 +547,6 @@
    ]
   },
   {
-   "cell_type": "markdown",
-   "id": "93275471",
-   "metadata": {},
-   "source": [
-    "This code provides a comprehensive toolkit for analyzing, visualizing, and handling missing data in a pandas DataFrame using advanced and flexible approaches. It includes functions to assess the extent and patterns of missingness, visualize those patterns, and apply various imputation techniques. The centerpiece is the ability to perform Multiple Imputation by Chained Equations (MICE) using scikit-learn’s IterativeImputer with a RandomForestRegressor (for numerical features), which statistically estimates and fills in missing values based on all other feature relationships. For categorical variables, the code defaults to simpler mode imputation. Users can also choose alternative strategies like dropping rows (drop), filling with column medians (median), or filling with the most frequent value (mode). The code features detailed feedback and visual support with heatmaps and bar plots to help the user understand and monitor missing data patterns throughout the handling process. Together, these utilities help users robustly prepare data for machine learning or statistical analysis, reducing bias and maximizing data retention and utility."
-   ]
-  },
-  {
    "cell_type": "code",
    "execution_count": 4,
    "id": "mupr2hdm16",
@@ -581,7 +561,7 @@
     }
    ],
    "source": [
-    "# Code Chunk ID: CHUNK_2_1_4_A\n",
+    "# Code Chunk ID: CHUNK_008\n",
     "# Advanced Missing Data Handling with MICE\n",
     "from sklearn.experimental import enable_iterative_imputer\n",
     "from sklearn.impute import IterativeImputer\n",
@@ -822,7 +802,7 @@
     }
    ],
    "source": [
-    "# Code Chunk ID: CHUNK_2_1_4_B\n",
+    "# Code Chunk ID: CHUNK_008A\n",
     "# ============================================================================\n",
     "# CONDITIONAL MISSING DATA IMPUTATION\n",
     "# ============================================================================\n",
@@ -849,12 +829,20 @@
   },
   {
    "cell_type": "code",
-   "execution_count": null,
+   "execution_count": 6,
    "id": "c9cf8678",
    "metadata": {},
-   "outputs": [],
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "✅ No missing values detected - skipping imputation\n"
+     ]
+    }
+   ],
    "source": [
-    "# Code Chunk ID: CHUNK_2_1_4_C\n",
+    "# Code Chunk ID: CHUNK_008A\n",
     "# ============================================================================\n",
     "# ROBUST MISSING DATA IMPUTATION\n",
     "# ============================================================================\n",
@@ -863,62 +851,121 @@
     "missing_count = data.isnull().sum().sum()\n",
     "\n",
     "if missing_count > 0:\n",
-    "    print(f\"🔧 ROBUST MISSING DATA IMPUTATION\")\n",
-    "    print(f\"📊 Found {missing_count} missing values - applying {MISSING_STRATEGY} strategy with error handling\")\n",
+    "    print(f\"🔧 MISSING DATA IMPUTATION\")\n",
+    "    print(f\"📊 Found {missing_count} missing values - applying {MISSING_STRATEGY} strategy\")\n",
     "    \n",
+    "    # Store original data\n",
+    "    data_original = data.copy()\n",
+    "    \n",
+    "    # Apply robust missing data handling\n",
     "    try:\n",
-    "        # Store original data for fallback\n",
-    "        data_original = data.copy()\n",
-    "        \n",
-    "        # Apply imputation with error handling\n",
-    "        data = handle_missing_data_strategy(data, MISSING_STRATEGY, TARGET_COLUMN)\n",
-    "        \n",
-    "        # Verify imputation success\n",
-    "        remaining = data.isnull().sum().sum()\n",
-    "        \n",
-    "        if remaining < missing_count:\n",
-    "            print(f\"✅ Robust imputation successful: {missing_count} → {remaining} missing values\")\n",
-    "        else:\n",
-    "            print(f\"⚠️  Imputation may not be complete: {missing_count} → {remaining} missing values\")\n",
+    "        if MISSING_STRATEGY.lower() == 'mice':\n",
+    "            # Apply MICE imputation with robust error handling\n",
+    "            print(\"   🔬 Applying MICE imputation...\")\n",
     "            \n",
+    "            # Separate numeric and categorical columns\n",
+    "            numeric_cols = data.select_dtypes(include=[np.number]).columns.tolist()\n",
+    "            categorical_cols = data.select_dtypes(include=['object']).columns.tolist()\n",
+    "            \n",
+    "            # Handle numeric columns with iterative imputer\n",
+    "            if numeric_cols:\n",
+    "                from sklearn.experimental import enable_iterative_imputer\n",
+    "                from sklearn.impute import IterativeImputer\n",
+    "                from sklearn.ensemble import RandomForestRegressor\n",
+    "                \n",
+    "                print(f\"   Imputing {len(numeric_cols)} numeric columns...\")\n",
+    "                numeric_imputer = IterativeImputer(\n",
+    "                    estimator=RandomForestRegressor(n_estimators=10, random_state=42),\n",
+    "                    max_iter=10,\n",
+    "                    random_state=42\n",
+    "                )\n",
+    "                data[numeric_cols] = numeric_imputer.fit_transform(data[numeric_cols])\n",
+    "            \n",
+    "            # Handle categorical columns with mode\n",
+    "            if categorical_cols:\n",
+    "                print(f\"   Imputing {len(categorical_cols)} categorical columns with mode...\")\n",
+    "                for col in categorical_cols:\n",
+    "                    if data[col].isnull().any():\n",
+    "                        mode_val = data[col].mode()\n",
+    "                        fill_val = mode_val[0] if len(mode_val) > 0 else 'Unknown'\n",
+    "                        data[col] = data[col].fillna(fill_val)\n",
+    "            \n",
+    "            print(\"✅ MICE imputation completed!\")\n",
+    "            \n",
+    "        else:\n",
+    "            # Fallback to simple imputation\n",
+    "            print(f\"   📊 Applying {MISSING_STRATEGY} imputation...\")\n",
+    "            \n",
+    "            for col in data.columns:\n",
+    "                if data[col].isnull().any():\n",
+    "                    if data[col].dtype in ['object']:\n",
+    "                        # Categorical: use mode\n",
+    "                        mode_val = data[col].mode()\n",
+    "                        fill_val = mode_val[0] if len(mode_val) > 0 else 'Unknown'\n",
+    "                        data[col] = data[col].fillna(fill_val)\n",
+    "                    else:\n",
+    "                        # Numeric: use median\n",
+    "                        median_val = data[col].median()\n",
+    "                        data[col] = data[col].fillna(median_val)\n",
+    "            \n",
+    "            print(f\"✅ {MISSING_STRATEGY} imputation completed!\")\n",
+    "    \n",
     "    except Exception as e:\n",
-    "        print(f\"❌ Error during imputation: {e}\")\n",
-    "        print(\"🔄 Using fallback: median imputation for numeric, mode for categorical\")\n",
+    "        print(f\"⚠️ Imputation error: {e}\")\n",
+    "        print(\"   Applying fallback median/mode imputation...\")\n",
     "        \n",
-    "        # Fallback imputation strategy\n",
-    "        numeric_columns = data.select_dtypes(include=[np.number]).columns\n",
-    "        categorical_columns = data.select_dtypes(include=['object']).columns\n",
+    "        # Robust fallback imputation\n",
+    "        for col in data.columns:\n",
+    "            if data[col].isnull().any():\n",
+    "                if data[col].dtype in ['object']:\n",
+    "                    data[col] = data[col].fillna('Unknown')\n",
+    "                else:\n",
+    "                    data[col] = data[col].fillna(data[col].median())\n",
     "        \n",
-    "        for col in numeric_columns:\n",
-    "            if data[col].isnull().sum() > 0:\n",
-    "                data[col].fillna(data[col].median(), inplace=True)\n",
-    "                \n",
-    "        for col in categorical_columns:\n",
-    "            if data[col].isnull().sum() > 0:\n",
-    "                data[col].fillna(data[col].mode()[0], inplace=True)\n",
-    "                \n",
-    "        remaining = data.isnull().sum().sum()\n",
-    "        print(f\"✅ Fallback imputation complete: {missing_count} → {remaining} missing values\")\n",
-    "        \n",
+    "        print(\"✅ Fallback imputation completed!\")\n",
+    "    \n",
+    "    # Report results\n",
+    "    remaining = data.isnull().sum().sum()\n",
+    "    print(f\"   Missing values before: {missing_count}\")\n",
+    "    print(f\"   Missing values after: {remaining}\")\n",
+    "    print(f\"✅ Imputation complete: {missing_count} → {remaining} missing values\")\n",
     "else:\n",
-    "    print(\"✅ No missing values detected - skipping robust imputation\")"
+    "    print(\"✅ No missing values detected - skipping imputation\")"
    ]
   },
   {
    "cell_type": "markdown",
-   "id": "d278d62b",
+   "id": "931baea0",
    "metadata": {},
    "source": [
-    "⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️\n",
-    "\n",
-    "Note that next chunk samples 500 rows\n",
-    "\n",
-    "⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️"
+    "### 2.1.4a - Adjustments"
    ]
   },
   {
    "cell_type": "code",
-   "execution_count": null,
+   "execution_count": 7,
+   "id": "f71aa7f7",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "(30691, 11)"
+      ]
+     },
+     "execution_count": 7,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "data.head\n",
+    "data.shape"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
    "id": "565bbd5d",
    "metadata": {},
    "outputs": [
@@ -999,8 +1046,7 @@
     }
    ],
    "source": [
-    "# CHUNK_2_1_4_C\n",
-    "# This chunk samples 500 rows for quicker testing - remove for full dataset\n",
+    "\n",
     "data=data.sample(n=500, random_state=42)\n",
     "data.shape\n",
     "data.head"
@@ -1039,7 +1085,7 @@
     }
    ],
    "source": [
-    "# Code Chunk ID: CHUNK_2_1_5_A\n",
+    "# Code Chunk ID: CHUNK_009\n",
     "# Enhanced Dataset Overview and Analysis\n",
     "print(\"📋 COMPREHENSIVE DATASET OVERVIEW\")\n",
     "print(\"=\" * 60)\n",
@@ -1078,7 +1124,7 @@
     }
    ],
    "source": [
-    "# Code Chunk ID: CHUNK_2_1_5_B\n",
+    "# Code Chunk ID: CHUNK_010\n",
     "# Enhanced Column Analysis - OUTPUT TO FILE\n",
     "print(\"📊 DETAILED COLUMN ANALYSIS (SAVING TO FILE)\")\n",
     "print(\"=\" * 50)\n",
@@ -1131,7 +1177,7 @@
     }
    ],
    "source": [
-    "# Code Chunk ID: CHUNK_2_1_5_C\n",
+    "# Code Chunk ID: CHUNK_011\n",
     "# Enhanced Target Variable Analysis - OUTPUT TO FILE\n",
     "print(\"🎯 TARGET VARIABLE ANALYSIS (SAVING TO FILE)\")\n",
     "print(\"=\" * 40)\n",
@@ -1201,7 +1247,7 @@
     }
    ],
    "source": [
-    "# Code Chunk ID: CHUNK_2_1_5_D\n",
+    "# Code Chunk ID: CHUNK_012\n",
     "# Enhanced Feature Distribution Visualizations - OUTPUT TO FILE\n",
     "print(\"📊 FEATURE DISTRIBUTION ANALYSIS (SAVING TO FILE)\")\n",
     "print(\"=\" * 40)\n",
@@ -1294,7 +1340,7 @@
     }
    ],
    "source": [
-    "# Code Chunk ID: CHUNK_2_1_5_E\n",
+    "# Code Chunk ID: CHUNK_013\n",
     "# Enhanced Correlation Analysis - OUTPUT TO FILE\n",
     "print(\"🔍 CORRELATION ANALYSIS (SAVING TO FILE)\")\n",
     "print(\"=\" * 30)\n",
@@ -1402,7 +1448,7 @@
     }
    ],
    "source": [
-    "# Code Chunk ID: CHUNK_2_1_5_F\n",
+    "# Code Chunk ID: CHUNK_014\n",
     "# ============================================================================\n",
     "# GLOBAL CONFIGURATION VARIABLES\n",
     "# ============================================================================\n",
@@ -1842,121 +1888,82 @@
   },
   {
    "cell_type": "code",
-   "execution_count": null,
+   "execution_count": 20,
    "id": "76d4dfe4",
    "metadata": {},
-   "outputs": [],
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "📊 FEATURE DISTRIBUTION ANALYSIS (SAVING TO FILE)\n",
+      "========================================\n",
+      "📊 Feature distribution plots saved to results/liver-train/2025-09-22/Section-2/feature_distributions-posttransorm.png\n",
+      "📊 Distribution analysis completed for 10 numeric features\n"
+     ]
+    }
+   ],
    "source": [
-    "# Code Chunk ID: CHUNK_2_1_5_G\n",
+    "# Code Chunk ID: CHUNK_012\n",
     "# Enhanced Feature Distribution Visualizations - OUTPUT TO FILE\n",
     "print(\"📊 FEATURE DISTRIBUTION ANALYSIS (SAVING TO FILE)\")\n",
-    "print(\"=\" * 60)\n",
+    "print(\"=\" * 40)\n",
     "\n",
-    "# Create results directory for this section\n",
-    "results_path = setup.get_results_path(\"Section-2\")\n",
-    "os.makedirs(results_path, exist_ok=True)\n",
+    "# Turn off interactive mode to prevent figures from displaying in notebook\n",
+    "import matplotlib\n",
+    "matplotlib.use('Agg')  # Use non-interactive backend\n",
+    "plt.ioff()  # Turn off interactive mode\n",
     "\n",
-    "# 📊 DISTRIBUTION VISUALIZATION WITH FILE OUTPUT\n",
-    "def create_enhanced_distribution_plots_to_file(df, target_col, results_path):\n",
-    "    \"\"\"Create comprehensive distribution plots and save to files\"\"\"\n",
-    "    \n",
-    "    # Separate numeric and categorical columns\n",
-    "    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()\n",
-    "    if target_col in numeric_cols:\n",
-    "        numeric_cols.remove(target_col)\n",
-    "    \n",
-    "    categorical_cols = df.select_dtypes(include=['object']).columns.tolist()\n",
-    "    if target_col in categorical_cols:\n",
-    "        categorical_cols.remove(target_col)\n",
-    "    \n",
-    "    print(f\"📈 Analyzing {len(numeric_cols)} numeric and {len(categorical_cols)} categorical features\")\n",
-    "    \n",
-    "    # 1. NUMERIC FEATURE DISTRIBUTIONS\n",
-    "    if numeric_cols:\n",
-    "        n_numeric = len(numeric_cols)\n",
-    "        n_cols = min(3, n_numeric)\n",
-    "        n_rows = (n_numeric + n_cols - 1) // n_cols\n",
-    "        \n",
-    "        fig, axes = plt.subplots(n_rows, n_cols, figsize=(15, 4 * n_rows))\n",
-    "        if n_rows == 1 and n_cols == 1:\n",
-    "            axes = [axes]\n",
-    "        elif n_rows == 1:\n",
-    "            axes = axes\n",
-    "        else:\n",
-    "            axes = axes.flatten()\n",
-    "        \n",
-    "        for i, col in enumerate(numeric_cols):\n",
-    "            if i < len(axes):\n",
-    "                ax = axes[i]\n",
-    "                \n",
-    "                # Distribution plot with KDE\n",
-    "                data[col].hist(bins=30, alpha=0.7, ax=ax, density=True)\n",
-    "                data[col].plot(kind='kde', ax=ax, secondary_y=False)\n",
-    "                \n",
-    "                ax.set_title(f'{col} Distribution')\n",
-    "                ax.set_xlabel(col)\n",
-    "                ax.set_ylabel('Density')\n",
-    "                \n",
-    "                # Add statistics\n",
-    "                mean_val = data[col].mean()\n",
-    "                std_val = data[col].std()\n",
-    "                ax.axvline(mean_val, color='red', linestyle='--', alpha=0.7, label=f'Mean: {mean_val:.2f}')\n",
-    "                ax.legend()\n",
-    "        \n",
-    "        # Hide unused subplots\n",
-    "        for i in range(n_numeric, len(axes)):\n",
-    "            axes[i].set_visible(False)\n",
-    "        \n",
-    "        plt.tight_layout()\n",
-    "        numeric_dist_path = os.path.join(results_path, 'numeric_distributions.png')\n",
-    "        plt.savefig(numeric_dist_path, dpi=300, bbox_inches='tight')\n",
-    "        plt.close()\n",
-    "        print(f\"💾 Numeric distributions saved: {numeric_dist_path}\")\n",
-    "    \n",
-    "    # 2. CATEGORICAL FEATURE DISTRIBUTIONS\n",
-    "    if categorical_cols:\n",
-    "        n_categorical = len(categorical_cols)\n",
-    "        n_cols = min(2, n_categorical)\n",
-    "        n_rows = (n_categorical + n_cols - 1) // n_cols\n",
-    "        \n",
-    "        fig, axes = plt.subplots(n_rows, n_cols, figsize=(12, 4 * n_rows))\n",
-    "        if n_rows == 1 and n_cols == 1:\n",
-    "            axes = [axes]\n",
-    "        elif n_rows == 1:\n",
-    "            axes = axes\n",
-    "        else:\n",
-    "            axes = axes.flatten()\n",
-    "        \n",
-    "        for i, col in enumerate(categorical_cols):\n",
-    "            if i < len(axes):\n",
-    "                ax = axes[i]\n",
-    "                \n",
-    "                value_counts = data[col].value_counts()\n",
-    "                value_counts.plot(kind='bar', ax=ax)\n",
-    "                \n",
-    "                ax.set_title(f'{col} Distribution')\n",
-    "                ax.set_xlabel(col)\n",
-    "                ax.set_ylabel('Count')\n",
-    "                ax.tick_params(axis='x', rotation=45)\n",
-    "                \n",
-    "                # Add value labels on bars\n",
-    "                for j, v in enumerate(value_counts.values):\n",
-    "                    ax.text(j, v + 0.1, str(v), ha='center', va='bottom')\n",
-    "        \n",
-    "        # Hide unused subplots\n",
-    "        for i in range(n_categorical, len(axes)):\n",
-    "            axes[i].set_visible(False)\n",
-    "        \n",
-    "        plt.tight_layout()\n",
-    "        categorical_dist_path = os.path.join(results_path, 'categorical_distributions.png')\n",
-    "        plt.savefig(categorical_dist_path, dpi=300, bbox_inches='tight')\n",
-    "        plt.close()\n",
-    "        print(f\"💾 Categorical distributions saved: {categorical_dist_path}\")\n",
+    "# Get numeric columns excluding target\n",
+    "numeric_cols = data.select_dtypes(include=[np.number]).columns.tolist()\n",
+    "if target_column in numeric_cols:\n",
+    "    numeric_cols.remove(target_column)\n",
     "\n",
-    "# Execute the enhanced visualization\n",
-    "create_enhanced_distribution_plots_to_file(data, TARGET_COLUMN, results_path)\n",
-    "\n",
-    "print(f\"✅ Enhanced distribution analysis complete - files saved to: {results_path}\")"
+    "if numeric_cols:\n",
+    "    n_cols = min(3, len(numeric_cols))\n",
+    "    n_rows = (len(numeric_cols) + n_cols - 1) // n_cols\n",
+    "    \n",
+    "    fig, axes = plt.subplots(n_rows, n_cols, figsize=(5*n_cols, 4*n_rows))\n",
+    "    # Use dataset name fallback for title\n",
+    "    dataset_name = DATASET_IDENTIFIER.title() if DATASET_IDENTIFIER else \"Dataset\"\n",
+    "    fig.suptitle(f'{dataset_name} - Feature Distributions', fontsize=16, fontweight='bold')\n",
+    "    \n",
+    "    # Handle different subplot configurations\n",
+    "    if n_rows == 1 and n_cols == 1:\n",
+    "        axes = [axes]\n",
+    "    elif n_rows == 1:\n",
+    "        axes = axes\n",
+    "    else:\n",
+    "        axes = axes.flatten()\n",
+    "    \n",
+    "    for i, col in enumerate(numeric_cols):\n",
+    "        if i < len(axes):\n",
+    "            # Enhanced histogram\n",
+    "            axes[i].hist(data[col], bins=30, alpha=0.7, color='skyblue', \n",
+    "                        edgecolor='black', density=True)\n",
+    "            \n",
+    "            axes[i].set_title(f'{col}', fontsize=12, fontweight='bold')\n",
+    "            axes[i].set_xlabel(col)\n",
+    "            axes[i].set_ylabel('Density')\n",
+    "            axes[i].grid(True, alpha=0.3)\n",
+    "    \n",
+    "    # Remove empty subplots\n",
+    "    for j in range(len(numeric_cols), len(axes)):\n",
+    "        fig.delaxes(axes[j])\n",
+    "    \n",
+    "    plt.tight_layout()\n",
+    "    \n",
+    "    # Use new folder structure: results/dataset_identifier/YYYY-MM-DD/Section-2\n",
+    "    results_path = get_results_path(DATASET_IDENTIFIER, 2)\n",
+    "    os.makedirs(results_path, exist_ok=True)\n",
+    "    plot_file = f'{results_path}/feature_distributions-posttransorm.png'\n",
+    "    plt.savefig(plot_file, dpi=300, bbox_inches='tight')\n",
+    "    plt.close()  # Close the figure to free memory\n",
+    "    \n",
+    "    print(f\"📊 Feature distribution plots saved to {plot_file}\")\n",
+    "    print(f\"📊 Distribution analysis completed for {len(numeric_cols)} numeric features\")\n",
+    "else:\n",
+    "    print(\"⚠️ No numeric features found for visualization\")"
    ]
   },
   {
@@ -1981,14 +1988,6 @@
    "metadata": {},
    "source": [
     "### 3.1 Demos"
-   ]
-  },
-  {
-   "cell_type": "markdown",
-   "id": "0e9e1f91",
-   "metadata": {},
-   "source": [
-    "Each model is run with default parameters for purposes of testing."
    ]
   },
   {
@@ -2035,7 +2034,7 @@
     }
    ],
    "source": [
-    "# Code Chunk ID: CHUNK_3_1_1_A\n",
+    "# Code Chunk ID: CHUNK_016\n",
     "import time\n",
     "try:\n",
     "    print(\"🔄 CTGAN Demo - Default Parameters\")\n",
@@ -2187,7 +2186,7 @@
     }
    ],
    "source": [
-    "# Code Chunk ID: CHUNK_3_1_2_A\n",
+    "# Code Chunk ID: CHUNK_020\n",
     "try:\n",
     "    print(\"🔄 CTAB-GAN Demo - Default Parameters\")\n",
     "    print(\"=\" * 50)\n",
@@ -2341,7 +2340,7 @@
     }
    ],
    "source": [
-    "# Code Chunk ID: CHUNK_3_1_3_A\n",
+    "# Code Chunk ID: CHUNK_024\n",
     "try:\n",
     "    print(\"🔄 CTAB-GAN+ Demo - Default Parameters\")\n",
     "    print(\"=\" * 50)\n",
@@ -2491,7 +2490,7 @@
     }
    ],
    "source": [
-    "# Code Chunk ID: CHUNK_3_1_4_A\n",
+    "# Code Chunk ID: CHUNK_028\n",
     "try:\n",
     "    print(\"🔄 GANerAid Demo - Default Parameters\")\n",
     "    print(\"=\" * 50)\n",
@@ -2589,7 +2588,7 @@
     }
    ],
    "source": [
-    "# Code Chunk ID: CHUNK_3_1_5_A\n",
+    "# Code Chunk ID: CHUNK_031\n",
     "try:\n",
     "    print(\"🔄 CopulaGAN Demo - Default Parameters\")\n",
     "    print(\"=\" * 50)\n",
@@ -2681,7 +2680,7 @@
     }
    ],
    "source": [
-    "# Code Chunk ID: CHUNK_3_1_6_A\n",
+    "# Code Chunk ID: CHUNK_034\n",
     "try:\n",
     "    print(\"🔄 TVAE Demo - Default Parameters\")\n",
     "    print(\"=\" * 50)\n",
@@ -2748,14 +2747,6 @@
    "metadata": {},
    "source": [
     "### 3.2 Batch Process"
-   ]
-  },
-  {
-   "cell_type": "markdown",
-   "id": "d487958b",
-   "metadata": {},
-   "source": [
-    "This section outputs figures and graphics from models run in 3.1. The next chunk will output results for whatever subsections of 3.1 were run. I.e., if there's need to debug one method, there's no need to run all subsections of 3.1."
    ]
   },
   {
@@ -3194,7 +3185,7 @@
     }
    ],
    "source": [
-    "# Code Chunk ID: CHUNK_3_2_0_A\n",
+    "# Code Chunk ID: CHUNK_018\n",
     "# ============================================================================\n",
     "# SECTION 3 - BATCH EVALUATION FOR ALL TRAINED MODELS\n",
     "# Standardized evaluation using enhanced batch evaluation system\n",
@@ -3611,7 +3602,7 @@
     }
    ],
    "source": [
-    "# Code Chunk ID: CHUNK_4_1_1_A\n",
+    "# Code Chunk ID: CHUNK_040\n",
     "# CTGAN Hyperparameter Optimization Execution\n",
     "# Complete optimization study with search space definition and execution\n",
     "\n",
@@ -3975,7 +3966,7 @@
     }
    ],
    "source": [
-    "# Code Chunk ID: CHUNK_4_1_2_A\n",
+    "# Code Chunk ID: CHUNK_042\n",
     "# Import required libraries for CTAB-GAN optimization\n",
     "import optuna\n",
     "import numpy as np\n",
@@ -4325,7 +4316,7 @@
     }
    ],
    "source": [
-    "# Code Chunk ID: CHUNK_4_1_3_A\n",
+    "# Code Chunk ID: CHUNK_044\n",
     "# Import required libraries for CTAB-GAN+ optimization\n",
     "import optuna\n",
     "import numpy as np\n",
@@ -4718,7 +4709,7 @@
     }
    ],
    "source": [
-    "# Code Chunk ID: CHUNK_4_1_4_A\n",
+    "# Code Chunk ID: CHUNK_046\n",
     "# GANerAid Search Space and Hyperparameter Optimization\n",
     "\n",
     "# ============================================================================\n",
@@ -5070,7 +5061,7 @@
     }
    ],
    "source": [
-    "# Code Chunk ID: CHUNK_4_1_5_A\n",
+    "# Code Chunk ID: CHUNK_048\n",
     "# CopulaGAN Search Space and Hyperparameter Optimization\n",
     "\n",
     "# ============================================================================\n",
@@ -5361,7 +5352,7 @@
     }
    ],
    "source": [
-    "# Code Chunk ID: CHUNK_4_1_6_A\n",
+    "# Code Chunk ID: CHUNK_050\n",
     "# TVAE Robust Search Space (from hypertuning_eg.md)\n",
     "\n",
     "# ============================================================================\n",
@@ -5464,14 +5455,6 @@
    "metadata": {},
    "source": [
     "### 4.2 Batch process "
-   ]
-  },
-  {
-   "cell_type": "markdown",
-   "id": "3ee75c64",
-   "metadata": {},
-   "source": [
-    "This section outputs figures and graphics from models run in 4.1. The next chunk will output results for whatever subsections of 4.1 were run. I.e., if there's need to debug one method, there's no need to run all subsections of 4.1."
    ]
   },
   {
@@ -5848,7 +5831,7 @@
     }
    ],
    "source": [
-    "# Code Chunk ID: CHUNK_4_2_0_A\n",
+    "# Code Chunk ID: CHUNK_052\n",
     "# ============================================================================\n",
     "# SECTION 4 - BATCH HYPERPARAMETER OPTIMIZATION ANALYSIS\n",
     "# ============================================================================\n",
@@ -5929,14 +5912,6 @@
    "metadata": {},
    "source": [
     "## Section 5: Final Model Comparison and Best-of-Best Selection"
-   ]
-  },
-  {
-   "cell_type": "markdown",
-   "id": "71e67665",
-   "metadata": {},
-   "source": [
-    "### 5.1 Re-run of models with best hyperparameters identified from Section 4"
    ]
   },
   {
@@ -6056,7 +6031,7 @@
     }
    ],
    "source": [
-    "# Code Chunk ID: CHUNK_5_1_1_A\n",
+    "# Code Chunk ID: CHUNK_053\n",
     "# Section 5.1: Best CTGAN Model Evaluation  \n",
     "print(\"🏆 SECTION 5.1: BEST CTGAN MODEL EVALUATION\")\n",
     "print(\"=\" * 60)\n",
@@ -6335,7 +6310,7 @@
     }
    ],
    "source": [
-    "# Code Chunk ID: CHUNK_5_1_1_Aa\n",
+    "# Code Chunk ID: CHUNK_053a\n",
     "\n",
     "# Section 5.2: Best CTAB-GAN Model Evaluation\n",
     "print(\"🏆 SECTION 5.2: BEST CTAB-GAN MODEL EVALUATION\")\n",
@@ -6557,7 +6532,7 @@
     }
    ],
    "source": [
-    "# Code Chunk ID: CHUNK_5_1_3_A\n",
+    "# Code Chunk ID: CHUNK_061\n",
     "# ============================================================================\n",
     "# Section 5.3: Best CTAB-GAN+ Model Evaluation - FIXED IMPLEMENTATION\n",
     "# ============================================================================\n",
@@ -6753,7 +6728,7 @@
     }
    ],
    "source": [
-    "# Code Chunk ID: CHUNK_5_1_4_A\n",
+    "# Code Chunk ID: CHUNK_065\n",
     "# ============================================================================\n",
     "# Section 5.4.1: Best GANerAid Model Training\n",
     "# ============================================================================\n",
@@ -6925,7 +6900,7 @@
     }
    ],
    "source": [
-    "# Code Chunk ID: CHUNK_5_1_5_A\n",
+    "# Code Chunk ID: CHUNK_070\n",
     "# ============================================================================\n",
     "# Section 5.5: Best CopulaGAN Model Evaluation\n",
     "# ============================================================================\n",
@@ -7082,7 +7057,7 @@
     }
    ],
    "source": [
-    "# Code Chunk ID: CHUNK_5_1_6_A\n",
+    "# Code Chunk ID: CHUNK_075\n",
     "# ============================================================================\n",
     "# Section 5.6.1: Best TVAE Model Training\n",
     "# ============================================================================\n",
@@ -7178,14 +7153,6 @@
    "metadata": {},
    "source": [
     "### 5.2 Batch Process"
-   ]
-  },
-  {
-   "cell_type": "markdown",
-   "id": "7c20369b",
-   "metadata": {},
-   "source": [
-    "This section outputs figures and graphics from models run in 5.1. The next chunk will output results for whatever subsections of 5.1 were run. I.e., if there's need to debug one method, there's no need to run all subsections of 5.1."
    ]
   },
   {
@@ -7643,7 +7610,7 @@
     }
    ],
    "source": [
-    "# Code Chunk ID: CHUNK_5_2_0_A\n",
+    "# Code Chunk ID: CHUNK_076\n",
     "# ============================================================================\n",
     "# SECTION 5.2 - OPTIMIZED MODELS BATCH EVALUATION\n",
     "# Following CHUNK_018 pattern with comprehensive file export to Section-5 directory\n",
