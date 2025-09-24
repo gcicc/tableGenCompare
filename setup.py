@@ -9,6 +9,13 @@ import os
 SESSION_TIMESTAMP = datetime.now().strftime("%Y-%m-%d")
 print(f"Session timestamp captured: {SESSION_TIMESTAMP}")
 
+def refresh_session_timestamp():
+    """Refresh the session timestamp to current date"""
+    global SESSION_TIMESTAMP
+    SESSION_TIMESTAMP = datetime.now().strftime("%Y-%m-%d")
+    print(f"Session timestamp refreshed to: {SESSION_TIMESTAMP}")
+    return SESSION_TIMESTAMP
+
 def extract_dataset_identifier(data_file_path):
     """Extract dataset identifier from file path or filename"""
     if isinstance(data_file_path, str):
