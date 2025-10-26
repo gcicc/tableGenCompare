@@ -21,6 +21,10 @@ sdv>=1.2.0  # Includes CTGAN, CopulaGAN, TVAE
 ctgan>=0.11.0
 copulas>=0.12.0
 
+# CTAB-GAN Models (installed from GitHub)
+git+https://github.com/Team-TUD/CTAB-GAN.git
+git+https://github.com/Team-TUD/CTAB-GAN-Plus.git
+
 # Hyperparameter Optimization
 optuna>=3.0.0
 
