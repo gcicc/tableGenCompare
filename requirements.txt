@@ -53,3 +53,11 @@ faker>=18.0.0  # For data generation testing
 
 # Python Utilities
 python-dateutil>=2.8.2
+
+# System Monitoring and Compatibility
+psutil>=5.9.0
+importlib-metadata>=6.0.0
+packaging>=23.0
+
+# SDV Transform Library (explicit version)
+rdt>=1.6.0
