@@ -1,63 +1,79 @@
 # Clinical Synthetic Data Generation Framework - Core Dependencies
 # Python 3.11+ compatible
+# PINNED VERSIONS for AWS SageMaker Jupyter Lab compatibility
+# Generated from working environment on 2025-11-06
 
 # Core Data Science Libraries
-pandas>=2.0.0
-numpy>=1.24.0
-matplotlib>=3.7.0
-seaborn>=0.12.0
-scipy>=1.10.0
+pandas==2.3.3
+numpy==1.26.4
+matplotlib==3.7.2
+seaborn==0.12.2
+scipy==1.10.1
 
 # Machine Learning & Preprocessing
-scikit-learn>=1.3.0
-joblib>=1.3.0
+scikit-learn==1.7.1
+joblib==1.4.2
 
 # Deep Learning - PyTorch
-torch>=2.0.0
-torchvision>=0.15.0
+torch==2.6.0
+torchvision==0.21.0
 
 # Synthetic Data Generation Models
-sdv>=1.2.0  # Includes CTGAN, CopulaGAN, TVAE
-ctgan>=0.11.0
-copulas>=0.12.0
+sdv==1.24.1
+ctgan==0.11.0
+copulas==0.12.3
 
-# CTAB-GAN Models (installed from GitHub)
-git+https://github.com/Team-TUD/CTAB-GAN.git
-git+https://github.com/Team-TUD/CTAB-GAN-Plus.git
+# CTAB-GAN Models (GitHub installations)
+# Note: Install these separately AFTER pip install -r requirements.txt:
+# pip install git+https://github.com/Team-TUD/CTAB-GAN.git
+# pip install git+https://github.com/Team-TUD/CTAB-GAN-Plus.git
+tab-gan-metrics==1.1.4
 
 # Hyperparameter Optimization
-optuna>=3.0.0
+optuna==4.4.0
 
 # Notebook Support
-jupyter>=1.0.0
-ipykernel>=6.20.0
-ipython>=8.10.0
-notebook>=7.0.0
+jupyter==1.1.1
+ipykernel==6.29.5
+ipython==9.3.0
+notebook==7.4.4
 
 # Visualization
-plotly>=5.14.0
+plotly==6.2.0
 
 # Utilities
-tqdm>=4.65.0
-pyyaml>=6.0
+tqdm==4.66.5
+PyYAML==6.0.2
 
 # Statistical Analysis
-statsmodels>=0.14.0
-dython>=0.5.0  # For correlation analysis
+dython==0.5.1
 
 # Additional GAN Tools
-GANerAid>=1.8
+GANerAid==1.8
 
 # Data Validation
-faker>=18.0.0  # For data generation testing
+Faker==37.5.3
 
 # Python Utilities
-python-dateutil>=2.8.2
+python-dateutil==2.9.0.post0
 
 # System Monitoring and Compatibility
-psutil>=5.9.0
-importlib-metadata>=6.0.0
-packaging>=23.0
+psutil==7.0.0
+importlib-metadata==8.6.1
+packaging==24.1
 
-# SDV Transform Library (explicit version)
-rdt>=1.6.0
+# SDV Transform Library
+rdt==1.17.1
+
+# Additional Deep Learning Dependencies
+keras==3.10.0
+tensorflow==2.19.0
+tensorboard==2.19.0
+
+# Deep Echo for synthetic data
+deepecho==0.7.0
+
+# Additional utilities
+cloudpickle==3.1.1
+networkx==3.3
+graphviz==0.21
