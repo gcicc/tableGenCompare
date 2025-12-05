@@ -162,19 +162,27 @@ try:
             ganeraid_import_successful = True
         except ImportError:
             pass
-    
+            
+    if not ganeraid_import_successful:
+        try:
+            from GANerAid import GANerAid
+            print("[OK] GANerAidModel imported successfully (direct import)")
+            ganeraid_import_successful = True
+        except ImportError:
+            pass
+           
     if not ganeraid_import_successful:
         print("[WARNING] GANerAidModel not available - creating placeholder")
         # Dummy class fallback
         class GANerAidModel:
             def __init__(self, *args, **kwargs):
-                raise ImportError("GANerAid not available")
+                raise ImportError("GANerAid not available. Please install it using: pip install GANerAid")
         GANERAID_AVAILABLE = False
     else:
         GANERAID_AVAILABLE = True
 
 except Exception as e:
-    print(f"ERROR importing GANerAid: {e}")
+    print(f"[ERROR] Importing GANerAid failed: {e}")
     # Create a dummy class to prevent import errors
     class GANerAidModel:
         def __init__(self, *args, **kwargs):
