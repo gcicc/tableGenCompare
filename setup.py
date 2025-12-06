@@ -58,11 +58,13 @@ from src.evaluation.mode_collapse import (
 from src.evaluation.quality import (
     calculate_mutual_information
 )
+from src.evaluation.trts import (
+    comprehensive_trts_analysis
+)
 
 # Future imports will be added here as we migrate code to src/ modules:
 # from src.models.wrappers import CTABGANModel, CTABGANPlusModel, GANerAidModel, etc.
 # from src.evaluation.quality import evaluate_synthetic_data_quality
-# from src.evaluation.trts import comprehensive_trts_analysis
 # from src.objective.functions import enhanced_objective_function_v2
 
 print("[SETUP] Thin re-export layer loaded successfully!")
@@ -2778,224 +2780,10 @@ def compare_parameters_sources(scope=None, section_number=4, dataset_identifier=
 print("[OK] Parameter management functions added to setup.py!")
 
 # COMPREHENSIVE TRTS (TRAIN REAL TEST SYNTHETIC) FRAMEWORK
-
-def comprehensive_trts_analysis(real_data, synthetic_data, target_column, 
-                               test_size=0.2, random_state=42, n_estimators=100,
-                               verbose=True):
-    """
-    Comprehensive TRTS framework analysis with all four scenarios:
-    - TRTR: Train Real, Test Real
-    - TRTS: Train Real, Test Synthetic  
-    - TSTR: Train Synthetic, Test Real
-    - TSTS: Train Synthetic, Test Synthetic
-    
-    Parameters:
-    - real_data: Original dataset
-    - synthetic_data: Generated synthetic dataset
-    - target_column: Target column name
-    - test_size: Test split ratio (default 0.2)
-    - random_state: Random seed for reproducibility
-    - n_estimators: Number of trees in RandomForest
-    - verbose: Print detailed results
-    
-    Returns:
-    - Dictionary with detailed TRTS results and timing information
-    """
-    import time
-    import pandas as pd
-    import numpy as np
-    from sklearn.model_selection import train_test_split
-    from sklearn.ensemble import RandomForestClassifier
-    from sklearn.metrics import accuracy_score, precision_recall_fscore_support
-    from sklearn.preprocessing import LabelEncoder
-    
-    if verbose:
-        print("[ANALYSIS] COMPREHENSIVE TRTS FRAMEWORK ANALYSIS")
-        print("=" * 60)
-    
-    # Prepare data
-    X_real = real_data.drop(columns=[target_column])
-    y_real = real_data[target_column]
-    X_synth = synthetic_data.drop(columns=[target_column])
-    y_synth = synthetic_data[target_column]
-    
-    if verbose:
-        print(f"[CHART] Data shapes:")
-        print(f"   - Real: {X_real.shape}, Target unique values: {y_real.nunique()}")
-        print(f"   - Synthetic: {X_synth.shape}, Target unique values: {y_synth.nunique()}")
-    
-    # Ensure common features
-    common_features = list(set(X_real.columns) & set(X_synth.columns))
-    if len(common_features) == 0:
-        if verbose:
-            print("[ERROR] No common features between datasets")
-        return {'error': 'No common features'}
-    
-    X_real = X_real[common_features]
-    X_synth = X_synth[common_features]
-    
-    # Handle categorical features with label encoding
-    for col in common_features:
-        if X_real[col].dtype == 'object' or X_synth[col].dtype == 'object':
-            le = LabelEncoder()
-            # Fit on combined data to ensure consistent encoding
-            combined_values = pd.concat([X_real[col].astype(str), X_synth[col].astype(str)])
-            le.fit(combined_values)
-            X_real[col] = le.transform(X_real[col].astype(str))
-            X_synth[col] = le.transform(X_synth[col].astype(str))
-    
-    # Handle target column encoding if needed
-    if y_real.dtype == 'object' or y_synth.dtype == 'object':
-        le_target = LabelEncoder()
-        combined_targets = pd.concat([y_real.astype(str), y_synth.astype(str)])
-        le_target.fit(combined_targets)
-        y_real = le_target.transform(y_real.astype(str))
-        y_synth = le_target.transform(y_synth.astype(str))
-    
-    # Fill missing values
-    X_real = X_real.fillna(X_real.median())
-    X_synth = X_synth.fillna(X_synth.median())
-    
-    if verbose:
-        print(f"   - Using {len(common_features)} common features")
-    
-    # Split real data for TRTR scenario
-    X_real_train, X_real_test, y_real_train, y_real_test = train_test_split(
-        X_real, y_real, test_size=test_size, random_state=random_state, stratify=y_real
-    )
-    
-    # Split synthetic data for TSTS scenario  
-    X_synth_train, X_synth_test, y_synth_train, y_synth_test = train_test_split(
-        X_synth, y_synth, test_size=test_size, random_state=random_state, stratify=y_synth
-    )
-    
-    results = {}
-    
-    # SCENARIO 1: TRTR - Train Real, Test Real (Baseline)
-    if verbose:
-        print(f"\n[PROCESS] 1. TRTR - Train Real, Test Real (Baseline)")
-    
-    start_time = time.time()
-    try:
-        rf_trtr = RandomForestClassifier(n_estimators=n_estimators, random_state=random_state, max_depth=10)
-        rf_trtr.fit(X_real_train, y_real_train)
-        pred_trtr = rf_trtr.predict(X_real_test)
-        trtr_accuracy = accuracy_score(y_real_test, pred_trtr)
-        trtr_time = time.time() - start_time
-        
-        results['TRTR'] = {
-            'accuracy': trtr_accuracy,
-            'training_time': trtr_time,
-            'scenario': 'Train Real, Test Real',
-            'status': 'success'
-        }
-        
-        if verbose:
-            print(f"   [OK] TRTR Accuracy: {trtr_accuracy:.4f} (Time: {trtr_time:.3f}s)")
-    except Exception as e:
-        results['TRTR'] = {'accuracy': 0.0, 'error': str(e), 'status': 'failed'}
-        if verbose:
-            print(f"   [ERROR] TRTR failed: {e}")
-    
-    # SCENARIO 2: TRTS - Train Real, Test Synthetic
-    if verbose:
-        print(f"[PROCESS] 2. TRTS - Train Real, Test Synthetic")
-    
-    start_time = time.time()
-    try:
-        rf_trts = RandomForestClassifier(n_estimators=n_estimators, random_state=random_state, max_depth=10)
-        rf_trts.fit(X_real_train, y_real_train)
-        pred_trts = rf_trts.predict(X_synth_test)
-        trts_accuracy = accuracy_score(y_synth_test, pred_trts)
-        trts_time = time.time() - start_time
-        
-        results['TRTS'] = {
-            'accuracy': trts_accuracy,
-            'training_time': trts_time,
-            'scenario': 'Train Real, Test Synthetic', 
-            'status': 'success'
-        }
-        
-        if verbose:
-            print(f"   [OK] TRTS Accuracy: {trts_accuracy:.4f} (Time: {trts_time:.3f}s)")
-    except Exception as e:
-        results['TRTS'] = {'accuracy': 0.0, 'error': str(e), 'status': 'failed'}
-        if verbose:
-            print(f"   [ERROR] TRTS failed: {e}")
-    
-    # SCENARIO 3: TSTR - Train Synthetic, Test Real  
-    if verbose:
-        print(f"[PROCESS] 3. TSTR - Train Synthetic, Test Real")
-    
-    start_time = time.time()
-    try:
-        rf_tstr = RandomForestClassifier(n_estimators=n_estimators, random_state=random_state, max_depth=10)
-        rf_tstr.fit(X_synth_train, y_synth_train)
-        pred_tstr = rf_tstr.predict(X_real_test)
-        tstr_accuracy = accuracy_score(y_real_test, pred_tstr)
-        tstr_time = time.time() - start_time
-        
-        results['TSTR'] = {
-            'accuracy': tstr_accuracy,
-            'training_time': tstr_time,
-            'scenario': 'Train Synthetic, Test Real',
-            'status': 'success'
-        }
-        
-        if verbose:
-            print(f"   [OK] TSTR Accuracy: {tstr_accuracy:.4f} (Time: {tstr_time:.3f}s)")
-    except Exception as e:
-        results['TSTR'] = {'accuracy': 0.0, 'error': str(e), 'status': 'failed'}
-        if verbose:
-            print(f"   [ERROR] TSTR failed: {e}")
-    
-    # SCENARIO 4: TSTS - Train Synthetic, Test Synthetic
-    if verbose:
-        print(f"[PROCESS] 4. TSTS - Train Synthetic, Test Synthetic")
-    
-    start_time = time.time()
-    try:
-        rf_tsts = RandomForestClassifier(n_estimators=n_estimators, random_state=random_state, max_depth=10)
-        rf_tsts.fit(X_synth_train, y_synth_train)
-        pred_tsts = rf_tsts.predict(X_synth_test)
-        tsts_accuracy = accuracy_score(y_synth_test, pred_tsts)
-        tsts_time = time.time() - start_time
-        
-        results['TSTS'] = {
-            'accuracy': tsts_accuracy,
-            'training_time': tsts_time,
-            'scenario': 'Train Synthetic, Test Synthetic',
-            'status': 'success'
-        }
-        
-        if verbose:
-            print(f"   [OK] TSTS Accuracy: {tsts_accuracy:.4f} (Time: {tsts_time:.3f}s)")
-    except Exception as e:
-        results['TSTS'] = {'accuracy': 0.0, 'error': str(e), 'status': 'failed'}
-        if verbose:
-            print(f"   [ERROR] TSTS failed: {e}")
-    
-    # Calculate summary metrics
-    successful_scenarios = [k for k, v in results.items() if v.get('status') == 'success']
-    if successful_scenarios:
-        accuracies = [results[k]['accuracy'] for k in successful_scenarios]
-        times = [results[k]['training_time'] for k in successful_scenarios]
-        
-        results['summary'] = {
-            'average_accuracy': np.mean(accuracies),
-            'accuracy_std': np.std(accuracies),
-            'total_training_time': sum(times),
-            'successful_scenarios': len(successful_scenarios),
-            'baseline_accuracy': results.get('TRTR', {}).get('accuracy', 0.0)
-        }
-        
-        if verbose:
-            print(f"\n[CHART] Summary Statistics:")
-            print(f"   - Successful scenarios: {len(successful_scenarios)}/4")
-            print(f"   - Average accuracy: {np.mean(accuracies):.4f} (+/-{np.std(accuracies):.4f})")
-            print(f"   - Total training time: {sum(times):.3f}s")
-    
-    return results
+# MIGRATED TO: src/evaluation/trts.py (Phase 3, Task 3.5)
+# Now includes 15+ comprehensive classification metrics (balanced accuracy, precision,
+# recall, F1, specificity, sensitivity, NPV, FPR, FNR, MCC, Cohen's Kappa, AUROC, AUPRC)
+# Import: from src.evaluation.trts import comprehensive_trts_analysis
 
 def create_trts_visualizations(trts_results_dict, model_names, results_dir, 
                               dataset_name="Dataset", save_files=True, display_plots=False):
