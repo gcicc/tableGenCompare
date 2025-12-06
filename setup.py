@@ -70,10 +70,14 @@ from src.visualization.section5 import (
     create_privacy_dashboard
 )
 
+# Import objective functions (Phase 3)
+from src.objective.functions import (
+    enhanced_objective_function_v2
+)
+
 # Future imports will be added here as we migrate code to src/ modules:
 # from src.models.wrappers import CTABGANModel, CTABGANPlusModel, GANerAidModel, etc.
 # from src.evaluation.quality import evaluate_synthetic_data_quality
-# from src.objective.functions import enhanced_objective_function_v2
 
 print("[SETUP] Thin re-export layer loaded successfully!")
 print(f"[SETUP] Session timestamp: {SESSION_TIMESTAMP}")
@@ -1605,6 +1609,13 @@ def evaluate_all_available_models(section_number, scope=None, models_to_evaluate
     )
 
 # Code Chunk ID: CHUNK_037 - Enhanced Objective Function v2
+# MIGRATED TO: src/objective/functions.py (Phase 3, Task 3.8)
+# Now includes Optuna pruning support for early stopping
+# Usage: from src.objective.functions import enhanced_objective_function_v2
+# New: Optional `trial` parameter for Optuna pruning (backward compatible - defaults to None)
+
+# REMOVED - Import from src.objective.functions instead
+"""
 def enhanced_objective_function_v2(real_data, synthetic_data, target_column, 
                                  similarity_weight=0.6, accuracy_weight=0.4):
     """
@@ -1909,6 +1920,8 @@ def enhanced_objective_function_v2(real_data, synthetic_data, target_column,
     print(f"[CHART] Combined Score: {combined_score:.4f} (Similarity: {similarity_score:.4f}, Accuracy: {accuracy_score_final:.4f})")
 
     return combined_score, similarity_score, accuracy_score_final
+"""
+# End of commented-out old implementation
 
 # Code Chunk ID: CHUNK_039 - Analyze Hyperparameter Optimization
 def analyze_hyperparameter_optimization(study_results, model_name, 
