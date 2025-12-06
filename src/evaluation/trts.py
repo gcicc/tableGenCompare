@@ -18,6 +18,7 @@ from sklearn.metrics import (
     confusion_matrix
 )
 from sklearn.preprocessing import LabelEncoder, label_binarize
+from .privacy import calculate_privacy_metrics
 
 
 def calculate_comprehensive_classification_metrics(y_true, y_pred, y_pred_proba=None, verbose=False):
@@ -411,5 +412,11 @@ def comprehensive_trts_analysis(real_data, synthetic_data, target_column,
             print(f"   - Successful scenarios: {len(successful_scenarios)}/4")
             print(f"   - Average accuracy: {np.mean(accuracies):.4f} (+/-{np.std(accuracies):.4f})")
             print(f"   - Total training time: {sum(times):.3f}s")
+
+    # Calculate privacy metrics
+    privacy_metrics = calculate_privacy_metrics(
+        real_data, synthetic_data, target_column, verbose=verbose
+    )
+    results['privacy'] = privacy_metrics
 
     return results
