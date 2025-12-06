@@ -61,6 +61,14 @@ from src.evaluation.quality import (
 from src.evaluation.trts import (
     comprehensive_trts_analysis
 )
+from src.evaluation.privacy import (
+    calculate_privacy_metrics
+)
+
+# Import visualization functions for Section 5 (Phase 3)
+from src.visualization.section5 import (
+    create_privacy_dashboard
+)
 
 # Future imports will be added here as we migrate code to src/ modules:
 # from src.models.wrappers import CTABGANModel, CTABGANPlusModel, GANerAidModel, etc.
