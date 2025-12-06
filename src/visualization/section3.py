@@ -236,3 +236,58 @@ def create_mode_collapse_visualization(mode_collapse_df, model_name, results_dir
         print(f"[VIZ] Saved: mode_collapse_summary.png")
 
     return str(output_file)
+
+
+def create_mi_comparison(mi_real, mi_synth, mi_features, mi_correlation, model_name,
+                        results_dir, verbose=True):
+    """
+    Create mutual information comparison visualization.
+
+    Parameters:
+    -----------
+    mi_real : np.array
+        Mutual information scores for real data
+    mi_synth : np.array
+        Mutual information scores for synthetic data
+    mi_features : list
+        List of feature names
+    mi_correlation : float
+        Correlation between real and synthetic MI scores
+    model_name : str
+        Model name for title
+    results_dir : Path or str
+        Directory to save output
+    verbose : bool
+        Print messages
+
+    Returns:
+    --------
+    str : Path to saved file
+    """
+    fig, ax = plt.subplots(figsize=(12, 6))
+
+    x = np.arange(len(mi_features))
+    width = 0.35
+
+    ax.bar(x - width/2, mi_real, width, label='Real Data', alpha=0.8, color='blue')
+    ax.bar(x + width/2, mi_synth, width, label='Synthetic Data', alpha=0.8, color='orange')
+
+    ax.set_xlabel('Features', fontsize=12)
+    ax.set_ylabel('Mutual Information with Target', fontsize=12)
+    ax.set_title(f'{model_name.upper()} - MI Preservation (Correlation: {mi_correlation:.3f})',
+                 fontsize=14, fontweight='bold')
+    ax.set_xticks(x)
+    ax.set_xticklabels(mi_features, rotation=45, ha='right')
+    ax.legend()
+    ax.grid(True, alpha=0.3, axis='y')
+
+    plt.tight_layout()
+
+    output_file = Path(results_dir) / 'mutual_information_comparison.png'
+    plt.savefig(output_file, dpi=300, bbox_inches='tight')
+    plt.close()
+
+    if verbose:
+        print(f"[VIZ] Saved: mutual_information_comparison.png")
+
+    return str(output_file)
