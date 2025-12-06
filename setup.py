@@ -36,11 +36,23 @@ from src.utils.documentation import (
     create_section3_model_readme
 )
 
+# Import visualization functions (Phase 2)
+from src.visualization.section2 import (
+    create_correlation_heatmap,
+    create_feature_distributions
+)
+from src.visualization.section3 import (
+    create_correlation_comparison,
+    create_distribution_comparison
+)
+from src.visualization.section5 import (
+    create_trts_visualizations
+)
+
 # Future imports will be added here as we migrate code to src/ modules:
 # from src.models.wrappers import CTABGANModel, CTABGANPlusModel, GANerAidModel, etc.
 # from src.evaluation.quality import evaluate_synthetic_data_quality
 # from src.evaluation.trts import comprehensive_trts_analysis
-# from src.visualization.section5 import create_trts_visualizations
 # from src.objective.functions import enhanced_objective_function_v2
 
 print("[SETUP] Thin re-export layer loaded successfully!")
