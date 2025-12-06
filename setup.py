@@ -43,10 +43,16 @@ from src.visualization.section2 import (
 )
 from src.visualization.section3 import (
     create_correlation_comparison,
-    create_distribution_comparison
+    create_distribution_comparison,
+    create_mode_collapse_visualization
 )
 from src.visualization.section5 import (
     create_trts_visualizations
+)
+
+# Import evaluation functions (Phase 3)
+from src.evaluation.mode_collapse import (
+    detect_mode_collapse
 )
 
 # Future imports will be added here as we migrate code to src/ modules:
