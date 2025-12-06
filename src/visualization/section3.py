@@ -173,3 +173,66 @@ def create_distribution_comparison(real_data, synthetic_data, numeric_cols_no_ta
         print(f"[VIZ] Average JS Similarity: {avg_js_similarity:.3f}")
 
     return saved_files, avg_js_similarity
+
+
+def create_mode_collapse_visualization(mode_collapse_df, model_name, results_dir, verbose=True):
+    """
+    Create mode collapse summary visualization.
+
+    Parameters:
+    -----------
+    mode_collapse_df : pd.DataFrame
+        Mode collapse analysis results
+    model_name : str
+        Model name for title
+    results_dir : Path or str
+        Directory to save output
+    verbose : bool
+        Print messages
+
+    Returns:
+    --------
+    str or None : Path to saved file (None if no data)
+    """
+    if mode_collapse_df.empty:
+        return None
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
+    fig.suptitle(f'{model_name.upper()} - Mode Collapse Analysis',
+                 fontsize=16, fontweight='bold')
+
+    # Left: Category coverage per column
+    colors_coverage = ['red' if x < 0.5 else 'orange' if x < 0.8 else 'green'
+                       for x in mode_collapse_df['category_coverage']]
+
+    ax1.barh(mode_collapse_df['column'], mode_collapse_df['category_coverage'],
+             color=colors_coverage)
+    ax1.axvline(x=0.8, color='orange', linestyle='--', linewidth=2, label='Mild threshold')
+    ax1.axvline(x=0.5, color='red', linestyle='--', linewidth=2, label='Moderate threshold')
+    ax1.set_xlabel('Category Coverage (higher is better)')
+    ax1.set_title('Category Coverage by Feature')
+    ax1.legend()
+    ax1.grid(True, alpha=0.3, axis='x')
+    ax1.set_xlim(0, 1.0)
+
+    # Right: Distribution similarity
+    colors_dist = ['red' if x < 0.5 else 'orange' if x < 0.7 else 'green'
+                   for x in mode_collapse_df['distribution_similarity']]
+
+    ax2.barh(mode_collapse_df['column'], mode_collapse_df['distribution_similarity'],
+             color=colors_dist)
+    ax2.set_xlabel('Distribution Similarity (higher is better)')
+    ax2.set_title('Categorical Distribution Similarity')
+    ax2.grid(True, alpha=0.3, axis='x')
+    ax2.set_xlim(0, 1.0)
+
+    plt.tight_layout()
+
+    output_file = Path(results_dir) / 'mode_collapse_summary.png'
+    plt.savefig(output_file, dpi=300, bbox_inches='tight')
+    plt.close()
+
+    if verbose:
+        print(f"[VIZ] Saved: mode_collapse_summary.png")
+
+    return str(output_file)
