@@ -1,63 +1,55 @@
-# Setup Module for Clinical Synthetic Data Generation Framework
-# Contains imported chunks from notebook for better organization
+"""
+Backward-compatible import layer for notebooks.
 
-# SESSION TIMESTAMP AND DATASET IDENTIFIER SYSTEM
-from datetime import datetime
-import os
+This module serves as a thin re-export layer, allowing notebooks to continue
+using 'from setup import *' while the actual implementation has been moved to
+the modular src/ directory structure.
 
-# Generate session timestamp when setup.py is first imported
-SESSION_TIMESTAMP = datetime.now().strftime("%Y-%m-%d")
-print(f"Session timestamp captured: {SESSION_TIMESTAMP}")
-
-def refresh_session_timestamp():
-    """Refresh the session timestamp to current date"""
-    global SESSION_TIMESTAMP
-    SESSION_TIMESTAMP = datetime.now().strftime("%Y-%m-%d")
-    print(f"Session timestamp refreshed to: {SESSION_TIMESTAMP}")
-    return SESSION_TIMESTAMP
-
-def extract_dataset_identifier(data_file_path):
-    """Extract dataset identifier from file path or filename"""
-    if isinstance(data_file_path, str):
-        filename = os.path.basename(data_file_path)
-        dataset_id = os.path.splitext(filename)[0].lower()
-        dataset_id = dataset_id.replace('_', '-').replace(' ', '-')
-        return dataset_id
-    return "unknown-dataset"
-
-def get_results_path(dataset_identifier, section_number):
-    """Generate standardized results path: results/dataset_identifier/YYYY-MM-DD/Section-N"""
-    return f"results/{dataset_identifier}/{SESSION_TIMESTAMP}/Section-{section_number}"
-
-# Global variables to be set when data is loaded
-DATASET_IDENTIFIER = None
-CURRENT_DATA_FILE = None
+All functionality is re-exported from src/ modules for backward compatibility.
+"""
 
 # ============================================================================
-# ESSENTIAL IMPORTS - Available globally when using 'from setup import *'
+# ESSENTIAL IMPORTS FROM SRC - Available globally when using 'from setup import *'
 # ============================================================================
-# Core data science libraries needed by CHUNK_005 and other notebook chunks
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-from scipy import stats
-from scipy.spatial.distance import jensenshannon
-from scipy.stats import wasserstein_distance
 
-# Core ML/preprocessing libraries
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler, LabelEncoder
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.decomposition import PCA
+# Import all essential data science libraries (pandas, numpy, sklearn, etc.)
+from src import *
 
-# Utility libraries
-import warnings
-warnings.filterwarnings('ignore')
+# Import configuration and session management
+from src.config import (
+    SESSION_TIMESTAMP,
+    DATASET_IDENTIFIER,
+    CURRENT_DATA_FILE,
+    refresh_session_timestamp
+)
 
-print("[OK] Essential data science libraries imported successfully!")
+# Import path utilities
+from src.utils.paths import (
+    extract_dataset_identifier,
+    get_results_path
+)
+
+# Import documentation utilities
+from src.utils.documentation import (
+    create_section2_readme,
+    create_section3_main_readme,
+    create_section3_model_readme
+)
+
+# Future imports will be added here as we migrate code to src/ modules:
+# from src.models.wrappers import CTABGANModel, CTABGANPlusModel, GANerAidModel, etc.
+# from src.evaluation.quality import evaluate_synthetic_data_quality
+# from src.evaluation.trts import comprehensive_trts_analysis
+# from src.visualization.section5 import create_trts_visualizations
+# from src.objective.functions import enhanced_objective_function_v2
+
+print("[SETUP] Thin re-export layer loaded successfully!")
+print(f"[SETUP] Session timestamp: {SESSION_TIMESTAMP}")
+
+# ============================================================================
+# LEGACY CODE - To be migrated to src/ modules in future phases
+# ============================================================================
+
 
 # Code Chunk ID: CHUNK_001 - CTAB-GAN Import and Compatibility
 # Import CTAB-GAN - try multiple installation paths with sklearn compatibility fix
