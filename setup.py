@@ -440,6 +440,7 @@ class CTABGANModel:
         self.epochs = epochs
         self.batch_size = batch_size
         self.model = None
+        self.loss_history = None  # For training loss tracking
         
     def fit(self, data, categorical_columns=None, target_column=None):
         """Train CTAB-GAN model with robust data preprocessing"""
@@ -475,6 +476,18 @@ class CTABGANModel:
             else:
                 self.model.fit(cleaned_data)
             print("[OK] CTAB-GAN training completed successfully")
+
+            # Capture loss history if available
+            try:
+                if hasattr(self.model, 'loss_values'):
+                    self.loss_history = self.model.loss_values
+                elif hasattr(self.model, 'loss'):
+                    self.loss_history = self.model.loss
+                elif hasattr(self.model, '_loss_values'):
+                    self.loss_history = self.model._loss_values
+                # Note: Some GAN models don't expose loss publicly
+            except Exception as e:
+                print(f"[INFO] Could not capture loss history: {e}")
 
         except Exception as e:
             print(f"[ERROR] CTAB-GAN training failed: {e}")
@@ -622,6 +635,7 @@ class CTABGANPlusModel:
         self.has_plus_features = False
         self.temp_csv_path = None
         self.original_data = None
+        self.loss_history = None  # For training loss tracking
         
     def _check_plus_features(self):
         """Check if CTAB-GAN+ features are available"""
@@ -730,6 +744,17 @@ class CTABGANPlusModel:
                     self.model.fit()
                     print("[OK] CTAB-GAN+ training completed successfully")
 
+                    # Capture loss history if available
+                    try:
+                        if hasattr(self.model, 'loss_values'):
+                            self.loss_history = self.model.loss_values
+                        elif hasattr(self.model, 'loss'):
+                            self.loss_history = self.model.loss
+                        elif hasattr(self.model, '_loss_values'):
+                            self.loss_history = self.model._loss_values
+                    except Exception as e:
+                        print(f"[INFO] Could not capture loss history: {e}")
+
                 except Exception as model_error:
                     print(f"[ERROR] CTAB-GAN+ initialization failed: {model_error}")
                     if "NoneType" in str(model_error) and "int" in str(model_error):
@@ -745,6 +770,17 @@ class CTABGANPlusModel:
                             )
                             self.model.fit()
                             print("[OK] CTAB-GAN+ training completed with fallback parameters")
+
+                            # Capture loss history if available
+                            try:
+                                if hasattr(self.model, 'loss_values'):
+                                    self.loss_history = self.model.loss_values
+                                elif hasattr(self.model, 'loss'):
+                                    self.loss_history = self.model.loss
+                                elif hasattr(self.model, '_loss_values'):
+                                    self.loss_history = self.model._loss_values
+                            except Exception as e:
+                                print(f"[INFO] Could not capture loss history: {e}")
                         except Exception as fallback_error:
                             print(f"[ERROR] Fallback also failed: {fallback_error}")
                             raise model_error
@@ -772,6 +808,17 @@ class CTABGANPlusModel:
                 else:
                     self.model.fit(cleaned_data)
                 print("[OK] CTAB-GAN (fallback) training completed successfully")
+
+                # Capture loss history if available
+                try:
+                    if hasattr(self.model, 'loss_values'):
+                        self.loss_history = self.model.loss_values
+                    elif hasattr(self.model, 'loss'):
+                        self.loss_history = self.model.loss
+                    elif hasattr(self.model, '_loss_values'):
+                        self.loss_history = self.model._loss_values
+                except Exception as e:
+                    print(f"[INFO] Could not capture loss history: {e}")
 
         except Exception as e:
             print(f"[ERROR] CTAB-GAN+ training failed: {e}")
