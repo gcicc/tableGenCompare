@@ -45,7 +45,13 @@ from src.visualization.section3 import (
     create_correlation_comparison,
     create_distribution_comparison,
     create_mode_collapse_visualization,
-    create_mi_comparison
+    create_mi_comparison,
+    create_loss_plot,
+    create_multi_model_loss_comparison
+)
+from src.visualization.section4 import (
+    create_optuna_visualizations,
+    create_all_models_optuna_summary
 )
 from src.visualization.section5 import (
     create_trts_visualizations
