@@ -8,6 +8,7 @@ including correlation comparisons and distribution comparisons between real and 
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
+import pandas as pd
 from pathlib import Path
 
 
@@ -291,3 +292,149 @@ def create_mi_comparison(mi_real, mi_synth, mi_features, mi_correlation, model_n
         print(f"[VIZ] Saved: mutual_information_comparison.png")
 
     return str(output_file)
+
+
+def create_loss_plot(loss_history, model_name, results_dir, verbose=True):
+    """
+    Create training loss visualization.
+
+    Parameters:
+    -----------
+    loss_history : dict or list
+        Loss values over training epochs
+        - If dict: {'generator': [...], 'discriminator': [...]}
+        - If list: single loss sequence
+    model_name : str
+        Model name for title
+    results_dir : Path or str
+        Directory to save output
+    verbose : bool
+        Print messages
+
+    Returns:
+    --------
+    str or None : Path to saved file (None if no data)
+    """
+    if loss_history is None or (isinstance(loss_history, (list, dict)) and len(loss_history) == 0):
+        if verbose:
+            print(f"[VIZ] No loss history available for {model_name}")
+        return None
+
+    fig, ax = plt.subplots(figsize=(12, 6))
+
+    # Handle different loss formats
+    if isinstance(loss_history, dict):
+        # GAN models with generator and discriminator losses
+        for loss_type, values in loss_history.items():
+            if len(values) > 0:
+                epochs = range(1, len(values) + 1)
+                ax.plot(epochs, values, label=loss_type.capitalize(), alpha=0.8, linewidth=2)
+
+        ax.set_ylabel('Loss', fontsize=12)
+        ax.legend(fontsize=10)
+        title = f'{model_name.upper()} - Training Loss Over Epochs'
+
+    elif isinstance(loss_history, list):
+        # Single loss sequence (e.g., TVAE)
+        epochs = range(1, len(loss_history) + 1)
+        ax.plot(epochs, loss_history, label='Loss', alpha=0.8, linewidth=2, color='blue')
+        ax.set_ylabel('Loss', fontsize=12)
+        ax.legend(fontsize=10)
+        title = f'{model_name.upper()} - Training Loss Over Epochs'
+
+    else:
+        if verbose:
+            print(f"[VIZ] Unrecognized loss format for {model_name}")
+        return None
+
+    ax.set_xlabel('Epoch', fontsize=12)
+    ax.set_title(title, fontsize=14, fontweight='bold')
+    ax.grid(True, alpha=0.3)
+
+    # Add vertical line at convergence point if detectable
+    if isinstance(loss_history, list) and len(loss_history) > 10:
+        # Simple convergence detection: where loss stabilizes
+        losses = np.array(loss_history)
+        if len(losses) > 20:
+            window = 10
+            rolling_std = pd.Series(losses).rolling(window=window).std()
+            convergence_idx = rolling_std.idxmin()
+            if not np.isnan(convergence_idx) and convergence_idx > window:
+                ax.axvline(x=convergence_idx, color='red', linestyle='--',
+                          linewidth=1, alpha=0.5, label=f'Convergence (~epoch {int(convergence_idx)})')
+                ax.legend(fontsize=10)
+
+    plt.tight_layout()
+
+    output_file = Path(results_dir) / 'training_loss.png'
+    plt.savefig(output_file, dpi=300, bbox_inches='tight')
+    plt.close()
+
+    if verbose:
+        print(f"[VIZ] Saved: training_loss.png")
+
+    return str(output_file)
+
+
+def create_multi_model_loss_comparison(loss_histories, results_path, verbose=True):
+    """
+    Create comparative loss plot for all models.
+
+    Parameters:
+    -----------
+    loss_histories : dict
+        {model_name: loss_history, ...}
+    results_path : str or Path
+        Section 3 results directory
+    verbose : bool
+        Print messages
+
+    Returns:
+    --------
+    str or None : Path to saved file (None if no data)
+    """
+    if not loss_histories or len(loss_histories) == 0:
+        return None
+
+    fig, ax = plt.subplots(figsize=(14, 7))
+
+    colors = plt.cm.tab10(np.linspace(0, 1, len(loss_histories)))
+
+    for (model_name, loss_history), color in zip(loss_histories.items(), colors):
+        if loss_history is None:
+            continue
+
+        # Extract primary loss (generator loss for GANs, or single loss)
+        if isinstance(loss_history, dict) and 'generator' in loss_history:
+            values = loss_history['generator']
+            label = f'{model_name} (G)'
+        elif isinstance(loss_history, dict) and len(loss_history) > 0:
+            # Take first available loss type
+            values = list(loss_history.values())[0]
+            label = model_name
+        elif isinstance(loss_history, list):
+            values = loss_history
+            label = model_name
+        else:
+            continue
+
+        if len(values) > 0:
+            epochs = range(1, len(values) + 1)
+            ax.plot(epochs, values, label=label, alpha=0.7, linewidth=2, color=color)
+
+    ax.set_xlabel('Epoch', fontsize=12)
+    ax.set_ylabel('Loss', fontsize=12)
+    ax.set_title('Training Loss Comparison - All Models', fontsize=14, fontweight='bold')
+    ax.legend(fontsize=9, loc='best')
+    ax.grid(True, alpha=0.3)
+
+    plt.tight_layout()
+
+    output_path = Path(results_path) / "training_loss_comparison_all_models.png"
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    plt.close()
+
+    if verbose:
+        print(f"[VIZ] Saved: training_loss_comparison_all_models.png")
+
+    return str(output_path)

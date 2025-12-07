@@ -94,6 +94,8 @@ Each model has its own subfolder:
 - **correlation_comparison.png** - Side-by-side heatmaps (real vs synthetic)
 - **distribution_comparison_partN.png** - Overlaid histograms per feature
 - **pca_comparison_with_outcome.png** - Principal component analysis
+- **training_loss.png** - Training loss over epochs (per model folder, if available)
+- **training_loss_comparison_all_models.png** - Loss comparison across all models (Section-3 root, if available)
 - **mode_collapse_summary.png** - Category coverage visualization (if mode collapse detected)
 - **mutual_information_comparison.png** - MI preservation analysis (if computed)
 
