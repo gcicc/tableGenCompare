@@ -33,7 +33,8 @@ from src.utils.paths import (
 from src.utils.documentation import (
     create_section2_readme,
     create_section3_main_readme,
-    create_section3_model_readme
+    create_section3_model_readme,
+    create_section5_readme
 )
 
 # Import visualization functions (Phase 2)
