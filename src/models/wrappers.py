@@ -19,12 +19,8 @@ from src.models.imports import (
     CTABGANPLUS_AVAILABLE
 )
 
-# Preprocessing function - will be imported from setup.py until Phase 2 migration  
-# After Phase 2, this will be: from src.data.preprocessing import clean_and_preprocess_data
-def clean_and_preprocess_data(data, categorical_columns=None):
-    """Temporary import placeholder - imports from setup.py"""
-    from setup import clean_and_preprocess_data as preprocess
-    return preprocess(data, categorical_columns)
+# Import preprocessing function from data module (Phase 2 migration complete)
+from src.data.preprocessing import clean_and_preprocess_data
 
 
 class CTABGANModel:
