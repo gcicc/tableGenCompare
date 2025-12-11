@@ -113,6 +113,14 @@ from src.models.wrappers import (
     CTABGANPlusModel
 )
 
+# Phase 2 Migration: Data Preprocessing Functions
+from src.data.preprocessing import (
+    get_categorical_columns_for_models,
+    clean_and_preprocess_data,
+    prepare_data_for_any_model,
+    prepare_data_for_hyperparameter_optimization
+)
+
 # Code Chunk ID: CHUNK_004 - Required Libraries Import
 # Import required libraries
 import pandas as pd
@@ -2416,98 +2424,12 @@ def evaluate_trained_models(section_number, variable_pattern, scope=None, models
 print("[OK] Unified evaluation function added to setup.py!")
 
 # ============================================================================
-# HYPERPARAMETER OPTIMIZATION DATA PREPROCESSING
-# Function to prepare data for CTGAN hyperparameter optimization
+# PHASE 2 MIGRATION COMPLETE: Data preprocessing functions migrated to src/data/preprocessing.py
+# - get_categorical_columns_for_models()
+# - clean_and_preprocess_data()
+# - prepare_data_for_any_model()
+# - prepare_data_for_hyperparameter_optimization()
 # ============================================================================
-
-def prepare_data_for_hyperparameter_optimization(data, categorical_columns=None):
-    """
-    Prepare data for CTGAN hyperparameter optimization by preprocessing categorical variables.
-
-    This function ensures that categorical data is properly encoded so CTGAN doesn't try
-    to treat strings like 'Female'/'Male' as continuous numerical variables.
-
-    Parameters:
-    - data: pandas DataFrame with raw data
-    - categorical_columns: list of categorical column names (optional, auto-detected if None)
-
-    Returns:
-    - processed_data: DataFrame with categorical variables encoded as numeric
-    - discrete_columns: list of column names to pass to CTGAN as discrete_columns
-    - encoders: dict of LabelEncoders for reverse transformation if needed
-    """
-    try:
-        print(f"[HYPEROPT_PREP] Preparing data for hyperparameter optimization...")
-        print(f"[HYPEROPT_PREP] Input data shape: {data.shape}")
-
-        # Make a copy to avoid modifying original data
-        processed_data = data.copy()
-
-        # Auto-detect categorical columns if not provided
-        if categorical_columns is None:
-            categorical_columns = []
-            for col in processed_data.columns:
-                if processed_data[col].dtype == 'object' or processed_data[col].dtype.name == 'category':
-                    categorical_columns.append(col)
-            print(f"[HYPEROPT_PREP] Auto-detected categorical columns: {categorical_columns}")
-        else:
-            print(f"[HYPEROPT_PREP] Using provided categorical columns: {categorical_columns}")
-
-        # Track encoded columns and store encoders
-        discrete_columns = []
-        encoders = {}
-
-        # Process categorical columns
-        for col in categorical_columns:
-            if col in processed_data.columns:
-                print(f"[HYPEROPT_PREP] Encoding categorical column: {col}")
-
-                # Handle missing values first
-                processed_data[col] = processed_data[col].fillna('Unknown')
-
-                # Create and fit label encoder
-                encoder = LabelEncoder()
-                processed_data[col] = encoder.fit_transform(processed_data[col].astype(str))
-
-                # Store encoder and mark as discrete
-                encoders[col] = encoder
-                discrete_columns.append(col)
-
-                print(f"[HYPEROPT_PREP] Column '{col}' encoded: {len(encoder.classes_)} unique values")
-
-        # Handle any remaining missing values in numeric columns
-        numeric_columns = processed_data.select_dtypes(include=[np.number]).columns
-        for col in numeric_columns:
-            if processed_data[col].isnull().any():
-                median_val = processed_data[col].median()
-                processed_data[col] = processed_data[col].fillna(median_val)
-                print(f"[HYPEROPT_PREP] Filled {processed_data[col].isnull().sum()} missing values in numeric column '{col}' with median: {median_val}")
-
-        # Ensure all data is numeric
-        for col in processed_data.columns:
-            if processed_data[col].dtype == 'object':
-                try:
-                    processed_data[col] = pd.to_numeric(processed_data[col], errors='coerce')
-                    processed_data[col] = processed_data[col].fillna(processed_data[col].median())
-                    print(f"[HYPEROPT_PREP] Converted column '{col}' to numeric")
-                except Exception as e:
-                    print(f"[WARNING] Could not convert column '{col}' to numeric: {e}")
-
-        print(f"[HYPEROPT_PREP] Final data shape: {processed_data.shape}")
-        print(f"[HYPEROPT_PREP] Discrete columns for CTGAN: {discrete_columns}")
-        print(f"[HYPEROPT_PREP] Data types: {processed_data.dtypes.value_counts().to_dict()}")
-        print(f"[HYPEROPT_PREP] Missing values: {processed_data.isnull().sum().sum()}")
-
-        return processed_data, discrete_columns, encoders
-
-    except Exception as e:
-        print(f"[ERROR] Hyperparameter optimization data preparation failed: {e}")
-        import traceback
-        traceback.print_exc()
-        # Return original data as fallback
-        return data, [], {}
-
-print("[OK] Hyperparameter optimization data preprocessing function added to setup.py!")
 
 # NOTEBOOK COMPATIBILITY FUNCTIONS FOR CONSISTENT API USAGE
 
