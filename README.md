@@ -82,6 +82,46 @@ Each dataset notebook follows a standardized 5-section pipeline with harmonized 
 - **Standardized Pipeline**: Identical methodology across different datasets
 - **Version Control**: Systematic tracking of model configurations and results
 
+## Modular Architecture (Phase 4 - December 2025)
+
+The codebase has been refactored into a clean modular structure to improve maintainability and scalability:
+
+### Code Organization
+
+**setup.py** - Thin backward-compatible re-export layer (209 lines, 94.3% reduction from 3,691 lines)
+- All notebooks continue using `from setup import *` without changes
+- All functionality migrated to specialized modules in `src/`
+
+**src/** - Modular source code structure:
+- **config.py** - Session management and global configuration
+- **compat.py** - Backward compatibility patches for legacy notebook code
+- **utils/** - Utility functions (paths, documentation, parameter management)
+- **data/** - Data preprocessing and summary functions
+- **evaluation/** - Comprehensive evaluation framework
+  - quality.py - Statistical fidelity assessment
+  - trts.py - Train Real Test Synthetic (TRTS) analysis
+  - privacy.py - Privacy metrics and membership inference
+  - mode_collapse.py - Mode collapse detection
+  - hyperparameters.py - Optuna optimization analysis
+  - batch.py - Unified batch evaluation for Sections 3 & 5
+- **visualization/** - Section-specific visualization functions
+- **objective/** - Objective functions for hyperparameter optimization
+- **models/** - Model imports, wrappers, and implementations
+
+### Benefits
+
+✅ **Maintainability**: Clean separation of concerns with single-responsibility modules
+✅ **Testability**: Each module can be tested independently
+✅ **Scalability**: Easy to extend with new models or evaluation metrics
+✅ **Backward Compatibility**: All existing notebooks work without modification
+✅ **Code Reusability**: Functions organized by purpose for easy discovery
+
+### Migration Status
+
+- ✅ Phase 0-3: Complete - All core functionality migrated
+- ✅ Phase 4 (Task 4.3): Complete - setup.py streamlined to <210 lines
+- 🔄 Next: Notebook testing and validation across all 4 datasets
+
 ## Installation
 
 ### Prerequisites
