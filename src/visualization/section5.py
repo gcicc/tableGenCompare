@@ -10,6 +10,9 @@ import seaborn as sns
 import pandas as pd
 import numpy as np
 from pathlib import Path
+from sklearn.metrics import roc_curve, auc, precision_recall_curve, average_precision_score
+from sklearn.preprocessing import label_binarize
+from sklearn.calibration import calibration_curve
 
 
 def create_trts_visualizations(trts_results_dict, model_names, results_dir,
@@ -435,3 +438,490 @@ def create_privacy_dashboard(trts_results_dict, model_names, results_dir,
             'best_privacy_model': privacy_df.loc[privacy_df['Privacy_Score'].idxmax(), 'Model'] if len(privacy_df) > 0 else None
         }
     }
+
+
+def create_trts_roc_curves(trts_results_dict, model_names, results_dir,
+                          dataset_name="Dataset", save_files=True,
+                          display_plots=False, verbose=True):
+    """
+    Generate ROC (Receiver Operating Characteristic) curves for all TRTS scenarios.
+
+    Creates a 2×2 subplot grid showing ROC curves for:
+    - TRTR (Train Real, Test Real)
+    - TRTS (Train Real, Test Synthetic)
+    - TSTR (Train Synthetic, Test Real)
+    - TSTS (Train Synthetic, Test Synthetic)
+
+    Parameters:
+    -----------
+    trts_results_dict : dict
+        Dictionary with model names as keys, each containing TRTS results with
+        'predictions' key (y_true, y_pred, y_pred_proba)
+    model_names : list
+        List of model names to include in visualization
+    results_dir : str
+        Directory to save output PNG file
+    dataset_name : str, default="Dataset"
+        Dataset identifier for title
+    save_files : bool, default=True
+        Whether to save PNG file to disk
+    display_plots : bool, default=False
+        Whether to display plot interactively
+    verbose : bool, default=True
+        Whether to print progress messages
+
+    Returns:
+    --------
+    str or None : Path to saved PNG file, or None if no valid data
+
+    Notes:
+    ------
+    - Requires store_predictions=True when calling comprehensive_trts_analysis()
+    - Gracefully skips models/scenarios without prediction data
+    - Binary classification: Single ROC curve per model
+    - Multi-class: Macro-average ROC curve
+    - Displays AUROC scores in legend
+    """
+    import os
+
+    if verbose:
+        print("\n" + "="*70)
+        print("GENERATING ROC CURVES")
+        print("="*70)
+
+    scenarios = ['TRTR', 'TRTS', 'TSTR', 'TSTS']
+    scenario_titles = {
+        'TRTR': 'Train Real, Test Real',
+        'TRTS': 'Train Real, Test Synthetic',
+        'TSTR': 'Train Synthetic, Test Real',
+        'TSTS': 'Train Synthetic, Test Synthetic'
+    }
+
+    # Check if any model has prediction data
+    has_predictions = False
+    for model_name in model_names:
+        if model_name in trts_results_dict:
+            for scenario in scenarios:
+                if (scenario in trts_results_dict[model_name] and
+                    trts_results_dict[model_name][scenario].get('status') == 'success' and
+                    'predictions' in trts_results_dict[model_name][scenario]):
+                    has_predictions = True
+                    break
+            if has_predictions:
+                break
+
+    if not has_predictions:
+        if verbose:
+            print("[WARNING] No prediction data available for ROC curves")
+            print("         Call comprehensive_trts_analysis() with store_predictions=True")
+        return None
+
+    # Create 2×2 subplot grid
+    fig, axes = plt.subplots(2, 2, figsize=(16, 14))
+    axes = axes.flatten()
+
+    for idx, scenario in enumerate(scenarios):
+        ax = axes[idx]
+
+        for model_name in model_names:
+            if model_name not in trts_results_dict:
+                continue
+
+            scenario_results = trts_results_dict[model_name].get(scenario, {})
+
+            if (scenario_results.get('status') != 'success' or
+                'predictions' not in scenario_results):
+                continue
+
+            preds = scenario_results['predictions']
+            y_true = preds['y_true']
+            y_pred_proba = preds['y_pred_proba']
+            classes = preds.get('classes', np.unique(y_true))
+
+            if y_pred_proba is None:
+                continue
+
+            n_classes = len(classes)
+
+            try:
+                if n_classes == 2:
+                    # Binary classification: Single curve
+                    fpr, tpr, _ = roc_curve(y_true, y_pred_proba[:, 1])
+                    roc_auc = auc(fpr, tpr)
+                    ax.plot(fpr, tpr, label=f'{model_name} (AUC={roc_auc:.3f})', linewidth=2)
+                else:
+                    # Multi-class: Macro-average curve
+                    y_true_bin = label_binarize(y_true, classes=classes)
+
+                    # Compute micro-average ROC curve
+                    fpr_micro, tpr_micro, _ = roc_curve(y_true_bin.ravel(), y_pred_proba.ravel())
+                    roc_auc_micro = auc(fpr_micro, tpr_micro)
+
+                    # Compute macro-average ROC curve
+                    fpr_macro = np.linspace(0, 1, 100)
+                    tpr_macro_list = []
+
+                    for i in range(n_classes):
+                        fpr_i, tpr_i, _ = roc_curve(y_true_bin[:, i], y_pred_proba[:, i])
+                        tpr_macro_list.append(np.interp(fpr_macro, fpr_i, tpr_i))
+
+                    tpr_macro = np.mean(tpr_macro_list, axis=0)
+                    roc_auc_macro = auc(fpr_macro, tpr_macro)
+
+                    ax.plot(fpr_macro, tpr_macro,
+                           label=f'{model_name} (macro AUC={roc_auc_macro:.3f})',
+                           linewidth=2)
+            except Exception as e:
+                if verbose:
+                    print(f"[WARNING] Could not generate ROC curve for {model_name} {scenario}: {e}")
+                continue
+
+        # Diagonal reference line (random classifier)
+        ax.plot([0, 1], [0, 1], 'k--', linewidth=1, label='Random')
+
+        ax.set_xlabel('False Positive Rate', fontsize=11)
+        ax.set_ylabel('True Positive Rate', fontsize=11)
+        ax.set_title(f'{scenario_titles[scenario]}', fontsize=12, fontweight='bold')
+        ax.legend(loc='lower right', fontsize=9)
+        ax.grid(True, alpha=0.3)
+        ax.set_xlim([0.0, 1.0])
+        ax.set_ylim([0.0, 1.05])
+
+    plt.suptitle(f'ROC Curves - {dataset_name}', fontsize=14, fontweight='bold', y=0.995)
+    plt.tight_layout()
+
+    output_path = None
+    if save_files:
+        output_path = os.path.join(results_dir, 'trts_roc_curves.png')
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        if verbose:
+            print(f"[SUCCESS] ROC curves saved: {output_path}")
+
+    if display_plots:
+        plt.show()
+    else:
+        plt.close()
+
+    return output_path
+
+
+def create_trts_pr_curves(trts_results_dict, model_names, results_dir,
+                         dataset_name="Dataset", save_files=True,
+                         display_plots=False, verbose=True):
+    """
+    Generate Precision-Recall curves for all TRTS scenarios.
+
+    Creates a 2×2 subplot grid showing PR curves for all scenarios.
+    Particularly useful for imbalanced datasets where AUROC may be misleading.
+
+    Parameters:
+    -----------
+    trts_results_dict : dict
+        Dictionary with model names as keys, each containing TRTS results with
+        'predictions' key (y_true, y_pred, y_pred_proba)
+    model_names : list
+        List of model names to include in visualization
+    results_dir : str
+        Directory to save output PNG file
+    dataset_name : str, default="Dataset"
+        Dataset identifier for title
+    save_files : bool, default=True
+        Whether to save PNG file to disk
+    display_plots : bool, default=False
+        Whether to display plot interactively
+    verbose : bool, default=True
+        Whether to print progress messages
+
+    Returns:
+    --------
+    str or None : Path to saved PNG file, or None if no valid data
+    """
+    import os
+
+    if verbose:
+        print("\n" + "="*70)
+        print("GENERATING PRECISION-RECALL CURVES")
+        print("="*70)
+
+    scenarios = ['TRTR', 'TRTS', 'TSTR', 'TSTS']
+    scenario_titles = {
+        'TRTR': 'Train Real, Test Real',
+        'TRTS': 'Train Real, Test Synthetic',
+        'TSTR': 'Train Synthetic, Test Real',
+        'TSTS': 'Train Synthetic, Test Synthetic'
+    }
+
+    # Check for prediction data
+    has_predictions = False
+    for model_name in model_names:
+        if model_name in trts_results_dict:
+            for scenario in scenarios:
+                if (scenario in trts_results_dict[model_name] and
+                    trts_results_dict[model_name][scenario].get('status') == 'success' and
+                    'predictions' in trts_results_dict[model_name][scenario]):
+                    has_predictions = True
+                    break
+            if has_predictions:
+                break
+
+    if not has_predictions:
+        if verbose:
+            print("[WARNING] No prediction data available for PR curves")
+        return None
+
+    # Create 2×2 subplot grid
+    fig, axes = plt.subplots(2, 2, figsize=(16, 14))
+    axes = axes.flatten()
+
+    for idx, scenario in enumerate(scenarios):
+        ax = axes[idx]
+
+        for model_name in model_names:
+            if model_name not in trts_results_dict:
+                continue
+
+            scenario_results = trts_results_dict[model_name].get(scenario, {})
+
+            if (scenario_results.get('status') != 'success' or
+                'predictions' not in scenario_results):
+                continue
+
+            preds = scenario_results['predictions']
+            y_true = preds['y_true']
+            y_pred_proba = preds['y_pred_proba']
+            classes = preds.get('classes', np.unique(y_true))
+
+            if y_pred_proba is None:
+                continue
+
+            n_classes = len(classes)
+
+            try:
+                if n_classes == 2:
+                    # Binary classification
+                    precision, recall, _ = precision_recall_curve(y_true, y_pred_proba[:, 1])
+                    ap = average_precision_score(y_true, y_pred_proba[:, 1])
+                    ax.plot(recall, precision, label=f'{model_name} (AP={ap:.3f})', linewidth=2)
+                else:
+                    # Multi-class: Macro-average
+                    y_true_bin = label_binarize(y_true, classes=classes)
+
+                    ap_scores = []
+                    for i in range(n_classes):
+                        ap_i = average_precision_score(y_true_bin[:, i], y_pred_proba[:, i])
+                        ap_scores.append(ap_i)
+
+                    ap_macro = np.mean(ap_scores)
+
+                    # Plot macro-average curve
+                    recall_macro = np.linspace(0, 1, 100)
+                    precision_list = []
+
+                    for i in range(n_classes):
+                        precision_i, recall_i, _ = precision_recall_curve(
+                            y_true_bin[:, i], y_pred_proba[:, i]
+                        )
+                        precision_list.append(np.interp(recall_macro[::-1], recall_i[::-1],
+                                                       precision_i[::-1])[::-1])
+
+                    precision_macro = np.mean(precision_list, axis=0)
+                    ax.plot(recall_macro, precision_macro,
+                           label=f'{model_name} (macro AP={ap_macro:.3f})',
+                           linewidth=2)
+            except Exception as e:
+                if verbose:
+                    print(f"[WARNING] Could not generate PR curve for {model_name} {scenario}: {e}")
+                continue
+
+        ax.set_xlabel('Recall', fontsize=11)
+        ax.set_ylabel('Precision', fontsize=11)
+        ax.set_title(f'{scenario_titles[scenario]}', fontsize=12, fontweight='bold')
+        ax.legend(loc='best', fontsize=9)
+        ax.grid(True, alpha=0.3)
+        ax.set_xlim([0.0, 1.0])
+        ax.set_ylim([0.0, 1.05])
+
+    plt.suptitle(f'Precision-Recall Curves - {dataset_name}',
+                fontsize=14, fontweight='bold', y=0.995)
+    plt.tight_layout()
+
+    output_path = None
+    if save_files:
+        output_path = os.path.join(results_dir, 'trts_pr_curves.png')
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        if verbose:
+            print(f"[SUCCESS] PR curves saved: {output_path}")
+
+    if display_plots:
+        plt.show()
+    else:
+        plt.close()
+
+    return output_path
+
+
+def create_trts_calibration_curves(trts_results_dict, model_names, results_dir,
+                                   dataset_name="Dataset", save_files=True,
+                                   display_plots=False, verbose=True):
+    """
+    Generate calibration (reliability) curves for all TRTS scenarios.
+
+    Shows how well predicted probabilities match actual frequencies.
+    Perfect calibration = diagonal line (predicted probability = observed frequency).
+
+    Parameters:
+    -----------
+    trts_results_dict : dict
+        Dictionary with model names as keys, each containing TRTS results with
+        'predictions' key (y_true, y_pred, y_pred_proba)
+    model_names : list
+        List of model names to include in visualization
+    results_dir : str
+        Directory to save output PNG file
+    dataset_name : str, default="Dataset"
+        Dataset identifier for title
+    save_files : bool, default=True
+        Whether to save PNG file to disk
+    display_plots : bool, default=False
+        Whether to display plot interactively
+    verbose : bool, default=True
+        Whether to print progress messages
+
+    Returns:
+    --------
+    str or None : Path to saved PNG file, or None if no valid data
+    """
+    import os
+
+    if verbose:
+        print("\n" + "="*70)
+        print("GENERATING CALIBRATION CURVES")
+        print("="*70)
+
+    scenarios = ['TRTR', 'TRTS', 'TSTR', 'TSTS']
+    scenario_titles = {
+        'TRTR': 'Train Real, Test Real',
+        'TRTS': 'Train Real, Test Synthetic',
+        'TSTR': 'Train Synthetic, Test Real',
+        'TSTS': 'Train Synthetic, Test Synthetic'
+    }
+
+    # Check for prediction data
+    has_predictions = False
+    for model_name in model_names:
+        if model_name in trts_results_dict:
+            for scenario in scenarios:
+                if (scenario in trts_results_dict[model_name] and
+                    trts_results_dict[model_name][scenario].get('status') == 'success' and
+                    'predictions' in trts_results_dict[model_name][scenario]):
+                    has_predictions = True
+                    break
+            if has_predictions:
+                break
+
+    if not has_predictions:
+        if verbose:
+            print("[WARNING] No prediction data available for calibration curves")
+        return None
+
+    # Create 2×2 subplot grid
+    fig, axes = plt.subplots(2, 2, figsize=(16, 14))
+    axes = axes.flatten()
+
+    for idx, scenario in enumerate(scenarios):
+        ax = axes[idx]
+
+        for model_name in model_names:
+            if model_name not in trts_results_dict:
+                continue
+
+            scenario_results = trts_results_dict[model_name].get(scenario, {})
+
+            if (scenario_results.get('status') != 'success' or
+                'predictions' not in scenario_results):
+                continue
+
+            preds = scenario_results['predictions']
+            y_true = preds['y_true']
+            y_pred_proba = preds['y_pred_proba']
+            classes = preds.get('classes', np.unique(y_true))
+
+            if y_pred_proba is None:
+                continue
+
+            n_classes = len(classes)
+
+            try:
+                if n_classes == 2:
+                    # Binary classification
+                    prob_true, prob_pred = calibration_curve(
+                        y_true, y_pred_proba[:, 1], n_bins=10, strategy='uniform'
+                    )
+                    ax.plot(prob_pred, prob_true, marker='o', label=model_name, linewidth=2)
+                else:
+                    # Multi-class: Average calibration across all classes
+                    y_true_bin = label_binarize(y_true, classes=classes)
+
+                    prob_true_list = []
+                    prob_pred_list = []
+
+                    for i in range(n_classes):
+                        if y_true_bin[:, i].sum() > 0:  # Only if class exists
+                            prob_true_i, prob_pred_i = calibration_curve(
+                                y_true_bin[:, i], y_pred_proba[:, i],
+                                n_bins=10, strategy='uniform'
+                            )
+                            prob_true_list.append(prob_true_i)
+                            prob_pred_list.append(prob_pred_i)
+
+                    if prob_true_list:
+                        # Average across classes
+                        max_len = max(len(p) for p in prob_true_list)
+                        prob_true_avg = np.mean([
+                            np.pad(p, (0, max_len - len(p)), constant_values=np.nan)
+                            for p in prob_true_list
+                        ], axis=0)
+                        prob_pred_avg = np.mean([
+                            np.pad(p, (0, max_len - len(p)), constant_values=np.nan)
+                            for p in prob_pred_list
+                        ], axis=0)
+
+                        # Remove NaN values
+                        mask = ~np.isnan(prob_true_avg) & ~np.isnan(prob_pred_avg)
+                        ax.plot(prob_pred_avg[mask], prob_true_avg[mask],
+                               marker='o', label=model_name, linewidth=2)
+
+            except Exception as e:
+                if verbose:
+                    print(f"[WARNING] Could not generate calibration curve for "
+                          f"{model_name} {scenario}: {e}")
+                continue
+
+        # Perfect calibration reference line
+        ax.plot([0, 1], [0, 1], 'k--', linewidth=1, label='Perfect Calibration')
+
+        ax.set_xlabel('Mean Predicted Probability', fontsize=11)
+        ax.set_ylabel('Fraction of Positives', fontsize=11)
+        ax.set_title(f'{scenario_titles[scenario]}', fontsize=12, fontweight='bold')
+        ax.legend(loc='best', fontsize=9)
+        ax.grid(True, alpha=0.3)
+        ax.set_xlim([0.0, 1.0])
+        ax.set_ylim([0.0, 1.05])
+
+    plt.suptitle(f'Calibration Curves - {dataset_name}',
+                fontsize=14, fontweight='bold', y=0.995)
+    plt.tight_layout()
+
+    output_path = None
+    if save_files:
+        output_path = os.path.join(results_dir, 'trts_calibration_curves.png')
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        if verbose:
+            print(f"[SUCCESS] Calibration curves saved: {output_path}")
+
+    if display_plots:
+        plt.show()
+    else:
+        plt.close()
+
+    return output_path

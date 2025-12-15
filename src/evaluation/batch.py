@@ -195,7 +195,8 @@ def evaluate_trained_models(section_number, variable_pattern, scope=None, models
                     test_size=0.2,
                     random_state=42,
                     n_estimators=50 if section_number == 3 else 100,  # More thorough for optimized models
-                    verbose=True
+                    verbose=True,
+                    store_predictions=True  # Phase 1: Enable for ROC/PR/Calibration curve generation
                 )
 
                 trts_results[model_name] = trts_result
@@ -245,6 +246,85 @@ def evaluate_trained_models(section_number, variable_pattern, scope=None, models
                     print(f"   - Average combined score: {stats.get('avg_combined_score', 0):.4f}")
                     print(f"   - Best performing model: {stats.get('best_model', 'Unknown')}")
                     print(f"   - Total scenarios tested: {stats.get('total_scenarios_tested', 0)}")
+
+                # Phase 3: Generate privacy analysis dashboard
+                # Privacy metrics already calculated in comprehensive_trts_analysis()
+                # Check if any model has privacy metrics
+                has_privacy_metrics = any(
+                    'privacy' in model_results
+                    for model_results in trts_results.values()
+                )
+
+                if has_privacy_metrics:
+                    from src.visualization.section5 import create_privacy_dashboard
+
+                    privacy_dash_result = create_privacy_dashboard(
+                        trts_results_dict=trts_results,
+                        model_names=list(trts_results.keys()),
+                        results_dir=results_dir,
+                        dataset_name=f"{dataset_display_name}{suffix}",
+                        save_files=True,
+                        display_plots=False,
+                        verbose=True
+                    )
+
+                    if privacy_dash_result and 'files_generated' in privacy_dash_result:
+                        for model_name in evaluation_results:
+                            if 'files_generated' not in evaluation_results[model_name]:
+                                evaluation_results[model_name]['files_generated'] = []
+                            evaluation_results[model_name]['files_generated'].extend(privacy_dash_result['files_generated'])
+
+                # Phase 2: Generate ROC/PR/Calibration curves (if predictions available)
+                from src.visualization.section5 import (
+                    create_trts_roc_curves,
+                    create_trts_pr_curves,
+                    create_trts_calibration_curves
+                )
+
+                roc_path = create_trts_roc_curves(
+                    trts_results_dict=trts_results,
+                    model_names=list(trts_results.keys()),
+                    results_dir=results_dir,
+                    dataset_name=f"{dataset_display_name}{suffix}",
+                    save_files=True,
+                    display_plots=False,
+                    verbose=True
+                )
+
+                pr_path = create_trts_pr_curves(
+                    trts_results_dict=trts_results,
+                    model_names=list(trts_results.keys()),
+                    results_dir=results_dir,
+                    dataset_name=f"{dataset_display_name}{suffix}",
+                    save_files=True,
+                    display_plots=False,
+                    verbose=True
+                )
+
+                calib_path = create_trts_calibration_curves(
+                    trts_results_dict=trts_results,
+                    model_names=list(trts_results.keys()),
+                    results_dir=results_dir,
+                    dataset_name=f"{dataset_display_name}{suffix}",
+                    save_files=True,
+                    display_plots=False,
+                    verbose=True
+                )
+
+                # Add curve paths to evaluation results
+                curve_paths = []
+                if roc_path:
+                    curve_paths.append(roc_path)
+                if pr_path:
+                    curve_paths.append(pr_path)
+                if calib_path:
+                    curve_paths.append(calib_path)
+
+                if curve_paths:
+                    for model_name in evaluation_results:
+                        if 'files_generated' not in evaluation_results[model_name]:
+                            evaluation_results[model_name]['files_generated'] = []
+                        evaluation_results[model_name]['files_generated'].extend(curve_paths)
 
             except Exception as e:
                 print(f"[ERROR] TRTS visualization failed: {e}")
