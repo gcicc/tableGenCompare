@@ -15,7 +15,7 @@ from sklearn.metrics import (
     precision_recall_fscore_support,
     matthews_corrcoef, cohen_kappa_score,
     roc_auc_score, average_precision_score,
-    confusion_matrix
+    confusion_matrix, brier_score_loss  # Phase 3: For probability calibration metric
 )
 from sklearn.preprocessing import LabelEncoder, label_binarize
 from .privacy import calculate_privacy_metrics
@@ -83,6 +83,8 @@ def calculate_comprehensive_classification_metrics(y_true, y_pred, y_pred_proba=
         npv_list = []
         fpr_list = []
         fnr_list = []
+        fdr_list = []  # Phase 2: False Discovery Rate
+        for_omission_list = []  # Phase 2: False Omission Rate (avoid 'for' keyword)
 
         for i in range(n_classes):
             # True/False Positives/Negatives for class i (one-vs-rest)
@@ -107,15 +109,65 @@ def calculate_comprehensive_classification_metrics(y_true, y_pred, y_pred_proba=
             fnr = fn / (fn + tp) if (fn + tp) > 0 else 0
             fnr_list.append(fnr)
 
+            # FDR = FP / (FP + TP) = False Discovery Rate
+            fdr_val = fp / (fp + tp) if (fp + tp) > 0 else 0
+            fdr_list.append(fdr_val)
+
+            # FOR = FN / (FN + TN) = False Omission Rate
+            for_val = fn / (fn + tn) if (fn + tn) > 0 else 0
+            for_omission_list.append(for_val)
+
         # Macro average
         specificity = np.mean(specificity_list)
         npv = np.mean(npv_list)
         fpr = np.mean(fpr_list)
         fnr = np.mean(fnr_list)
+        fdr = np.mean(fdr_list)
+        false_omission_rate = np.mean(for_omission_list)  # Not 'for' (Python keyword)
 
-        # AUROC and AUPRC (if probabilities provided)
+        # Phase 3: Additional metrics from dev-plan.md task 3.5
+
+        # Youden's J Statistic = Sensitivity + Specificity - 1
+        youden_j = recall + specificity - 1
+
+        # Fowlkes–Mallows Index = sqrt(Precision × Recall)
+        fmi = np.sqrt(precision * recall) if (precision > 0 and recall > 0) else 0
+
+        # F-beta scores (beta=0.5 precision-weighted, beta=2.0 recall-weighted)
+        beta = 0.5
+        denominator = beta**2 * precision + recall
+        f_beta_0_5 = (1 + beta**2) * (precision * recall) / denominator if denominator > 0 else 0
+
+        beta = 2
+        denominator = beta**2 * precision + recall
+        f_beta_2 = (1 + beta**2) * (precision * recall) / denominator if denominator > 0 else 0
+
+        # TPR and TNR aliases (for medical/clinical users)
+        tpr = recall  # True Positive Rate = Sensitivity = Recall
+        tnr = specificity  # True Negative Rate = Specificity
+
+        # Prevalence and Predicted Positive Rate (using confusion matrix, not label assumptions)
+        prevalence_list = []
+        predicted_positive_rate_list = []
+        for i in range(n_classes):
+            tp = cm[i, i]
+            fp = cm[:, i].sum() - tp
+            fn = cm[i, :].sum() - tp
+            total = cm.sum()
+
+            # Prevalence = (TP + FN) / Total (actual positive rate per class)
+            prevalence_list.append((tp + fn) / total if total > 0 else 0)
+
+            # Predicted Positive Rate = (TP + FP) / Total (predicted positive rate per class)
+            predicted_positive_rate_list.append((tp + fp) / total if total > 0 else 0)
+
+        prevalence = np.mean(prevalence_list)  # Macro average across classes
+        predicted_positive_rate = np.mean(predicted_positive_rate_list)
+
+        # AUROC, AUPRC, and Brier Score (if probabilities provided)
         auroc = np.nan
         auprc = np.nan
+        brier = np.nan
 
         if y_pred_proba is not None:
             try:
@@ -123,32 +175,73 @@ def calculate_comprehensive_classification_metrics(y_true, y_pred, y_pred_proba=
                     # Binary classification
                     auroc = roc_auc_score(y_true, y_pred_proba[:, 1])
                     auprc = average_precision_score(y_true, y_pred_proba[:, 1])
+                    brier = brier_score_loss(y_true, y_pred_proba[:, 1])
                 else:
                     # Multi-class (use one-vs-rest macro average)
                     y_true_bin = label_binarize(y_true, classes=np.unique(y_true))
                     auroc = roc_auc_score(y_true_bin, y_pred_proba, average='macro', multi_class='ovr')
                     auprc = average_precision_score(y_true_bin, y_pred_proba, average='macro')
+
+                    # Brier Score for multi-class (handle missing classes gracefully)
+                    all_classes = np.arange(n_classes)
+                    y_true_bin_full = label_binarize(y_true, classes=all_classes)
+                    brier_scores = []
+                    for i in range(n_classes):
+                        # Only calculate if class exists in test set
+                        if y_true_bin_full[:, i].sum() > 0:
+                            brier_scores.append(brier_score_loss(y_true_bin_full[:, i], y_pred_proba[:, i]))
+                    brier = np.mean(brier_scores) if brier_scores else np.nan
             except Exception as e:
                 if verbose:
-                    print(f"   [WARNING] Could not calculate AUROC/AUPRC: {e}")
+                    print(f"   [WARNING] Could not calculate AUROC/AUPRC/Brier: {e}")
                 auroc = np.nan
                 auprc = np.nan
+                brier = np.nan
 
         return {
+            # Core metrics
             'accuracy': accuracy,
             'balanced_accuracy': balanced_acc,
+
+            # Precision/Recall family
             'precision': precision,
             'recall': recall,
             'f1_score': f1,
+            'f_beta_0_5': f_beta_0_5,  # Phase 3: F-beta (precision-weighted)
+            'f_beta_2': f_beta_2,  # Phase 3: F-beta (recall-weighted)
+
+            # Specificity family
             'specificity': specificity,
-            'sensitivity': recall,  # Sensitivity = Recall
+            'sensitivity': recall,  # Sensitivity = Recall (synonym)
+            'tpr': tpr,  # Phase 3: True Positive Rate = Sensitivity (alias)
+            'tnr': tnr,  # Phase 3: True Negative Rate = Specificity (alias)
+
+            # Predictive values
             'npv': npv,
+            'ppv': precision,  # Phase 3: Positive Predictive Value = Precision (synonym)
+
+            # Error rates
             'fpr': fpr,
             'fnr': fnr,
+            'fdr': fdr,  # Phase 2: False Discovery Rate
+            'false_omission_rate': false_omission_rate,  # Phase 2: False Omission Rate
+
+            # Combined metrics
             'mcc': mcc,
             'cohen_kappa': kappa,
+            'youden_j': youden_j,  # Phase 3: Youden's J Statistic
+            'fmi': fmi,  # Phase 3: Fowlkes-Mallows Index
+
+            # ROC/PR metrics
             'auroc': auroc,
-            'auprc': auprc
+            'auprc': auprc,
+
+            # Probability metrics
+            'brier_score': brier,  # Phase 3: Brier Score
+
+            # Population metrics
+            'prevalence': prevalence,  # Phase 3: Base rate
+            'predicted_positive_rate': predicted_positive_rate  # Phase 3: Predicted positive rate
         }
 
     except Exception as e:
@@ -156,20 +249,49 @@ def calculate_comprehensive_classification_metrics(y_true, y_pred, y_pred_proba=
             print(f"   [ERROR] Metric calculation failed: {e}")
         # Return NaN for all metrics on error
         return {
+            # Core metrics
             'accuracy': np.nan,
             'balanced_accuracy': np.nan,
+
+            # Precision/Recall family
             'precision': np.nan,
             'recall': np.nan,
             'f1_score': np.nan,
+            'f_beta_0_5': np.nan,  # Phase 3
+            'f_beta_2': np.nan,  # Phase 3
+
+            # Specificity family
             'specificity': np.nan,
             'sensitivity': np.nan,
+            'tpr': np.nan,  # Phase 3
+            'tnr': np.nan,  # Phase 3
+
+            # Predictive values
             'npv': np.nan,
+            'ppv': np.nan,  # Phase 3
+
+            # Error rates
             'fpr': np.nan,
             'fnr': np.nan,
+            'fdr': np.nan,  # Phase 2
+            'false_omission_rate': np.nan,  # Phase 2
+
+            # Combined metrics
             'mcc': np.nan,
             'cohen_kappa': np.nan,
+            'youden_j': np.nan,  # Phase 3
+            'fmi': np.nan,  # Phase 3
+
+            # ROC/PR metrics
             'auroc': np.nan,
-            'auprc': np.nan
+            'auprc': np.nan,
+
+            # Probability metrics
+            'brier_score': np.nan,  # Phase 3
+
+            # Population metrics
+            'prevalence': np.nan,  # Phase 3
+            'predicted_positive_rate': np.nan  # Phase 3
         }
 
 
