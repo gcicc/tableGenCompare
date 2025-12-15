@@ -12,6 +12,7 @@ import pandas as pd
 from src.evaluation.quality import evaluate_synthetic_data_quality
 from src.evaluation.trts import comprehensive_trts_analysis
 from src.visualization.section5 import create_trts_visualizations
+from src.visualization.section4 import create_optuna_visualizations, create_all_models_optuna_summary
 from src.utils.paths import get_results_path
 
 
@@ -175,6 +176,78 @@ def evaluate_trained_models(section_number, variable_pattern, scope=None, models
 
         except Exception as e:
             print(f"[WARNING] Could not save batch summary: {e}")
+
+    # SECTION 4 OPTUNA VISUALIZATIONS
+    # Automatically detect and visualize Optuna studies if present
+    print(f"\n{'='*25} OPTUNA OPTIMIZATION ANALYSIS {'='*25}")
+
+    # Map model names to study variable names
+    study_var_names = {
+        'CTGAN': 'ctgan_study',
+        'CTABGAN': 'ctabgan_study',
+        'CTABGANPLUS': 'ctabganplus_study',
+        'GANerAid': 'ganeraid_study',
+        'CopulaGAN': 'copulagan_study',
+        'TVAE': 'tvae_study'
+    }
+
+    detected_studies = {}
+    for model_name, study_var in study_var_names.items():
+        if study_var in scope and scope[study_var] is not None:
+            detected_studies[model_name] = scope[study_var]
+
+    if detected_studies:
+        print(f"[INFO] Found {len(detected_studies)} Optuna studies: {list(detected_studies.keys())}")
+
+        # Get Section 4 results path
+        section4_results_dir = get_results_path(dataset_id, 4)
+        os.makedirs(section4_results_dir, exist_ok=True)
+
+        # Generate per-model Optuna visualizations
+        optuna_files_generated = {}
+        for model_name, study in detected_studies.items():
+            print(f"\n[OPTUNA] Generating visualizations for {model_name}...")
+            try:
+                viz_paths = create_optuna_visualizations(
+                    study=study,
+                    model_name=model_name,
+                    results_path=section4_results_dir,
+                    verbose=True
+                )
+                if viz_paths:
+                    optuna_files_generated[model_name] = viz_paths
+                    # Add to evaluation results if model was evaluated
+                    if model_name in evaluation_results:
+                        if 'files_generated' not in evaluation_results[model_name]:
+                            evaluation_results[model_name]['files_generated'] = []
+                        evaluation_results[model_name]['files_generated'].extend(viz_paths.values())
+            except Exception as e:
+                print(f"[ERROR] Failed to generate Optuna visualizations for {model_name}: {e}")
+
+        # Generate summary visualization comparing all models
+        if len(detected_studies) >= 2:
+            print(f"\n[OPTUNA] Generating summary comparison across all models...")
+            try:
+                summary_path = create_all_models_optuna_summary(
+                    studies_dict=detected_studies,
+                    results_path=section4_results_dir,
+                    verbose=True
+                )
+                if summary_path:
+                    print(f"[OK] Optuna summary saved to Section 4: {summary_path}")
+                    # Add to all evaluated models
+                    for model_name in evaluation_results:
+                        if 'files_generated' not in evaluation_results[model_name]:
+                            evaluation_results[model_name]['files_generated'] = []
+                        if summary_path not in evaluation_results[model_name]['files_generated']:
+                            evaluation_results[model_name]['files_generated'].append(summary_path)
+            except Exception as e:
+                print(f"[ERROR] Failed to generate Optuna summary: {e}")
+
+        print(f"\n[OK] Optuna visualizations saved to: {section4_results_dir}")
+    else:
+        print("[INFO] No Optuna studies detected in notebook scope")
+        print("      Studies are expected with names like: ctgan_study, ctabgan_study, etc.")
 
         # ADD COMPREHENSIVE TRTS ANALYSIS (SAME AS BOTH ORIGINAL FUNCTIONS)
 
