@@ -55,17 +55,52 @@ def create_trts_visualizations(trts_results_dict, model_names, results_dir,
 
         for scenario in scenarios:
             if scenario in trts_results and trts_results[scenario].get('status') == 'success':
-                accuracy = trts_results[scenario]['accuracy']
-                time_val = trts_results[scenario]['training_time']
+                result = trts_results[scenario]
 
+                # Extract all comprehensive metrics (Phase 1-3: 30 metrics total)
                 scenario_data.append({
                     'Model': model_name,
                     'Scenario': scenario,
-                    'Accuracy': accuracy,
-                    'Training_Time': time_val
+                    # Core metrics
+                    'Accuracy': result.get('accuracy', np.nan),
+                    'Balanced_Accuracy': result.get('balanced_accuracy', np.nan),
+                    # Precision/Recall family
+                    'Precision': result.get('precision', np.nan),
+                    'Recall': result.get('recall', np.nan),
+                    'F1_Score': result.get('f1_score', np.nan),
+                    'F_Beta_0_5': result.get('f_beta_0_5', np.nan),  # Phase 3
+                    'F_Beta_2': result.get('f_beta_2', np.nan),  # Phase 3
+                    # Specificity family
+                    'Specificity': result.get('specificity', np.nan),
+                    'Sensitivity': result.get('sensitivity', np.nan),
+                    'TPR': result.get('tpr', np.nan),  # Phase 3: True Positive Rate
+                    'TNR': result.get('tnr', np.nan),  # Phase 3: True Negative Rate
+                    # Predictive values
+                    'NPV': result.get('npv', np.nan),
+                    'PPV': result.get('ppv', np.nan),  # Phase 3: Positive Predictive Value
+                    # Error rates
+                    'FPR': result.get('fpr', np.nan),
+                    'FNR': result.get('fnr', np.nan),
+                    'FDR': result.get('fdr', np.nan),  # Phase 2: False Discovery Rate
+                    'FOR': result.get('false_omission_rate', np.nan),  # Phase 2: False Omission Rate
+                    # Combined metrics
+                    'MCC': result.get('mcc', np.nan),
+                    'Cohen_Kappa': result.get('cohen_kappa', np.nan),
+                    'Youden_J': result.get('youden_j', np.nan),  # Phase 3
+                    'FMI': result.get('fmi', np.nan),  # Phase 3: Fowlkes-Mallows Index
+                    # ROC/PR metrics
+                    'AUROC': result.get('auroc', np.nan),
+                    'AUPRC': result.get('auprc', np.nan),
+                    # Probability metrics
+                    'Brier_Score': result.get('brier_score', np.nan),  # Phase 3
+                    # Population metrics
+                    'Prevalence': result.get('prevalence', np.nan),  # Phase 3
+                    'Predicted_Positive_Rate': result.get('predicted_positive_rate', np.nan),  # Phase 3
+                    # Timing
+                    'Training_Time': result.get('training_time', 0)
                 })
-                model_accuracies.append(accuracy)
-                model_times.append(time_val)
+                model_accuracies.append(result.get('accuracy', 0))
+                model_times.append(result.get('training_time', 0))
 
         if model_accuracies:  # Only include if we have data
             # Calculate summary metrics
