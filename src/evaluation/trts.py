@@ -297,7 +297,7 @@ def calculate_comprehensive_classification_metrics(y_true, y_pred, y_pred_proba=
 
 def comprehensive_trts_analysis(real_data, synthetic_data, target_column,
                                test_size=0.2, random_state=42, n_estimators=100,
-                               verbose=True):
+                               verbose=True, store_predictions=False):
     """
     Comprehensive TRTS framework analysis with all four scenarios and 15+ metrics:
     - TRTR: Train Real, Test Real
@@ -324,10 +324,16 @@ def comprehensive_trts_analysis(real_data, synthetic_data, target_column,
         Number of trees in RandomForest
     verbose : bool
         Print detailed results
+    store_predictions : bool, default=False
+        If True, stores y_true, y_pred, y_pred_proba arrays in results for
+        ROC/PR/Calibration curve generation. WARNING: Increases memory usage.
+        Only enable when visualization generation is needed.
 
     Returns:
     --------
-    dict : Dictionary with detailed TRTS results including 15+ metrics per scenario
+    dict : Dictionary with detailed TRTS results including 15+ metrics per scenario.
+          If store_predictions=True, each scenario dict also contains 'predictions' key
+          with y_true, y_pred, y_pred_proba, and class labels.
     """
     if verbose:
         print("[ANALYSIS] COMPREHENSIVE TRTS FRAMEWORK ANALYSIS (15+ Metrics)")
@@ -415,6 +421,15 @@ def comprehensive_trts_analysis(real_data, synthetic_data, target_column,
             **metrics  # Unpack all 15+ metrics
         }
 
+        # Phase 1: Conditionally store predictions for curve generation
+        if store_predictions:
+            results['TRTR']['predictions'] = {
+                'y_true': y_real_test.copy(),
+                'y_pred': pred_trtr.copy(),
+                'y_pred_proba': pred_proba_trtr.copy() if pred_proba_trtr is not None else None,
+                'classes': rf_trtr.classes_.tolist()
+            }
+
         if verbose:
             print(f"   [OK] TRTR Accuracy: {metrics['accuracy']:.4f} | Balanced Acc: {metrics['balanced_accuracy']:.4f} | MCC: {metrics['mcc']:.4f} (Time: {trtr_time:.3f}s)")
     except Exception as e:
@@ -445,6 +460,15 @@ def comprehensive_trts_analysis(real_data, synthetic_data, target_column,
             'training_time': trts_time,
             **metrics
         }
+
+        # Phase 1: Conditionally store predictions for curve generation
+        if store_predictions:
+            results['TRTS']['predictions'] = {
+                'y_true': y_synth_test.copy(),
+                'y_pred': pred_trts.copy(),
+                'y_pred_proba': pred_proba_trts.copy() if pred_proba_trts is not None else None,
+                'classes': rf_trts.classes_.tolist()
+            }
 
         if verbose:
             print(f"   [OK] TRTS Accuracy: {metrics['accuracy']:.4f} | Balanced Acc: {metrics['balanced_accuracy']:.4f} | MCC: {metrics['mcc']:.4f} (Time: {trts_time:.3f}s)")
@@ -477,6 +501,15 @@ def comprehensive_trts_analysis(real_data, synthetic_data, target_column,
             **metrics
         }
 
+        # Phase 1: Conditionally store predictions for curve generation
+        if store_predictions:
+            results['TSTR']['predictions'] = {
+                'y_true': y_real_test.copy(),
+                'y_pred': pred_tstr.copy(),
+                'y_pred_proba': pred_proba_tstr.copy() if pred_proba_tstr is not None else None,
+                'classes': rf_tstr.classes_.tolist()
+            }
+
         if verbose:
             print(f"   [OK] TSTR Accuracy: {metrics['accuracy']:.4f} | Balanced Acc: {metrics['balanced_accuracy']:.4f} | MCC: {metrics['mcc']:.4f} (Time: {tstr_time:.3f}s)")
     except Exception as e:
@@ -507,6 +540,15 @@ def comprehensive_trts_analysis(real_data, synthetic_data, target_column,
             'training_time': tsts_time,
             **metrics
         }
+
+        # Phase 1: Conditionally store predictions for curve generation
+        if store_predictions:
+            results['TSTS']['predictions'] = {
+                'y_true': y_synth_test.copy(),
+                'y_pred': pred_tsts.copy(),
+                'y_pred_proba': pred_proba_tsts.copy() if pred_proba_tsts is not None else None,
+                'classes': rf_tsts.classes_.tolist()
+            }
 
         if verbose:
             print(f"   [OK] TSTS Accuracy: {metrics['accuracy']:.4f} | Balanced Acc: {metrics['balanced_accuracy']:.4f} | MCC: {metrics['mcc']:.4f} (Time: {tsts_time:.3f}s)")
