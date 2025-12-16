@@ -9,6 +9,7 @@ All functionality is re-exported from src/ modules for backward compatibility.
 
 Migrated to src/ modules in Phase 4, Task 4.3 - reducing setup.py to <100 lines.
 """
+import os
 
 # ============================================================================
 # ESSENTIAL IMPORTS FROM SRC - Available globally when using 'from setup import *'
@@ -106,6 +107,10 @@ from src.models.imports import (
 from src.models.wrappers import (
     CTABGANModel,
     CTABGANPlusModel
+)
+
+from src.models.model_factory import (
+    ModelFactory
 )
 
 # Import data preprocessing functions
