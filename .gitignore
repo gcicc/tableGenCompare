@@ -42,4 +42,4 @@ model_tests.log
 *.html
 
 # Processed data cache
-data/*_processed.csv
+data/*_processed.csvnul
