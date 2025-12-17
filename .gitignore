@@ -34,3 +34,12 @@ model_tests.log
 
 # Environment files
 .env
+
+# Local CLI settings
+.claude/settings.local.json
+
+# Generated documentation
+*.html
+
+# Processed data cache
+data/*_processed.csv
