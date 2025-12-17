@@ -1,3 +1,9 @@
+---
+title: "Project Evolution"
+output: html_document
+date: "2025-12-16"
+---
+
 # Clinical Synthetic Data Generation Framework - Project Evolution
 
 **A Timeline of Development Across Branches**
@@ -9,6 +15,7 @@
 This document traces the evolution of the Clinical Synthetic Data Generation Framework from its initial proof-of-concept through multiple rounds of AWS deployment refinement. The project has progressed through four major development phases, each represented by distinct Git branches that capture significant architectural and methodological improvements.
 
 **Branch Overview:**
+
 - **old-main** (Aug 2025) - Initial successful local execution
 - **AWS_Round1** (Sep-Oct 2025) - First AWS deployment and multi-dataset expansion
 - **main** (Oct-Nov 2025) - Stabilized AWS-compatible release
@@ -35,7 +42,8 @@ This document traces the evolution of the Clinical Synthetic Data Generation Fra
 
 ## Timeline of Major Milestones
 
-### Phase 0: Genesis (Pre-Aug 2025)
+### Phase 0: Genesis 
+
 **Branch:** N/A (Pre-version control)
 
 Initial research and prototyping phase:
@@ -62,6 +70,7 @@ cc2e6d8 | 2025-08-27 | working through end of 5.1 with classification metrics
 ```
 
 #### Technical Highlights
+
 - ✅ **All 6 models working:** CTGAN, CTAB-GAN, CTAB-GAN+, GANerAid, CopulaGAN, TVAE
 - ✅ **Complete 5-section pipeline:** Setup → Preprocessing → Configuration → Optimization → Evaluation
 - ✅ **4 healthcare datasets:** Alzheimer's, Breast Cancer, Liver Disease, Pakistani Liver
@@ -69,12 +78,14 @@ cc2e6d8 | 2025-08-27 | working through end of 5.1 with classification metrics
 - ✅ **Basic evaluation metrics:** Statistical fidelity, utility preservation
 
 #### Challenges Overcome
+
 - GANerAid divisibility constraints with dataset sizes
 - Section 4 variable scoping issues (locals() → globals())
 - DataFrame dtype errors in performance visualization
 - Index out-of-bounds errors with small datasets
 
 #### Limitations
+
 - ⚠️ Local hardware constraints (10+ hours per full run)
 - ⚠️ No modular architecture
 - ⚠️ Limited scalability
@@ -85,11 +96,13 @@ cc2e6d8 | 2025-08-27 | working through end of 5.1 with classification metrics
 ---
 
 ### Phase 2: AWS Migration - **AWS_Round1**
+
 **Timeline:** September - October 2025
 **Environment:** AWS SageMaker
 **Status:** Cloud Deployment Foundation ✅
 
 #### Key Achievement
+
 **Successfully migrated framework to AWS SageMaker with enterprise-grade dependency management.**
 
 #### Major Commits
@@ -103,6 +116,7 @@ ef7cff4 | 2025-10-26 | feat: Add curated requirements.txt for AWS deployment
 ```
 
 #### Technical Highlights
+
 - ✅ **AWS SageMaker deployment:** Successful cloud migration
 - ✅ **Dependency management:** Curated requirements.txt with exact versions
 - ✅ **Multi-dataset framework:** Harmonized notebook structure across all 4 datasets
@@ -110,7 +124,9 @@ ef7cff4 | 2025-10-26 | feat: Add curated requirements.txt for AWS deployment
 - ✅ **Comprehensive documentation:** README with installation instructions
 
 #### Critical Discovery: The "3-Model Limitation"
+
 **Due to corporate AWS environment restrictions, only 3 of 6 models could be deployed:**
+
 - ✅ **CTGAN** - Standard GAN approach
 - ✅ **CopulaGAN** - Statistical copula-based approach
 - ✅ **TVAE** - Variational autoencoder approach
@@ -119,6 +135,7 @@ ef7cff4 | 2025-10-26 | feat: Add curated requirements.txt for AWS deployment
 - ❌ **GANerAid** - Blocked by custom implementation issues
 
 #### AWS-Specific Fixes
+
 - Pinned exact package versions for reproducibility
 - Resolved sklearn 1.0+ compatibility issues
 - Fixed CopulaGAN importlib warnings
@@ -137,11 +154,13 @@ ef7cff4 | 2025-10-26 | feat: Add curated requirements.txt for AWS deployment
 ---
 
 ### Phase 3: Production Stabilization - **main**
+
 **Timeline:** October - November 2025
 **Environment:** AWS SageMaker
 **Status:** Current Production Release 🟢
 
 #### Key Achievement
+
 **Stable, production-ready release optimized for AWS SageMaker with 3-model configuration.**
 
 #### Major Commits
@@ -152,6 +171,7 @@ b6e4522 | 2025-11-05 | Add AWS setup guide for CTAB-GAN and Deep Tabular GANs
 ```
 
 #### Technical Highlights
+
 - ✅ **Production stability:** Thoroughly tested on AWS SageMaker
 - ✅ **Version pinning:** Exact dependency versions for reproducibility
 - ✅ **Comprehensive documentation:** Setup guides and troubleshooting
@@ -159,6 +179,7 @@ b6e4522 | 2025-11-05 | Add AWS setup guide for CTAB-GAN and Deep Tabular GANs
 - ✅ **3-model optimization:** CTGAN, CopulaGAN, TVAE fully functional
 
 #### Use Cases
+
 - **Baseline comparisons** for new synthetic data methods
 - **Production deployment** for clinical data synthesis
 - **Teaching/demonstration** of synthetic data generation
@@ -169,11 +190,15 @@ b6e4522 | 2025-11-05 | Add AWS setup guide for CTAB-GAN and Deep Tabular GANs
 ---
 
 ### Phase 4: Next-Generation Architecture - **AWS_Round2**
-**Timeline:** December 2025 - Present
+
+**Timeline:** December 2025 - 
+
 **Environment:** AWS SageMaker
+
 **Status:** Active Development 🚀
 
 #### Key Achievement
+
 **Complete architectural overhaul with modular design, comprehensive evaluation, and automated workflows.**
 
 This phase represents a fundamental reimagining of the framework based on lessons learned from AWS_Round1 and production experience with main.
@@ -231,6 +256,7 @@ tableGenCompare/
 ```
 
 ##### Benefits
+
 - ✅ **94.3% code reduction** in setup.py (3,691 → 209 lines)
 - ✅ **Zero notebook changes** - full backward compatibility
 - ✅ **Improved testability** - modular components
@@ -258,6 +284,7 @@ a462541 | 2025-12-06 | feat(trts): expand to 15+ comprehensive classification me
 ##### Evaluation Framework
 
 **1. TRTS Analysis (Train Real/Test Synthetic Framework)**
+
 - 4 scenarios: TRTR, TRTS, TSTR, TSTS
 - 30+ classification metrics per scenario:
   - **Basic:** accuracy, balanced_accuracy, precision, recall, F1
@@ -268,6 +295,7 @@ a462541 | 2025-12-06 | feat(trts): expand to 15+ comprehensive classification me
   - **Population:** prevalence, predicted_positive_rate
 
 **2. Privacy Risk Assessment**
+
 - **DCR (Distance to Closest Record):** Measures memorization risk
 - **NNDR (Nearest Neighbor Distance Ratio):** Detects overfitting
 - **Memorization Score:** Percentage of exact replicas
@@ -275,6 +303,7 @@ a462541 | 2025-12-06 | feat(trts): expand to 15+ comprehensive classification me
 - **Privacy Score:** Composite privacy metric (0-1 scale)
 
 **3. Statistical Fidelity**
+
 - Distribution similarity (KS test, Wasserstein distance)
 - Correlation structure preservation
 - PCA comparison with outcome color-coding
@@ -282,6 +311,7 @@ a462541 | 2025-12-06 | feat(trts): expand to 15+ comprehensive classification me
 - Mode collapse detection
 
 **4. Utility Preservation**
+
 - Cross-accuracy (Real→Synth, Synth→Real)
 - Downstream task performance
 - Feature importance alignment
@@ -294,6 +324,7 @@ a462541 | 2025-12-06 | feat(trts): expand to 15+ comprehensive classification me
 ```
 
 **Automated Visualization Suite:**
+
 - **ROC Curves:** 2×2 grid for all TRTS scenarios
 - **Precision-Recall Curves:** Performance across thresholds
 - **Calibration Curves:** Probability calibration assessment
@@ -330,6 +361,7 @@ results = evaluate_all_available_models(
 ```
 
 **What it automatically does:**
+
 - ✅ Detects all trained models in notebook scope
 - ✅ Runs comprehensive quality evaluation
 - ✅ Performs 30+ metric TRTS analysis
@@ -341,11 +373,13 @@ results = evaluate_all_available_models(
 - ✅ Returns comprehensive results dictionary
 
 **2. Section-Aware Organization**
+
 - Section 3 results → `results/{dataset}/Section-3/`
 - Section 4 results → `results/{dataset}/Section-4/` (Optuna viz)
 - Section 5 results → `results/{dataset}/Section-5/`
 
 **3. Notebook Cleanup**
+
 - **432 lines removed** across 7 notebooks
 - Eliminated redundant manual visualization code
 - Streamlined workflow
@@ -360,6 +394,7 @@ results = evaluate_all_available_models(
 ```
 
 **Issues Resolved:**
+
 - ✅ Fixed corrupted Unicode characters causing `SyntaxError: null bytes`
 - ✅ Resolved Section 2 preprocessing failures
 - ✅ Fixed privacy key mismatch in batch evaluation
@@ -371,24 +406,29 @@ results = evaluate_all_available_models(
 ### AWS_Round2 Summary Statistics
 
 #### Code Metrics
+
 - **setup.py reduction:** 3,691 → 209 lines (94.3%)
 - **New modular files:** 20+ specialized modules
 - **Lines removed from notebooks:** 432 lines (automation)
 - **Commits in AWS_Round2:** 25+ major feature commits
 
 #### Evaluation Enhancements
+
 - **Metrics:** 5 basic → 30+ comprehensive
 - **TRTS scenarios:** 4 comprehensive scenarios
 - **Privacy metrics:** 5 new privacy risk measures
 - **Visualizations:** 8+ auto-generated charts per evaluation
 
 #### Automation Improvements
+
 - **Manual steps eliminated:** 6 visualization steps per model
 - **File generation:** 10+ files per batch evaluation
 - **Section organization:** Auto-routed to correct directories
 
 #### Files Generated Per Evaluation
+
 **Section 3 (Quality):**
+
 - statistical_similarity.csv
 - pca_comparison_with_outcome.png
 - distribution_comparison.png
@@ -396,12 +436,14 @@ results = evaluate_all_available_models(
 - evaluation_summary.csv
 
 **Section 4 (Optuna):**
+
 - optim_history_{model}.png (×6 models)
 - param_importance_{model}.png (×6 models)
 - parallel_coord_{model}.png (×6 models)
 - optuna_summary_all_models.png
 
 **Section 5 (TRTS):**
+
 - trts_comprehensive_analysis.png
 - trts_summary_metrics.csv
 - trts_detailed_results.csv
@@ -418,16 +460,19 @@ results = evaluate_all_available_models(
 ## Development Philosophy Evolution
 
 ### old-main → AWS_Round1: **"Make it work in the cloud"**
+
 - Focus: AWS migration and dependency management
 - Challenge: Corporate environment restrictions
 - Outcome: 3-model limitation discovered
 
 ### AWS_Round1 → main: **"Make it stable"**
+
 - Focus: Production readiness and reproducibility
 - Challenge: Version conflicts and edge cases
 - Outcome: Stable 3-model configuration
 
 ### main → AWS_Round2: **"Make it excellent"**
+
 - Focus: Architectural excellence and automation
 - Challenge: Maintaining backward compatibility during refactor
 - Outcome: Enterprise-grade modular framework
@@ -437,22 +482,26 @@ results = evaluate_all_available_models(
 ## Recommended Usage by Branch
 
 ### When to Use **old-main**
+
 - ❌ **Not recommended** - Historical reference only
 - Academic interest in original implementation
 - Understanding initial design decisions
 
 ### When to Use **AWS_Round1**
+
 - ❌ **Not recommended** - Superseded by main
 - Learning about AWS migration challenges
 - Understanding multi-dataset harmonization
 
 ### When to Use **main**
+
 - ✅ **Production deployments** requiring stability
 - Environments with strict version control
 - 3-model configuration (CTGAN, CopulaGAN, TVAE)
 - Conservative deployments avoiding bleeding-edge features
 
 ### When to Use **AWS_Round2** (Current)
+
 - ✅ **All new development and research**
 - Advanced evaluation requirements (30+ metrics)
 - Automated workflow needs
@@ -509,18 +558,21 @@ results = evaluate_all_available_models(
 ## Future Roadmap
 
 ### Short-Term (Q1 2026)
+
 - [ ] Resolve 3-model limitation in AWS environment
 - [ ] Expand to additional healthcare datasets
 - [ ] Add differential privacy mechanisms
 - [ ] Implement automated quality gates
 
 ### Medium-Term (Q2-Q3 2026)
+
 - [ ] GPU acceleration for larger datasets
 - [ ] Real-time synthetic data generation API
 - [ ] Interactive dashboard for result exploration
 - [ ] Automated hyperparameter tuning strategies
 
 ### Long-Term (Q4 2026+)
+
 - [ ] Multi-modal data support (tabular + imaging)
 - [ ] Federated learning integration
 - [ ] Production-grade deployment templates
