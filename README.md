@@ -267,6 +267,8 @@ Based on current development roadmap:
 - **Increased Optimization Trials**: Scale n_trials to 50-100 for more robust hyperparameter search
 - **Global Parameter Management**: Centralized n_trials configuration across all models
 
+### https://pypi.org/project/python-synthpop/ and other contenders
+
 ### Advanced Dataset Support
 - **Multi-Level Categorical Endpoints**: Support for complex categorical target variables
 - **One-Hot Encoding Verification**: Enhanced validation for categorical variable handling
