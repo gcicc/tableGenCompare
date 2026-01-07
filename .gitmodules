@@ -1,0 +1,9 @@
+[submodule "CTAB-GAN"]
+  path = CTAB-GAN
+  url = https://github.com/Team-TUD/CTAB-GAN
+[submodule "CTAB-GAN-Plus"]
+  path = CTAB-GAN-Plus
+  url = https://github.com/Team-TUD/CTAB-GAN-Plus
+[submodule "GANerAid"]
+  path = GANerAid
+  url = https://github.com/TeamGenerAid/GANerAid
