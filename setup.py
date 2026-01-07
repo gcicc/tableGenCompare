@@ -16,7 +16,7 @@ import os
 # ============================================================================
 
 # Import all essential data science libraries (pandas, numpy, sklearn, etc.)
-from src import *
+# from src import *
 
 # Import configuration and session management
 from src.config import (
