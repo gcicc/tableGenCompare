@@ -325,7 +325,8 @@ class CTABGANPlusModel:
                         categorical_columns=categorical_cols,
                         integer_columns=integer_columns,
                         problem_type=problem_type,
-                        test_ratio=test_ratio
+                        test_ratio=test_ratio,
+                        epochs=self.epochs,
                     )
 
                     print(f"[CTABGAN+] Training CTAB-GAN+ (Enhanced) for {self.epochs} epochs...")
@@ -354,7 +355,8 @@ class CTABGANPlusModel:
                                 categorical_columns=[],  # Remove categorical columns as fallback
                                 integer_columns=integer_columns,
                                 problem_type={None: None},  # Simplify problem type
-                                test_ratio=0.15  # Use smaller test ratio
+                                test_ratio=0.15,  # Use smaller test ratio
+                                epochs=self.epochs,
                             )
                             self.model.fit()
                             print("[OK] CTAB-GAN+ training completed with fallback parameters")
