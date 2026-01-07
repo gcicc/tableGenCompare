@@ -1,70 +1,53 @@
-# Core Data Science Libraries
+# Core
 pandas==2.3.3
-numpy==1.25.2           # <=1.25.x will build and run on default GCC, avoid 1.26+!
-matplotlib==3.7.2
-seaborn==0.12.2
+numpy==1.26.4
 scipy==1.10.1
+python-dateutil==2.9.0.post0
+pytz==2025.2
+tzdata==2025.3
 
-# Machine Learning & Preprocessing
-scikit-learn==1.7.1
+# Viz
+matplotlib==3.10.8
+seaborn==0.13.2
+plotly==6.2.0
+
+# ML
+scikit-learn==1.2.2
 joblib==1.4.2
 
-# Deep Learning - PyTorch
+# Deep Learning
 torch==2.6.0
 torchvision==0.21.0
 
-# Synthetic Data Generation Models
+# Synthetic data
 sdv==1.24.1
 ctgan==0.11.0
 copulas==0.12.3
+rdt==1.17.1
+deepecho==0.7.0
 
-# CTAB-GAN metrics
+# Metrics / helpers
 tab-gan-metrics==1.1.4
+dython==0.6.8
+scikit-plot==0.3.7
 
-# Hyperparameter Optimization
+# HPO
 optuna==4.4.0
 
-# Notebook Support
-jupyter==1.1.1
+# Notebook runtime
 ipykernel==6.29.5
-ipython==9.3.0
 notebook==7.4.4
-
-# Visualization
-plotly==6.2.0
+jupyter==1.1.1
 
 # Utilities
 tqdm==4.66.5
 PyYAML==6.0.2
-
-# Statistical Analysis
-dython==0.5.1
-
-# Additional GAN Tools
-GANerAid==1.8
-
-# Data Validation
-Faker==37.5.3
-
-# Python Utilities
-python-dateutil==2.9.0.post0
-
-# System Monitoring and Compatibility
 psutil==7.0.0
-importlib-metadata==8.6.1
-packaging==24.1
-
-# SDV Transform Library
-rdt==1.17.1
-
-# Miscellaneous
+packaging==25.0
 cloudpickle==3.1.1
 networkx==3.3
 graphviz==0.21
 
-# The following will fail in default SageMaker!
-# Only uncomment/install these in a modern or custom container:
-# keras==3.10.0
-# tensorflow==2.19.0
-# tensorboard==2.19.0
-# deepecho==0.7.0
+# Optional
+GANerAid==1.8
+Faker==37.5.3

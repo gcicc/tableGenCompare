@@ -1,115 +1,90 @@
-# Setting Up an AWS SageMaker Notebook Instance for CTAB-GAN/Deep Tabular GANs
+# Setting Up an AWS SageMaker Notebook Instance for CTAB-GAN / Deep Tabular GANs
 
-These steps walk you through accessing AWS, setting up a GPU-powered notebook, installing requirements, and cloning key repositories.
+These steps cover creating the notebook instance, cloning the repo + submodules, creating a Python 3.10 conda env, installing pinned requirements, and registering a Jupyter kernel.
 
 ---
 
-## 1. Accessing AWS and SageMaker
+## 1) Accessing AWS and SageMaker
 
 1. Log in to AWS via Okta: **AWS TEC**
 2. Select your environment: `tec-rnd-sqs-dev`
-3. Choose **Amazon SageMaker AI** from services menu
-4. In the SageMaker Console, click **Notebook Instances**
+3. Open **Amazon SageMaker AI**
+4. Go to **Notebook instances**
 
 ---
 
-## 2. Setup: Attach a Git Repository
+## 2) Create the Notebook Instance
 
-5. Choose **Git repositories**, add:  https://github.com/gcicc/tableGenCompare.git
-
-## 3. Create the Notebook Instance
-
-6. **Create Notebook Instance** with:
- - **Instance type:** `ml.g4dn.xlarge` (GPU, suitable for deep learning)
- - **Volume:** 50 GB (customize as needed)
- - **Attach your Git repo**
-
----
-
-## 4. Launching and Configuring Your Environment
-
-7. Once instance is "InService," click **Open JupyterLab**
+1. Click **Create notebook instance**
+2. Recommended settings:
+   - **Instance type:** `ml.g4dn.xlarge`
+   - **Volume:** 50 GB (or more if datasets/models are large)
+   - **IAM role:** use an existing role that worked previously
+3. Under **Git repositories**, add:
+   - `https://github.com/gcicc/tableGenCompare.git`
+   - **Branch:** choose your working branch (example: `AWS_Round2_envfix`)
+4. Create and wait until status is **InService**
+5. Click **Open JupyterLab**
 
 ---
 
 # Project Setup Instructions
 
-## First-Time Setup
+## First-time setup (per notebook instance)
 
-If you're setting up the environment and Jupyter kernel for the first time, follow these steps:
+### 1) Open a Terminal in JupyterLab
 
-1. **Open a Terminal in JupyterLab**: Start by opening a terminal session in JupyterLab. By default, this will use the base environment unless another is activated.
+Do not start Jupyter from the terminal; use the SageMaker-managed JupyterLab UI.
 
-2. **Switch to Bash**: Ensure you are using the bash shell:
-   ```bash
-   bash
-   ```
+### 2) Initialize conda for the terminal session (if needed)
 
-3. **Create the Conda Environment**: Create the `clinical_synth` environment with Python 3.11. This step only needs to be done once.
-   ```bash
-   conda create -n clinical_synth python=3.11
-   ```
+```bash
+source ~/anaconda3/bin/activate
+conda init bash
+exec bash
+```
 
-4. **Initialize Conda for Your Shell**: Run this command to ensure Conda commands work in your shell. This step only needs to be done once per shell type.
-   ```bash
-   conda init bash
-   ```
-   Restart your terminal or source your shell configuration file to apply the changes:
-   ```bash
-   source ~/.bashrc
-   ```
+### 3) Create a conda environment (Python 3.10)
+Python 3.10 avoids wheel/build issues and worked with the pinned stack.
+``` bash
+conda create -n tablegen python=3.10 -y
+conda activate tablegen
+python -m pip install -U pip setuptools wheel
+```
 
-5. **Activate the Conda Environment**: Activate your new environment each time you start working on your project.
-   ```bash
-   conda activate clinical_synth
-   ```
+### 4) Go to the repo and initialize submodules (CRITICAL)
+CTAB-GAN / CTAB-GAN-Plus / GANerAid are tracked as submodules.
 
-6. **Install Project Dependencies**: Install necessary packages from `requirements.txt`. This step ensures that all necessary packages are installed in your environment.
-   ```bash
-   pip install -r requirements.txt
-   ```
+```bash
+cd ~/tableGenCompare
+git submodule update --init --recursive
+```
 
-7. **Fix Version Conflicts**: Especially for SageMaker compatibility, ensure specific package versions are installed.
-   ```bash
-   pip install numpy==1.26.4
-   ```
+### 5) Install dependencies (single source of truth: requirements.txt)
 
-8. **Clone Additional Repositories**: In the same terminal, clone the necessary repositories and install additional packages.
-   ```bash
-   git clone https://github.com/Team-TUD/CTAB-GAN.git
-   git clone https://github.com/Team-TUD/CTAB-GAN-Plus.git
-   git clone https://github.com/TeamGenerAid/GANerAid
-   pip install ctgan
-   pip install GANerAid
-   pip install sdv
-   ```
+pip install -r requirements.txt
 
-9. **Set Up Jupyter Kernel**: Make this environment available as a Jupyter kernel.
-   ```bash
-   pip install ipykernel
-   python -m ipykernel install --user --name clinical_synth --display-name "Clinical Synthetic (py3.11)"
-   ```
+### 6) Register the kernel
 
-## Returning Users
+```bash
+pip install ipykernel
+python -m ipykernel install --user --name tablegen --display-name "Python (tablegen)"
+```
 
-If you've already set up the environment and kernel, follow these steps each time you return to work on your project:
+### 7) In JupyterLab
+Kernel → Change Kernel → Python (tablegen)
 
-1. **Open a Terminal in JupyterLab**: Start by opening a terminal session in JupyterLab.
+### Returning users (each session)
+```bash
+source ~/anaconda3/bin/activate
+conda activate tablegen
+cd ~/tableGenCompare
+```
 
-2. **Activate the Conda Environment**: Activate your `clinical_synth` environment.
-   ```bash
-   conda activate clinical_synth
-   ```
+### Notes / gotchas (based on issues encountered)
 
-3. **Start Working on Your Project**: With the environment activated, you can now proceed with your project tasks.
-
-## Additional Tips
-
-- **Installing Python Packages**: If you need to install additional Python packages, do so from a notebook cell using `!pip install ...` to ensure they are installed in the correct environment:
-  ```python
-  !pip install <package-name>
-  ```
-
-- **Kernel Management**: When running a notebook, ensure you change the kernel to the appropriate environment (`clinical_synth`) if needed.
-
-By following these instructions, you'll ensure that your environment is consistently set up for working on your project. Adjust the instructions as needed based on your specific workflow or project requirements.
+* Do not use Python 3.11+ for this project on classic Notebook Instances unless you control the image/toolchain.
+* Do not pin ipython==9.3.0 (invalid). Let Jupyter manage it, or pin ipython<9 only if needed.
+* scikit-learn must be pinned to a CTAB-compatible version (we used scikit-learn==1.2.2).
+* CTAB-GAN / CTAB-GAN-Plus / GANerAid must be fetched via git submodule update --init --recursive (not pip install).
+* If you work on GPU models (GANerAid), instantiate the wrapper with CUDA in notebooks, e.g.: GANerAidModel(device="cuda")
