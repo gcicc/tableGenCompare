@@ -1,6 +1,6 @@
 [submodule "CTAB-GAN"]
   path = CTAB-GAN
-  url = https://github.com/Team-TUD/CTAB-GAN
+	url = git@github.com:gcicc/CTAB-GAN.git
 [submodule "CTAB-GAN-Plus"]
   path = CTAB-GAN-Plus
   url = https://github.com/Team-TUD/CTAB-GAN-Plus
