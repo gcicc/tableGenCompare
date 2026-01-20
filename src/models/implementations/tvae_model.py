@@ -482,24 +482,34 @@ class TVAEModel(SyntheticDataModel):
     def _postprocess_data(self, data: pd.DataFrame) -> pd.DataFrame:
         """
         Post-process generated synthetic data.
-        
+
         Args:
             data: Raw synthetic data from TVAE
-            
+
         Returns:
             Post-processed synthetic data
         """
         # SDV TVAE handles most post-processing automatically through RDTs
         # We'll do minimal post-processing here
         processed_data = data.copy()
-        
+
+        # TVAE FIX: Sanitize numeric columns to handle inf/-inf and NaN values
+        # This prevents correlation calculation failures in downstream evaluation
+        from src.data.target_integrity import sanitize_numeric
+        processed_data = sanitize_numeric(
+            processed_data,
+            inf_replacement="nan",
+            nan_strategy="median",
+            verbose=False
+        )
+
         # Ensure integer columns are properly typed
         for column in processed_data.columns:
             if processed_data[column].dtype == 'float64':
                 # Check if all values are close to integers
                 if processed_data[column].apply(lambda x: x == int(x) if pd.notnull(x) else True).all():
                     processed_data[column] = processed_data[column].astype('int64')
-        
+
         return processed_data
     
     def get_training_losses(self) -> List[float]:

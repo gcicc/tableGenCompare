@@ -152,18 +152,61 @@ class SyntheticDataModel(ABC):
     def get_training_summary(self) -> Dict[str, Any]:
         """
         Get summary of training process and results.
-        
+
         Returns:
             Dictionary containing training summary
         """
         if not self.is_trained:
             return {"status": "not_trained"}
-        
+
         return {
             "status": "trained",
             "metadata": self.training_metadata,
             "config": self.model_config
         }
+
+    def sanitize_output(
+        self,
+        synthetic_data: pd.DataFrame,
+        real_data: Optional[pd.DataFrame] = None,
+        target_column: Optional[str] = None,
+        task_type: Optional[str] = None
+    ) -> pd.DataFrame:
+        """
+        Sanitize synthetic data output to ensure data integrity.
+
+        This method handles:
+        - inf/-inf values (replaced with NaN, then imputed)
+        - NaN values in numeric columns (imputed with median)
+        - Target column schema enforcement (for classification targets)
+
+        Models should call this in their generate() or _postprocess_data() methods.
+
+        Args:
+            synthetic_data: Generated synthetic DataFrame
+            real_data: Original real DataFrame (needed for target schema)
+            target_column: Name of target column (optional)
+            task_type: "classification", "regression", or "auto" (optional)
+
+        Returns:
+            Sanitized synthetic DataFrame
+        """
+        from src.data.target_integrity import sanitize_numeric, enforce_target_schema
+
+        # Always sanitize numeric columns
+        result = sanitize_numeric(synthetic_data, verbose=False)
+
+        # Enforce target schema if we have the necessary info
+        if real_data is not None and target_column is not None:
+            result = enforce_target_schema(
+                real_df=real_data,
+                synth_df=result,
+                target_column=target_column,
+                task_type=task_type,
+                verbose=False
+            )
+
+        return result
 
 
 class ModelNotTrainedError(Exception):

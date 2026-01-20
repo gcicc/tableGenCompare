@@ -14,6 +14,7 @@ from src.evaluation.trts import comprehensive_trts_analysis
 from src.visualization.section5 import create_trts_visualizations
 from src.visualization.section4 import create_optuna_visualizations, create_all_models_optuna_summary
 from src.utils.paths import get_results_path
+from src.data.target_integrity import sanitize_synthetic_data, sanitize_numeric
 
 
 def evaluate_trained_models(section_number, variable_pattern, scope=None, models_to_evaluate=None,
@@ -115,10 +116,21 @@ def evaluate_trained_models(section_number, variable_pattern, scope=None, models
         print(f"\n{'='*20} EVALUATING {model_name} {'='*20}")
 
         try:
+            # DEFENSIVE: Sanitize synthetic data before evaluation
+            # This handles inf/-inf, NaN, and target schema issues that may have
+            # slipped through model-level sanitization
+            sanitized_synthetic = sanitize_synthetic_data(
+                real_df=real_data,
+                synth_df=synthetic_data,
+                target_column=target_col,
+                task_type="auto",
+                verbose=False
+            )
+
             # Use the comprehensive evaluation function for consistency
             results = evaluate_synthetic_data_quality(
                 real_data=real_data,
-                synthetic_data=synthetic_data,
+                synthetic_data=sanitized_synthetic,
                 model_name=model_name,
                 target_column=target_col,
                 section_number=section_number,
@@ -261,9 +273,18 @@ def evaluate_trained_models(section_number, variable_pattern, scope=None, models
             print(f"\n[ANALYSIS] Running TRTS analysis for {model_name}...")
 
             try:
+                # DEFENSIVE: Sanitize synthetic data before TRTS analysis
+                sanitized_synthetic = sanitize_synthetic_data(
+                    real_df=real_data,
+                    synth_df=synthetic_data,
+                    target_column=target_col,
+                    task_type="auto",
+                    verbose=False
+                )
+
                 trts_result = comprehensive_trts_analysis(
                     real_data=real_data,
-                    synthetic_data=synthetic_data,
+                    synthetic_data=sanitized_synthetic,
                     target_column=target_col,
                     test_size=0.2,
                     random_state=42,

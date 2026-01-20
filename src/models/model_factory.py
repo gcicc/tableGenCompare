@@ -46,6 +46,19 @@ try:
 except ImportError:
     CTABGANPLUS_AVAILABLE = False
 
+# New models (Phase 5 - January 2026)
+try:
+    from .implementations.pategan_model import PATEGANModel
+    PATEGAN_AVAILABLE = True
+except ImportError:
+    PATEGAN_AVAILABLE = False
+
+try:
+    from .implementations.medgan_model import MEDGANModel
+    MEDGAN_AVAILABLE = True
+except ImportError:
+    MEDGAN_AVAILABLE = False
+
 # TableGAN removed
 TABLEGAN_AVAILABLE = False
 
@@ -103,7 +116,20 @@ class ModelFactory:
             cls._model_availability["ctabganplus"] = True
         else:
             cls._model_availability["ctabganplus"] = False
-            
+
+        # New models (Phase 5 - January 2026)
+        if PATEGAN_AVAILABLE:
+            cls._model_registry["pategan"] = PATEGANModel
+            cls._model_availability["pategan"] = True
+        else:
+            cls._model_availability["pategan"] = False
+
+        if MEDGAN_AVAILABLE:
+            cls._model_registry["medgan"] = MEDGANModel
+            cls._model_availability["medgan"] = True
+        else:
+            cls._model_availability["medgan"] = False
+
         # TableGAN removed
         cls._model_availability["tablegan"] = False
     
