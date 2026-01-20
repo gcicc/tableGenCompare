@@ -35,7 +35,7 @@ def extract_dataset_identifier(data_file_path):
     return "unknown-dataset"
 
 
-def get_results_path(dataset_identifier, section_number):
+def get_results_path(dataset_identifier, section_number, model_name=None):
     """
     Generate standardized results path.
 
@@ -45,14 +45,21 @@ def get_results_path(dataset_identifier, section_number):
         Dataset identifier (e.g., 'alzheimers-disease-data')
     section_number : int
         Section number (1-5)
+    model_name : str, optional
+        Model name for model-specific subdirectory
 
     Returns:
     --------
-    str : Standardized path in format: results/{dataset_id}/{YYYY-MM-DD}/Section-{N}
+    str : Standardized path in format: results/{dataset_id}/{YYYY-MM-DD}/Section-{N}[/model_name]
 
     Examples:
     ---------
     >>> get_results_path('alzheimers-disease-data', 2)
     'results/alzheimers-disease-data/2024-12-05/Section-2'
+    >>> get_results_path('alzheimers-disease-data', 3, 'ctgan')
+    'results/alzheimers-disease-data/2024-12-05/Section-3/ctgan'
     """
-    return f"results/{dataset_identifier}/{SESSION_TIMESTAMP}/Section-{section_number}"
+    base_path = f"results/{dataset_identifier}/{SESSION_TIMESTAMP}/Section-{section_number}"
+    if model_name:
+        return f"{base_path}/{model_name}"
+    return base_path
