@@ -34,7 +34,13 @@ from src.config import (
 # Import path utilities
 from src.utils.paths import (
     extract_dataset_identifier,
-    get_results_path
+    get_results_path,
+    ensure_results_dir,
+    save_model_params,
+    save_evaluation_summary,
+    save_synthetic_sample,
+    save_comparison_table,
+    get_latest_results_path
 )
 
 # Import documentation utilities
