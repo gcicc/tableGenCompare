@@ -97,21 +97,21 @@ See [January2026-Reference.md](January2026-Reference.md) for detailed specs.
 
 ## Phase 5: New Models
 
-- [ ] **5.1** Create `src/models/implementations/pategan_model.py`
+- [x] **5.1** Create `src/models/implementations/pategan_model.py`
   - Implement train/generate interface
   - Log privacy budget/accountant parameters
   - Tuning params: epochs, batch_size, learning rates, privacy budget
 
-- [ ] **5.2** Create `src/models/implementations/medgan_model.py`
+- [x] **5.2** Create `src/models/implementations/medgan_model.py`
   - Implement train/generate interface
   - Handle discrete/encoded input requirements
   - Tuning params: epochs, batch_size, architecture dims
 
-- [ ] **5.3** Register in registry.py and model_factory.py
+- [x] **5.3** Register in registry.py and model_factory.py
   - Add to AVAILABLE_MODELS dict
   - Wire up in factory pattern
 
-- [ ] **5.4** Add Optuna objective functions in `src/objective/`
+- [x] **5.4** Add Optuna objective functions in `src/objective/`
   - Define search spaces for PATE-GAN and MEDGAN
   - Integrate with existing objective infrastructure
 
@@ -119,7 +119,7 @@ See [January2026-Reference.md](January2026-Reference.md) for detailed specs.
 
 ## Phase 6: Integration
 
-- [ ] **6.1** Create `get_results_path()` utility
+- [x] **6.1** Create `get_results_path()` utility
   - `get_results_path(dataset_identifier, section_number, model_name=None)`
   - Returns: `results/<dataset_identifier>/<YYYY-MM-DD>/Section-<N>/[model_name/]`
   - Re-export via setup.py
@@ -135,10 +135,10 @@ See [January2026-Reference.md](January2026-Reference.md) for detailed specs.
 
 ## Done Checklist
 
-- [ ] Existing notebooks run without modification (`from setup import *` works)
+- [x] Existing notebooks run without modification (`from setup import *` works)
 - [ ] New config block works on at least one dataset notebook end-to-end
-- [ ] Subset model selection works (e.g., only CTGAN + PATE-GAN)
-- [ ] Smoke vs full trials works
+- [x] Subset model selection works (e.g., only CTGAN + PATE-GAN)
+- [x] Smoke vs full trials works
 - [ ] All missingness strategies run (including indicator_onehot)
 - [ ] Target integrity prevents CTABGAN continuous-target failures
 - [ ] NaN/inf sanitization prevents correlation failures

@@ -523,87 +523,88 @@ class MEDGANModel(SyntheticDataModel):
 # NEURAL NETWORK COMPONENTS
 # ============================================================================
 
-class Autoencoder(nn.Module):
-    """Autoencoder for learning latent representations of discrete data."""
+if MEDGAN_AVAILABLE:
+    class Autoencoder(nn.Module):
+        """Autoencoder for learning latent representations of discrete data."""
 
-    def __init__(self, input_dim: int, hidden_dims: tuple, latent_dim: int):
-        super().__init__()
+        def __init__(self, input_dim: int, hidden_dims: tuple, latent_dim: int):
+            super().__init__()
 
-        # Encoder
-        encoder_layers = []
-        in_dim = input_dim
-        for h_dim in hidden_dims:
-            encoder_layers.extend([
-                nn.Linear(in_dim, h_dim),
-                nn.BatchNorm1d(h_dim),
-                nn.ReLU()
-            ])
-            in_dim = h_dim
-        encoder_layers.append(nn.Linear(in_dim, latent_dim))
-        self.encoder = nn.Sequential(*encoder_layers)
+            # Encoder
+            encoder_layers = []
+            in_dim = input_dim
+            for h_dim in hidden_dims:
+                encoder_layers.extend([
+                    nn.Linear(in_dim, h_dim),
+                    nn.BatchNorm1d(h_dim),
+                    nn.ReLU()
+                ])
+                in_dim = h_dim
+            encoder_layers.append(nn.Linear(in_dim, latent_dim))
+            self.encoder = nn.Sequential(*encoder_layers)
 
-        # Decoder
-        decoder_layers = []
-        in_dim = latent_dim
-        for h_dim in reversed(hidden_dims):
-            decoder_layers.extend([
-                nn.Linear(in_dim, h_dim),
-                nn.BatchNorm1d(h_dim),
-                nn.ReLU()
-            ])
-            in_dim = h_dim
-        decoder_layers.append(nn.Linear(in_dim, input_dim))
-        decoder_layers.append(nn.Sigmoid())  # Output in [0, 1]
-        self.decoder = nn.Sequential(*decoder_layers)
+            # Decoder
+            decoder_layers = []
+            in_dim = latent_dim
+            for h_dim in reversed(hidden_dims):
+                decoder_layers.extend([
+                    nn.Linear(in_dim, h_dim),
+                    nn.BatchNorm1d(h_dim),
+                    nn.ReLU()
+                ])
+                in_dim = h_dim
+            decoder_layers.append(nn.Linear(in_dim, input_dim))
+            decoder_layers.append(nn.Sigmoid())  # Output in [0, 1]
+            self.decoder = nn.Sequential(*decoder_layers)
 
-    def forward(self, x):
-        latent = self.encoder(x)
-        reconstructed = self.decoder(latent)
-        return reconstructed, latent
+        def forward(self, x):
+            latent = self.encoder(x)
+            reconstructed = self.decoder(latent)
+            return reconstructed, latent
 
-    def decode(self, latent):
-        return self.decoder(latent)
-
-
-class Generator(nn.Module):
-    """Generator network for MEDGAN."""
-
-    def __init__(self, noise_dim: int, hidden_dims: tuple, output_dim: int):
-        super().__init__()
-
-        layers = []
-        in_dim = noise_dim
-        for h_dim in hidden_dims:
-            layers.extend([
-                nn.Linear(in_dim, h_dim),
-                nn.BatchNorm1d(h_dim),
-                nn.ReLU()
-            ])
-            in_dim = h_dim
-        layers.append(nn.Linear(in_dim, output_dim))
-        self.net = nn.Sequential(*layers)
-
-    def forward(self, x):
-        return self.net(x)
+        def decode(self, latent):
+            return self.decoder(latent)
 
 
-class Discriminator(nn.Module):
-    """Discriminator network for MEDGAN."""
+    class Generator(nn.Module):
+        """Generator network for MEDGAN."""
 
-    def __init__(self, input_dim: int, hidden_dims: tuple):
-        super().__init__()
+        def __init__(self, noise_dim: int, hidden_dims: tuple, output_dim: int):
+            super().__init__()
 
-        layers = []
-        in_dim = input_dim
-        for h_dim in hidden_dims:
-            layers.extend([
-                nn.Linear(in_dim, h_dim),
-                nn.LeakyReLU(0.2)
-            ])
-            in_dim = h_dim
-        layers.append(nn.Linear(in_dim, 1))
-        layers.append(nn.Sigmoid())
-        self.net = nn.Sequential(*layers)
+            layers = []
+            in_dim = noise_dim
+            for h_dim in hidden_dims:
+                layers.extend([
+                    nn.Linear(in_dim, h_dim),
+                    nn.BatchNorm1d(h_dim),
+                    nn.ReLU()
+                ])
+                in_dim = h_dim
+            layers.append(nn.Linear(in_dim, output_dim))
+            self.net = nn.Sequential(*layers)
 
-    def forward(self, x):
-        return self.net(x)
+        def forward(self, x):
+            return self.net(x)
+
+
+    class Discriminator(nn.Module):
+        """Discriminator network for MEDGAN."""
+
+        def __init__(self, input_dim: int, hidden_dims: tuple):
+            super().__init__()
+
+            layers = []
+            in_dim = input_dim
+            for h_dim in hidden_dims:
+                layers.extend([
+                    nn.Linear(in_dim, h_dim),
+                    nn.LeakyReLU(0.2)
+                ])
+                in_dim = h_dim
+            layers.append(nn.Linear(in_dim, 1))
+            layers.append(nn.Sigmoid())
+            self.net = nn.Sequential(*layers)
+
+        def forward(self, x):
+            return self.net(x)
