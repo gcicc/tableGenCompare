@@ -187,23 +187,33 @@ class CTABGANModel(SyntheticDataModel):
     def generate(self, n_samples: int, **kwargs) -> pd.DataFrame:
         """
         Generate synthetic data samples.
-        
+
         Args:
             n_samples: Number of synthetic samples to generate
             **kwargs: Generation parameters
-            
+
         Returns:
             Generated synthetic data as pandas DataFrame
         """
         if not self.is_trained or self._ctabgan_model is None:
             raise ModelNotTrainedError("Model must be trained before generating samples")
-        
+
         try:
             # Generate samples using CTAB-GAN
             synthetic_data = self._ctabgan_model.generate_samples()
-            
+
+            # CTAB-GAN FIX: Sanitize numeric columns to handle inf/-inf and NaN values
+            from src.data.target_integrity import sanitize_numeric
+            synthetic_data = sanitize_numeric(
+                synthetic_data,
+                inf_replacement="nan",
+                nan_strategy="median",
+                verbose=False
+            )
+
             # CTAB-GAN FIX: Ensure categorical columns have consistent data types
             # This prevents TRTS evaluation errors with string/int comparison
+            # Also fixes continuous target values for classification tasks
             for col in self._categorical_columns:
                 if col in synthetic_data.columns:
                     try:
@@ -215,9 +225,13 @@ class CTABGANModel(SyntheticDataModel):
                                 # If conversion was successful for most values, use it
                                 if numeric_values.notna().sum() / len(numeric_values) > 0.8:
                                     synthetic_data[col] = numeric_values.fillna(0).astype(int)
+                        elif synthetic_data[col].dtype in ['float64', 'float32']:
+                            # CTABGAN FIX: Round continuous values to nearest integer for categorical cols
+                            # This addresses the continuous-target issue for classification
+                            synthetic_data[col] = synthetic_data[col].round().astype(int)
                     except Exception:
                         pass  # If conversion fails, leave as is
-            
+
             # Sample the requested number of rows
             if len(synthetic_data) > n_samples:
                 synthetic_data = synthetic_data.sample(n=n_samples, random_state=self.random_state)
@@ -226,9 +240,9 @@ class CTABGANModel(SyntheticDataModel):
                 additional_needed = n_samples - len(synthetic_data)
                 additional_data = synthetic_data.sample(n=additional_needed, replace=True, random_state=self.random_state)
                 synthetic_data = pd.concat([synthetic_data, additional_data], ignore_index=True)
-            
+
             return synthetic_data
-            
+
         except Exception as e:
             logger.error(f"CTAB-GAN generation failed: {e}")
             raise RuntimeError(f"Generation failed: {e}")

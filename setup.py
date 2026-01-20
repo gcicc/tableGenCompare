@@ -23,7 +23,12 @@ from src.config import (
     SESSION_TIMESTAMP,
     DATASET_IDENTIFIER,
     CURRENT_DATA_FILE,
-    refresh_session_timestamp
+    refresh_session_timestamp,
+    # Notebook config schema (Phase 1)
+    NOTEBOOK_CONFIG_DEFAULTS,
+    get_default_config,
+    validate_config,
+    get_n_trials
 )
 
 # Import path utilities
@@ -113,12 +118,27 @@ from src.models.model_factory import (
     ModelFactory
 )
 
+# Import model registry and selection helpers (Phase 4)
+from src.models.registry import (
+    AVAILABLE_MODELS,
+    get_available_model_names,
+    resolve_models,
+    get_models_to_run,
+    get_model_display_name,
+    is_model_available,
+    get_tuning_config,
+    get_n_trials as get_n_trials_from_registry
+)
+
 # Import data preprocessing functions
 from src.data.preprocessing import (
     get_categorical_columns_for_models,
     clean_and_preprocess_data,
     prepare_data_for_any_model,
-    prepare_data_for_hyperparameter_optimization
+    prepare_data_for_hyperparameter_optimization,
+    # Config-driven preprocessing (Phase 3)
+    preprocess_dataset,
+    load_and_preprocess_from_config
 )
 
 # ============================================================================

@@ -359,3 +359,207 @@ def evaluate_ganeraid_objective(original_data, synthetic_data, target_column, ca
             'detailed_results': {},
             'interpretation': {'overall': 'Evaluation failed - using fallback scores'}
         }
+
+
+# ============================================================================
+# OPTUNA OBJECTIVE FUNCTIONS FOR NEW MODELS (Phase 5 - January 2026)
+# ============================================================================
+
+def create_pategan_objective(real_data, target_column, discrete_columns=None):
+    """
+    Create an Optuna objective function for PATE-GAN hyperparameter optimization.
+
+    PATE-GAN has additional hyperparameters for differential privacy, including
+    num_teachers, noise_multiplier, and target_epsilon.
+
+    Parameters:
+    -----------
+    real_data : pd.DataFrame
+        Original dataset for training and evaluation
+    target_column : str
+        Name of target column
+    discrete_columns : list, optional
+        List of discrete column names
+
+    Returns:
+    --------
+    callable : Optuna objective function
+    """
+    def objective(trial):
+        from src.models.implementations.pategan_model import PATEGANModel
+
+        # Sample hyperparameters
+        epochs = trial.suggest_int("epochs", 100, 500, step=50)
+        batch_size = trial.suggest_categorical("batch_size", [32, 64, 128, 256])
+        generator_lr = trial.suggest_float("generator_lr", 1e-5, 1e-3, log=True)
+        discriminator_lr = trial.suggest_float("discriminator_lr", 1e-5, 1e-3, log=True)
+        num_teachers = trial.suggest_int("num_teachers", 5, 50, step=5)
+        noise_multiplier = trial.suggest_float("noise_multiplier", 0.5, 2.0)
+        target_epsilon = trial.suggest_float("target_epsilon", 0.1, 10.0, log=True)
+        lap_scale = trial.suggest_float("lap_scale", 0.01, 1.0, log=True)
+
+        generator_dim = trial.suggest_categorical(
+            "generator_dim", [(128, 128), (256, 256), (256, 128)]
+        )
+        discriminator_dim = trial.suggest_categorical(
+            "discriminator_dim", [(128, 128), (256, 256), (256, 128)]
+        )
+
+        try:
+            # Initialize model
+            model = PATEGANModel(random_state=42)
+            model.set_config({
+                "epochs": epochs,
+                "batch_size": batch_size,
+                "generator_lr": generator_lr,
+                "discriminator_lr": discriminator_lr,
+                "generator_dim": generator_dim,
+                "discriminator_dim": discriminator_dim,
+                "num_teachers": num_teachers,
+                "noise_multiplier": noise_multiplier,
+                "target_epsilon": target_epsilon,
+                "lap_scale": lap_scale,
+                "verbose": False
+            })
+
+            # Train
+            model.train(real_data, discrete_columns=discrete_columns)
+
+            # Generate synthetic data
+            synthetic_data = model.generate(len(real_data))
+
+            # Evaluate
+            combined_score, _, _ = enhanced_objective_function_v2(
+                real_data, synthetic_data, target_column, trial=trial
+            )
+
+            # Add privacy bonus: prefer lower epsilon usage
+            privacy_report = model.get_privacy_report()
+            epsilon_used = privacy_report.get("epsilon_spent", target_epsilon)
+            privacy_bonus = max(0, 0.1 * (1 - epsilon_used / target_epsilon))
+
+            return combined_score + privacy_bonus
+
+        except Exception as e:
+            print(f"[ERROR] PATE-GAN trial failed: {e}")
+            return 0.0
+
+    return objective
+
+
+def create_medgan_objective(real_data, target_column, discrete_columns=None):
+    """
+    Create an Optuna objective function for MEDGAN hyperparameter optimization.
+
+    MEDGAN has specific hyperparameters for its autoencoder pretraining phase
+    and latent space configuration.
+
+    Parameters:
+    -----------
+    real_data : pd.DataFrame
+        Original dataset for training and evaluation
+    target_column : str
+        Name of target column
+    discrete_columns : list, optional
+        List of discrete column names
+
+    Returns:
+    --------
+    callable : Optuna objective function
+    """
+    def objective(trial):
+        from src.models.implementations.medgan_model import MEDGANModel
+
+        # Sample hyperparameters
+        epochs = trial.suggest_int("epochs", 100, 500, step=50)
+        pretrain_epochs = trial.suggest_int("pretrain_epochs", 50, 200, step=25)
+        batch_size = trial.suggest_categorical("batch_size", [64, 128, 256, 512])
+        latent_dim = trial.suggest_int("latent_dim", 64, 256, step=32)
+        autoencoder_lr = trial.suggest_float("autoencoder_lr", 1e-4, 1e-2, log=True)
+        generator_lr = trial.suggest_float("generator_lr", 1e-4, 1e-2, log=True)
+        discriminator_lr = trial.suggest_float("discriminator_lr", 1e-4, 1e-2, log=True)
+        l2_reg = trial.suggest_float("l2_reg", 1e-5, 1e-2, log=True)
+
+        autoencoder_dim = trial.suggest_categorical(
+            "autoencoder_dim", [(64, 64), (128, 128), (256, 128)]
+        )
+        generator_dim = trial.suggest_categorical(
+            "generator_dim", [(64, 64), (128, 128), (256, 128)]
+        )
+        discriminator_dim = trial.suggest_categorical(
+            "discriminator_dim", [(128, 64), (256, 128), (256, 256)]
+        )
+
+        try:
+            # Initialize model
+            model = MEDGANModel(random_state=42)
+            model.set_config({
+                "epochs": epochs,
+                "pretrain_epochs": pretrain_epochs,
+                "batch_size": batch_size,
+                "latent_dim": latent_dim,
+                "autoencoder_lr": autoencoder_lr,
+                "generator_lr": generator_lr,
+                "discriminator_lr": discriminator_lr,
+                "l2_reg": l2_reg,
+                "autoencoder_dim": autoencoder_dim,
+                "generator_dim": generator_dim,
+                "discriminator_dim": discriminator_dim,
+                "verbose": False
+            })
+
+            # Train
+            model.train(real_data, discrete_columns=discrete_columns)
+
+            # Generate synthetic data
+            synthetic_data = model.generate(len(real_data))
+
+            # Evaluate
+            combined_score, _, _ = enhanced_objective_function_v2(
+                real_data, synthetic_data, target_column, trial=trial
+            )
+
+            return combined_score
+
+        except Exception as e:
+            print(f"[ERROR] MEDGAN trial failed: {e}")
+            return 0.0
+
+    return objective
+
+
+def get_model_objective_function(model_name: str, real_data, target_column, discrete_columns=None):
+    """
+    Factory function to get the appropriate Optuna objective function for a model.
+
+    Parameters:
+    -----------
+    model_name : str
+        Name of the model (e.g., "pategan", "medgan", "ctgan")
+    real_data : pd.DataFrame
+        Original dataset
+    target_column : str
+        Target column name
+    discrete_columns : list, optional
+        Discrete column names
+
+    Returns:
+    --------
+    callable : Optuna objective function for the specified model
+    """
+    model_name = model_name.lower()
+
+    if model_name == "pategan":
+        return create_pategan_objective(real_data, target_column, discrete_columns)
+    elif model_name == "medgan":
+        return create_medgan_objective(real_data, target_column, discrete_columns)
+    else:
+        # Default objective using enhanced_objective_function_v2
+        def default_objective(trial):
+            print(f"[WARNING] Using default objective for model: {model_name}")
+            return 0.5
+
+        return default_objective
+
+
+print("[OK] Optuna objective functions for PATE-GAN and MEDGAN loaded (Phase 5)")

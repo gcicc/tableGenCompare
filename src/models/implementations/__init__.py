@@ -36,4 +36,15 @@ try:
 except ImportError:
     pass
 
+# New models (Phase 5 - January 2026)
+try:
+    from .pategan_model import PATEGANModel
+except ImportError:
+    pass
+
+try:
+    from .medgan_model import MEDGANModel
+except ImportError:
+    pass
+
 # TableGAN removed
