@@ -204,7 +204,9 @@ def evaluate_trained_models(section_number, variable_pattern, scope=None, models
         'CTABGANPLUS': 'ctabganplus_study',
         'GANerAid': 'ganeraid_study',
         'CopulaGAN': 'copulagan_study',
-        'TVAE': 'tvae_study'
+        'TVAE': 'tvae_study',
+        'PATE-GAN': 'pategan_study',
+        'MEDGAN': 'medgan_study'
     }
 
     detected_studies = {}

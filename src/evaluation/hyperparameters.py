@@ -90,7 +90,9 @@ def evaluate_hyperparameter_optimization_results(section_number=4, scope=None, t
         {'name': 'CTAB-GAN+', 'study_var': 'ctabganplus_study', 'model_name': 'ctabganplus', 'section': '4.3.1', 'dir_name': 'CTABGANPLUS'},
         {'name': 'GANerAid', 'study_var': 'ganeraid_study', 'model_name': 'ganeraid', 'section': '4.4.1', 'dir_name': 'GANERAID'},
         {'name': 'CopulaGAN', 'study_var': 'copulagan_study', 'model_name': 'copulagan', 'section': '4.5.1', 'dir_name': 'COPULAGAN'},
-        {'name': 'TVAE', 'study_var': 'tvae_study', 'model_name': 'tvae', 'section': '4.6.1', 'dir_name': 'TVAE'}
+        {'name': 'TVAE', 'study_var': 'tvae_study', 'model_name': 'tvae', 'section': '4.6.1', 'dir_name': 'TVAE'},
+    {'name': 'PATE-GAN', 'study_var': 'pategan_study', 'model_name': 'pategan', 'section': '4.7.1', 'dir_name': 'PATEGAN'},
+    {'name': 'MEDGAN', 'study_var': 'medgan_study', 'model_name': 'medgan', 'section': '4.8.1', 'dir_name': 'MEDGAN'}
     ]
 
     analysis_results = {}
