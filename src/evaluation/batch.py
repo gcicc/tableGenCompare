@@ -68,7 +68,9 @@ def evaluate_trained_models(section_number, variable_pattern, scope=None, models
             'CTABGANPLUS': 'synthetic_data_ctabganplus',
             'GANerAid': 'synthetic_data_ganeraid',
             'CopulaGAN': 'synthetic_data_copulagan',
-            'TVAE': 'synthetic_data_tvae'
+            'TVAE': 'synthetic_data_tvae',
+            'MEDGAN': 'synthetic_data_medgan',
+            'PATEGAN': 'synthetic_data_pategan'
         }
     elif variable_pattern == 'final':
         # Section 5 pattern: synthetic_*_final
@@ -78,7 +80,9 @@ def evaluate_trained_models(section_number, variable_pattern, scope=None, models
             'CTABGANPLUS': 'synthetic_ctabganplus_final',
             'GANerAid': 'synthetic_ganeraid_final',
             'CopulaGAN': 'synthetic_copulagan_final',
-            'TVAE': 'synthetic_tvae_final'
+            'TVAE': 'synthetic_tvae_final',
+            'MEDGAN': 'synthetic_medgan_final',
+            'PATEGAN': 'synthetic_pategan_final'
         }
     else:
         print(f"[ERROR] ERROR: Unknown variable_pattern '{variable_pattern}'. Use 'standard' or 'final'")

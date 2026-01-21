@@ -241,6 +241,10 @@ class PATEGANModel(SyntheticDataModel):
             for d in self._discriminators
         ]
 
+        # Initialize loss tracking
+        d_loss = torch.tensor(0.0)
+        g_loss = torch.tensor(0.0)
+
         # Training loop
         for epoch in range(epochs):
             # Check privacy budget
@@ -249,11 +253,13 @@ class PATEGANModel(SyntheticDataModel):
                 break
 
             # Train each teacher on its partition
+            trained_any_discriminator = False
             for i, (discriminator, partition, d_opt) in enumerate(
                 zip(self._discriminators, partitions, d_optimizers)
             ):
                 if len(partition) < batch_size:
                     continue
+                trained_any_discriminator = True
 
                 idx = np.random.choice(len(partition), batch_size, replace=False)
                 real_batch = torch.FloatTensor(partition[idx]).to(device)
@@ -274,23 +280,28 @@ class PATEGANModel(SyntheticDataModel):
             noise = torch.randn(batch_size, 100).to(device)
             fake_batch = self._generator(noise)
 
-            # Get teacher votes with noise
-            votes = []
+            # Get teacher predictions (keep gradients flowing through raw predictions)
+            teacher_preds = []
             for discriminator in self._discriminators:
                 pred = discriminator(fake_batch)
-                votes.append((pred > 0.5).float())
+                teacher_preds.append(pred)
 
-            # Aggregate votes with Laplace noise for privacy
-            votes_tensor = torch.stack(votes, dim=0)
-            aggregated_votes = votes_tensor.mean(dim=0)
+            # Aggregate predictions (maintaining gradient flow)
+            preds_tensor = torch.stack(teacher_preds, dim=0)
+            aggregated_preds = preds_tensor.mean(dim=0)
+
+            # Add noise for privacy (detached, doesn't need gradients)
             noise_scale = self.model_config["lap_scale"]
-            noisy_votes = aggregated_votes + torch.FloatTensor(
-                np.random.laplace(0, noise_scale, aggregated_votes.shape)
-            ).to(device)
+            privacy_noise = torch.zeros_like(aggregated_preds)
+            with torch.no_grad():
+                privacy_noise = torch.FloatTensor(
+                    np.random.laplace(0, noise_scale, aggregated_preds.shape)
+                ).to(device)
 
-            # Train generator
+            # Train generator - use aggregated predictions with added noise
             g_optimizer.zero_grad()
-            g_loss = -torch.mean(torch.log(noisy_votes + 1e-8))
+            # Generator wants discriminators to think fake data is real
+            g_loss = -torch.mean(torch.log(aggregated_preds + privacy_noise.abs() + 1e-8))
             g_loss.backward()
             g_optimizer.step()
 
@@ -299,9 +310,11 @@ class PATEGANModel(SyntheticDataModel):
             self._privacy_spent["delta"] = target_delta
 
             if epoch % 50 == 0 and self.model_config.get("verbose", True):
+                d_loss_val = d_loss.item() if hasattr(d_loss, 'item') else float(d_loss)
+                g_loss_val = g_loss.item() if hasattr(g_loss, 'item') else float(g_loss)
                 logger.info(
-                    f"Epoch {epoch}: D_loss={d_loss.item():.4f}, "
-                    f"G_loss={g_loss.item():.4f}, "
+                    f"Epoch {epoch}: D_loss={d_loss_val:.4f}, "
+                    f"G_loss={g_loss_val:.4f}, "
                     f"epsilon={self._privacy_spent['epsilon']:.4f}"
                 )
 

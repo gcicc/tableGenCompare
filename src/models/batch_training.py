@@ -11,11 +11,34 @@ import time
 import logging
 from typing import Dict, List, Any, Optional
 import pandas as pd
+import torch
 
 from .model_factory import ModelFactory
 from .registry import resolve_models, get_model_display_name
 
 logger = logging.getLogger(__name__)
+
+# Models known to have CUDA issues - force CPU for these
+FORCE_CPU_MODELS = {"ganeraid"}
+
+
+def _get_device_for_model(model_name: str) -> str:
+    """
+    Determine the appropriate device for a model.
+
+    Most models can use CUDA if available, but some have known issues
+    and should be forced to use CPU.
+    """
+    # Check if model should be forced to CPU
+    if model_name.lower() in FORCE_CPU_MODELS:
+        logger.info(f"Model {model_name} forced to CPU due to known CUDA issues")
+        return "cpu"
+
+    # Use CUDA if available for other models
+    if torch.cuda.is_available():
+        return "cuda"
+
+    return "cpu"
 
 
 def train_models_batch(
@@ -110,10 +133,13 @@ def train_models_batch(
         start_time = time.time()
 
         try:
+            # Determine appropriate device for this model
+            device = _get_device_for_model(model_name)
+
             # Create model instance via factory
             model = ModelFactory.create(
                 model_name,
-                device="cpu",
+                device=device,
                 random_state=random_state
             )
 
@@ -250,6 +276,7 @@ def _get_model_train_kwargs(
     elif model_name == "ganeraid":
         # GANerAid uses categorical_columns
         kwargs["categorical_columns"] = categorical_columns
+        kwargs["epochs"] = 500  # Reduced for demo (default is 5000)
 
     elif model_name == "pategan":
         # PATE-GAN uses discrete_columns

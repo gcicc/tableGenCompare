@@ -23,7 +23,7 @@ try:
     CTGAN_AVAILABLE = True
 except ImportError:
     CTGAN_AVAILABLE = False  
-    logger.warning("CTGAN not available. Install with: pip install ctgan")
+    logger.debug("CTGAN not available. Install with: pip install ctgan")
 
 
 class CTGANModel(SyntheticDataModel):
