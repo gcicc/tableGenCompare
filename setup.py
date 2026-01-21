@@ -124,6 +124,23 @@ from src.models.model_factory import (
     ModelFactory
 )
 
+# Import batch training and optimization functions (Phase 5)
+from src.models.batch_training import (
+    train_models_batch,
+    extract_synthetic_data_to_globals,
+)
+
+from src.models.search_spaces import (
+    get_search_space,
+    get_pruner_config,
+    list_supported_models,
+)
+
+from src.models.batch_optimization import (
+    optimize_models_batch,
+    extract_studies_to_globals,
+)
+
 # Import model registry and selection helpers (Phase 4)
 from src.models.registry import (
     AVAILABLE_MODELS,
