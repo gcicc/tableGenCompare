@@ -1,7 +1,7 @@
 # Core
 pandas==2.3.3
 numpy==1.26.4
-scipy==1.10.1
+scipy>=1.11.1
 python-dateutil==2.9.0.post0
 pytz==2025.2
 tzdata==2025.3

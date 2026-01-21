@@ -27,7 +27,7 @@ except ImportError:
     # Create dummy class for type hints when SDV not available
     class SingleTableMetadata:
         pass
-    logger.warning("TVAE (SDV) not available. Install with: pip install sdv")
+    logger.debug("TVAE (SDV) not available. Install with: pip install sdv")
 
 
 class TVAEModel(SyntheticDataModel):

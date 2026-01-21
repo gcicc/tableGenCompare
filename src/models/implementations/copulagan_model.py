@@ -27,7 +27,7 @@ try:
 except ImportError as e:
     COPULAGAN_AVAILABLE = False
     logger = logging.getLogger(__name__)
-    logger.warning(f"SDV not available: {e}")
+    logger.debug(f"SDV not available: {e}")
     
     # Create dummy classes for type hints
     class CopulaGANSynthesizer:
