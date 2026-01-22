@@ -496,10 +496,14 @@ class MEDGANModel(SyntheticDataModel):
             mode_val = processed[col].mode()
             processed[col] = processed[col].fillna(mode_val[0] if len(mode_val) > 0 else 'Unknown')
 
-        # Normalize to [0, 1] for sigmoid output
+        # Store normalization parameters before normalizing
+        self._norm_params = {}
         numeric_cols = processed.select_dtypes(include=[np.number]).columns
+
+        # Normalize to [0, 1] for sigmoid output
         for col in numeric_cols:
             col_min, col_max = processed[col].min(), processed[col].max()
+            self._norm_params[col] = {'min': col_min, 'max': col_max}
             if col_max > col_min:
                 processed[col] = (processed[col] - col_min) / (col_max - col_min)
             else:
@@ -516,6 +520,18 @@ class MEDGANModel(SyntheticDataModel):
         # Clip to [0, 1] range (sigmoid output)
         data = np.clip(data, 0, 1)
         df = pd.DataFrame(data, columns=self._column_names)
+
+        # Denormalize numeric columns back to original scale
+        if hasattr(self, '_norm_params') and self._norm_params:
+            for col in df.columns:
+                if col in self._norm_params:
+                    p = self._norm_params[col]
+                    col_range = p['max'] - p['min']
+                    if col_range > 0:
+                        df[col] = df[col] * col_range + p['min']
+                    else:
+                        df[col] = p['min']
+
         return df
 
 

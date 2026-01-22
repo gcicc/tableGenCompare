@@ -9,6 +9,46 @@ import os
 from pathlib import Path
 
 
+def _save_plotly_figure(fig, output_path, verbose=True):
+    """
+    Save a Plotly figure with Kaleido fallback to HTML.
+
+    Parameters:
+    -----------
+    fig : plotly.graph_objects.Figure
+        Plotly figure object
+    output_path : str or Path
+        Output file path (should end with .png)
+    verbose : bool
+        Print progress messages
+
+    Returns:
+    --------
+    str or None : Path to saved file (may be .html if Kaleido fails)
+    """
+    output_path = Path(output_path)
+
+    try:
+        fig.write_image(str(output_path))
+        return str(output_path)
+    except Exception as e:
+        error_str = str(e).lower()
+        if 'kaleido' in error_str or 'chrome' in error_str or 'orca' in error_str:
+            # Fallback: save as HTML instead
+            html_path = output_path.with_suffix('.html')
+            try:
+                fig.write_html(str(html_path))
+                if verbose:
+                    print(f"[WARNING] Saved as HTML (Kaleido unavailable): {html_path.name}")
+                return str(html_path)
+            except Exception as html_error:
+                if verbose:
+                    print(f"[WARNING] HTML fallback also failed: {html_error}")
+                return None
+        else:
+            raise
+
+
 def create_optuna_visualizations(study, model_name, results_path, verbose=True):
     """
     Create standardized Optuna visualization exports for a completed study.
@@ -45,10 +85,11 @@ def create_optuna_visualizations(study, model_name, results_path, verbose=True):
         try:
             fig1 = vis.plot_optimization_history(study)
             history_path = results_path / f'optim_history_{model_name}.png'
-            fig1.write_image(str(history_path))
-            generated_files['optimization_history'] = str(history_path)
-            if verbose:
-                print(f"[VIZ] Saved: optim_history_{model_name}.png")
+            saved_path = _save_plotly_figure(fig1, history_path, verbose)
+            if saved_path:
+                generated_files['optimization_history'] = saved_path
+                if verbose and saved_path.endswith('.png'):
+                    print(f"[VIZ] Saved: optim_history_{model_name}.png")
         except Exception as e:
             if verbose:
                 print(f"[WARNING] Optimization history plot failed for {model_name}: {e}")
@@ -57,10 +98,11 @@ def create_optuna_visualizations(study, model_name, results_path, verbose=True):
         try:
             fig2 = vis.plot_param_importances(study)
             importance_path = results_path / f'param_importance_{model_name}.png'
-            fig2.write_image(str(importance_path))
-            generated_files['param_importance'] = str(importance_path)
-            if verbose:
-                print(f"[VIZ] Saved: param_importance_{model_name}.png")
+            saved_path = _save_plotly_figure(fig2, importance_path, verbose)
+            if saved_path:
+                generated_files['param_importance'] = saved_path
+                if verbose and saved_path.endswith('.png'):
+                    print(f"[VIZ] Saved: param_importance_{model_name}.png")
         except Exception as e:
             if verbose:
                 print(f"[WARNING] Parameter importance plot failed for {model_name}: {e}")
@@ -73,10 +115,11 @@ def create_optuna_visualizations(study, model_name, results_path, verbose=True):
             if params_to_plot:
                 fig3 = vis.plot_parallel_coordinate(study, params=params_to_plot)
                 parallel_path = results_path / f'parallel_coord_{model_name}.png'
-                fig3.write_image(str(parallel_path))
-                generated_files['parallel_coordinate'] = str(parallel_path)
-                if verbose:
-                    print(f"[VIZ] Saved: parallel_coord_{model_name}.png")
+                saved_path = _save_plotly_figure(fig3, parallel_path, verbose)
+                if saved_path:
+                    generated_files['parallel_coordinate'] = saved_path
+                    if verbose and saved_path.endswith('.png'):
+                        print(f"[VIZ] Saved: parallel_coord_{model_name}.png")
         except Exception as e:
             if verbose:
                 print(f"[WARNING] Parallel coordinate plot failed for {model_name}: {e}")

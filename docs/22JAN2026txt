@@ -1,4 +1,4 @@
-Let's review STG-Driver.ipynb and use it as a basis for creating a new notebook called 'STG-Driver.ipynb'.  This file uses the breastcancer data set.
+We are working on 'STG-Driver.ipynb'.  This file uses the breastcancer data set.
 
 It ran is smoke mode.  I have the following observations:
 -----------------
@@ -18,7 +18,7 @@ RANKING BY QUALITY SCORE:
 
 
 -------------
-In similar file, STG-Driver-liver, I don't see a barchart for categorical variable among EDA output. Specifically, how is gender of patient being handled?
+In similar file, STG-Driver-liver, I don't see a barchart for categorical variable among EDA output. Specifically, how is gender of patient being handled? Can we ensure that visualizations of categorical variables are included in output for Section 2 EDA featture_distribution.png and Section 3 and Section 5 distribution_comparison.png figures.
 [WARNING] Could not generate ROC curve for CTGAN TRTR: y_true takes value in {1.0, 2.0} and pos_label is not specified: either make y_true take value in {0, 1} or {-1, 1} or pass pos_label explicitly.
 [WARNING] Could not generate PR curve for CTGAN TRTR: y_true takes value in {1.0, 2.0} and pos_label is not specified: either make y_true take value in {0, 1} or {-1, 1} or pass pos_label explicitly.
 [WARNING] Could not generate calibration curve for CTGAN TRTR: y_true takes value in {1.0, 2.0} and pos_label is not specified: either make y_true take value in {0, 1} or {-1, 1} or pass pos_label explicitly.
@@ -37,3 +37,39 @@ Traceback (most recent call last):
     print(f"Models processed: {section5_batch_results['models_processed']}")
 KeyError: 'models_processed'
 
+-----------------
+Output from # Code Chunk ID: CHUNK_5_2_0_A includes the following (Do we need an alternative solution?): 
+
+
+========================= OPTUNA OPTIMIZATION ANALYSIS =========================
+[INFO] Found 7 Optuna studies: ['CTGAN', 'CTABGAN', 'CTABGANPLUS', 'CopulaGAN', 'TVAE', 'PATE-GAN', 'MEDGAN']
+
+[OPTUNA] Generating visualizations for CTGAN...
+[WARNING] Optimization history plot failed for CTGAN: 
+
+Kaleido requires Google Chrome to be installed.
+
+Either download and install Chrome yourself following Google's instructions for your operating system,
+or install it from your terminal by running:
+
+    $ plotly_get_chrome
+
+
+[WARNING] Parameter importance plot failed for CTGAN: 
+
+Kaleido requires Google Chrome to be installed.
+
+Either download and install Chrome yourself following Google's instructions for your operating system,
+or install it from your terminal by running:
+
+    $ plotly_get_chrome
+
+
+[WARNING] Parallel coordinate plot failed for CTGAN: 
+
+Kaleido requires Google Chrome to be installed.
+
+Either download and install Chrome yourself following Google's instructions for your operating system,
+or install it from your terminal by running:
+
+    $ plotly_get_chrome

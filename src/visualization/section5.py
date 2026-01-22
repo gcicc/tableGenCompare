@@ -14,6 +14,25 @@ from sklearn.metrics import roc_curve, auc, precision_recall_curve, average_prec
 from sklearn.preprocessing import label_binarize
 from sklearn.calibration import calibration_curve
 
+# Model-specific color mapping for consistent visualization across all plots
+MODEL_COLORS = {
+    'CTGAN': '#1f77b4',       # Blue
+    'TVAE': '#ff7f0e',        # Orange
+    'CTABGAN': '#2ca02c',     # Green
+    'CTABGANPLUS': '#d62728', # Red
+    'CTABGAN+': '#d62728',    # Red (alias)
+    'COPULAGAN': '#9467bd',   # Purple
+    'GANERAID': '#8c564b',    # Brown
+    'PATEGAN': '#e377c2',     # Pink
+    'PATE-GAN': '#e377c2',    # Pink (alias)
+    'MEDGAN': '#17becf',      # Cyan
+}
+
+
+def _get_model_color(model_name):
+    """Get consistent color for a model name."""
+    return MODEL_COLORS.get(model_name.upper(), '#7f7f7f')  # Gray fallback
+
 
 def create_trts_visualizations(trts_results_dict, model_names, results_dir,
                               dataset_name="Dataset", save_files=True, display_plots=False):
@@ -155,8 +174,8 @@ def create_trts_visualizations(trts_results_dict, model_names, results_dir,
 
     # 1. Overall Model Performance (Combined Score) - Top Left
     ax1 = axes[0, 0]
-    bars = ax1.bar(model_df['Model'], model_df['Combined_Score'],
-                   color=['#FFD700', '#C0C0C0', '#CD853F', '#87CEEB'][:len(model_df)])
+    model_colors = [_get_model_color(m) for m in model_df['Model']]
+    bars = ax1.bar(model_df['Model'], model_df['Combined_Score'], color=model_colors)
     ax1.set_title('Overall Model Performance (Combined Score)', fontweight='bold')
     ax1.set_ylabel('Combined Score')
     ax1.set_ylim(0, y_max)  # Dynamic y-axis limit
@@ -168,10 +187,9 @@ def create_trts_visualizations(trts_results_dict, model_names, results_dir,
 
     # 2. Similarity vs Utility Trade-off - Top Right
     ax2 = axes[0, 1]
-    colors = ['#9966CC', '#32CD32', '#FF6347', '#FFD700']
-    for i, (_, row) in enumerate(model_df.iterrows()):
+    for _, row in model_df.iterrows():
         ax2.scatter(row['Overall_Similarity'], row['Average_Utility'],
-                   s=100, color=colors[i % len(colors)], label=row['Model'], alpha=0.7)
+                   s=100, color=_get_model_color(row['Model']), label=row['Model'], alpha=0.7)
     ax2.set_title('Similarity vs Utility Trade-off', fontweight='bold')
     ax2.set_xlabel('Overall Similarity')
     ax2.set_ylabel('Average Utility')
@@ -202,8 +220,7 @@ def create_trts_visualizations(trts_results_dict, model_names, results_dir,
 
     # 4. Model Training Time Comparison - Bottom Right
     ax4 = axes[1, 1]
-    bars_time = ax4.bar(model_df['Model'], model_df['Training_Time_Sec'],
-                       color=['#87CEEB', '#4682B4', '#C0C0C0', '#FFD700'][:len(model_df)])
+    bars_time = ax4.bar(model_df['Model'], model_df['Training_Time_Sec'], color=model_colors)
     ax4.set_title('Model Training Time Comparison', fontweight='bold')
     ax4.set_ylabel('Training Time (seconds)')
 
@@ -323,7 +340,7 @@ def create_privacy_dashboard(trts_results_dict, model_names, results_dir,
     bars = ax1.bar(privacy_df['Model'], privacy_df['Privacy_Score'], color=colors_privacy, alpha=0.7)
     ax1.set_title('Overall Privacy Score (Higher = Better)', fontweight='bold')
     ax1.set_ylabel('Privacy Score')
-    ax1.set_ylim(0, 1.0)
+    ax1.set_ylim(0, 1.15)  # Increased from 1.0 to provide headroom for labels
     ax1.axhline(y=0.7, color='green', linestyle='--', linewidth=1, label='Good (>0.7)')
     ax1.axhline(y=0.5, color='orange', linestyle='--', linewidth=1, label='Moderate (>0.5)')
     ax1.legend()

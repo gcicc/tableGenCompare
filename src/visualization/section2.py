@@ -100,18 +100,24 @@ def create_feature_distributions(data, target_column, results_path,
     numeric_cols = data.select_dtypes(include=[np.number]).columns.tolist()
     numeric_cols_no_target = [col for col in numeric_cols if col != target_column]
 
-    # Split into chunks
+    # Get categorical columns excluding target
+    categorical_cols = data.select_dtypes(include=['object', 'category']).columns.tolist()
+    categorical_cols_no_target = [col for col in categorical_cols if col != target_column]
+
+    # Split numeric columns into chunks
     column_chunks = [numeric_cols_no_target[i:i+plots_per_file]
                      for i in range(0, len(numeric_cols_no_target), plots_per_file)]
 
     saved_files = []
+    total_files = len(column_chunks) + (1 if categorical_cols_no_target else 0)
 
     if verbose:
-        print(f"[VIZ] Creating {len(column_chunks)} feature distribution file(s)...")
+        print(f"[VIZ] Creating {total_files} feature distribution file(s)...")
 
+    # Generate numeric feature distribution plots
     for file_idx, cols_subset in enumerate(column_chunks, 1):
         fig, axes = plt.subplots(GRID_ROWS, GRID_COLS, figsize=(15, 8))
-        fig.suptitle(f'Feature Distributions (Part {file_idx}/{len(column_chunks)})',
+        fig.suptitle(f'Numeric Feature Distributions (Part {file_idx}/{len(column_chunks)})',
                      fontsize=16, fontweight='bold')
 
         axes = axes.flatten()
@@ -143,5 +149,44 @@ def create_feature_distributions(data, target_column, results_path,
 
         if verbose:
             print(f"[VIZ] Saved: {filename}")
+
+    # Generate categorical feature distribution plots
+    if categorical_cols_no_target:
+        n_cat_cols = len(categorical_cols_no_target)
+        n_cols = min(3, n_cat_cols)
+        n_rows = (n_cat_cols + n_cols - 1) // n_cols
+
+        fig, axes = plt.subplots(n_rows, n_cols, figsize=(5*n_cols, 4*n_rows))
+        fig.suptitle('Categorical Feature Distributions', fontsize=16, fontweight='bold')
+
+        # Ensure axes is always iterable
+        if n_rows * n_cols == 1:
+            axes = np.array([axes])
+        axes = np.array(axes).flatten()
+
+        for i, col in enumerate(categorical_cols_no_target):
+            if i < len(axes):
+                value_counts = data[col].value_counts()
+                bars = axes[i].bar(range(len(value_counts)), value_counts.values,
+                                   alpha=0.7, edgecolor='black')
+                axes[i].set_xticks(range(len(value_counts)))
+                axes[i].set_xticklabels(value_counts.index, rotation=45, ha='right')
+                axes[i].set_title(col, fontsize=10)
+                axes[i].set_ylabel('Count', fontsize=8)
+                axes[i].grid(True, alpha=0.3, axis='y')
+
+        # Hide unused subplots
+        for j in range(len(categorical_cols_no_target), len(axes)):
+            axes[j].set_visible(False)
+
+        plt.tight_layout()
+        cat_filename = 'feature_distributions_categorical.png'
+        output_path = Path(results_path) / cat_filename
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        plt.close()
+        saved_files.append(str(output_path))
+
+        if verbose:
+            print(f"[VIZ] Saved: {cat_filename}")
 
     return saved_files
