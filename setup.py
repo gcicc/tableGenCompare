@@ -210,10 +210,16 @@ def evaluate_section5_optimized_models(section_number=5, scope=None, target_colu
     - target_column: Target column name for analysis
 
     Returns:
-    - Dictionary with batch evaluation results and file paths
+    - Dictionary with batch evaluation results including:
+      - models_processed: Count of successfully processed models
+      - results_dir: Path to results directory
+      - evaluation_summaries: Per-model summary dict
+      - raw_results: Full evaluation results for backward compatibility
     """
     from src.evaluation.batch import evaluate_trained_models
-    return evaluate_trained_models(
+    from src.utils.paths import get_results_path
+
+    results = evaluate_trained_models(
         section_number=section_number,
         variable_pattern='final',  # Uses synthetic_*_final variables
         scope=scope,
@@ -221,6 +227,23 @@ def evaluate_section5_optimized_models(section_number=5, scope=None, target_colu
         real_data=None,
         target_col=target_column
     )
+
+    # Restructure for notebook compatibility
+    successful = {k: v for k, v in results.items() if 'error' not in v}
+    dataset_id = scope.get('DATASET_IDENTIFIER', 'unknown') if scope else 'unknown'
+
+    return {
+        'models_processed': len(successful),
+        'results_dir': get_results_path(dataset_id, section_number),
+        'evaluation_summaries': {
+            model: {
+                'synthetic_samples': res.get('synthetic_data_shape', (0,))[0] if res.get('synthetic_data_shape') else 0,
+                'overall_score': res.get('overall_quality_score', 0)
+            }
+            for model, res in successful.items()
+        },
+        'raw_results': results  # Keep full results for backward compat
+    }
 
 
 def display_categorical_summary(data, categorical_columns=None, target_column=None):

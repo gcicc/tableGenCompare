@@ -506,10 +506,14 @@ class PATEGANModel(SyntheticDataModel):
         for col in processed.select_dtypes(include=['object']).columns:
             processed[col] = processed[col].fillna(processed[col].mode()[0] if len(processed[col].mode()) > 0 else 'Unknown')
 
-        # Normalize numeric columns
+        # Store normalization parameters before normalizing
+        self._norm_params = {}
         numeric_cols = processed.select_dtypes(include=[np.number]).columns
+
+        # Normalize numeric columns to [-1, 1] for tanh output
         for col in numeric_cols:
             col_min, col_max = processed[col].min(), processed[col].max()
+            self._norm_params[col] = {'min': col_min, 'max': col_max}
             if col_max > col_min:
                 processed[col] = 2 * (processed[col] - col_min) / (col_max - col_min) - 1
 
@@ -521,10 +525,22 @@ class PATEGANModel(SyntheticDataModel):
 
     def _postprocess_data(self, data: np.ndarray) -> pd.DataFrame:
         """Postprocess generated data back to DataFrame format."""
+        # Clip to [-1, 1] range (tanh output)
+        data = np.clip(data, -1, 1)
         df = pd.DataFrame(data, columns=self._column_names)
 
-        # Denormalize and restore types would go here
-        # For now, return as-is with proper column names
+        # Denormalize numeric columns back to original scale
+        # PATEGAN uses [-1, 1] range: normalized = 2*(x-min)/(max-min) - 1
+        # Inverse: x = ((normalized + 1) / 2) * (max - min) + min
+        if hasattr(self, '_norm_params') and self._norm_params:
+            for col in df.columns:
+                if col in self._norm_params:
+                    p = self._norm_params[col]
+                    col_range = p['max'] - p['min']
+                    if col_range > 0:
+                        df[col] = ((df[col] + 1) / 2) * col_range + p['min']
+                    else:
+                        df[col] = p['min']
 
         return df
 
