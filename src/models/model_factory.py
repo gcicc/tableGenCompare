@@ -9,55 +9,64 @@ from typing import Dict, Any, Optional, Type
 import logging
 from .base_model import SyntheticDataModel
 
-# Import model implementations
+# Import model implementations and check their actual availability
+# (not just whether the wrapper class exists, but whether the underlying library is installed)
 try:
     from .implementations.ganeraid_model import GANerAidModel
-    GANERAID_AVAILABLE = True
+    from .implementations.ganeraid_model import GANERAID_AVAILABLE
 except ImportError:
     GANERAID_AVAILABLE = False
+    GANerAidModel = None
 
 try:
     from .implementations.ctgan_model import CTGANModel
-    CTGAN_AVAILABLE = True
+    from .implementations.ctgan_model import CTGAN_AVAILABLE
 except ImportError:
     CTGAN_AVAILABLE = False
+    CTGANModel = None
 
 try:
     from .implementations.tvae_model import TVAEModel
-    TVAE_AVAILABLE = True
+    from .implementations.tvae_model import TVAE_AVAILABLE
 except ImportError:
     TVAE_AVAILABLE = False
+    TVAEModel = None
 
 try:
     from .implementations.copulagan_model import CopulaGANModel
-    COPULAGAN_AVAILABLE = True
+    from .implementations.copulagan_model import COPULAGAN_AVAILABLE
 except ImportError:
     COPULAGAN_AVAILABLE = False
+    CopulaGANModel = None
 
 try:
     from .implementations.ctabgan_model import CTABGANModel
-    CTABGAN_AVAILABLE = True
+    from .implementations.ctabgan_model import CTABGAN_AVAILABLE
 except ImportError:
     CTABGAN_AVAILABLE = False
+    CTABGANModel = None
 
 try:
     from .implementations.ctabganplus_model import CTABGANPlusModel
-    CTABGANPLUS_AVAILABLE = True
+    from .implementations.ctabganplus_model import CTABGANPLUS_AVAILABLE
 except ImportError:
     CTABGANPLUS_AVAILABLE = False
+    CTABGANPlusModel = None
 
 # New models (Phase 5 - January 2026)
 try:
     from .implementations.pategan_model import PATEGANModel
-    PATEGAN_AVAILABLE = True
+    from .implementations.pategan_model import PATEGAN_AVAILABLE
 except ImportError:
     PATEGAN_AVAILABLE = False
+    PATEGANModel = None
 
 try:
     from .implementations.medgan_model import MEDGANModel
-    MEDGAN_AVAILABLE = True
+    from .implementations.medgan_model import MEDGAN_AVAILABLE
 except ImportError:
     MEDGAN_AVAILABLE = False
+    MEDGANModel = None
 
 # TableGAN removed
 TABLEGAN_AVAILABLE = False

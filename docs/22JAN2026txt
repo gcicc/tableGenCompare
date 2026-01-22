@@ -1,0 +1,39 @@
+Let's review STG-Driver.ipynb and use it as a basis for creating a new notebook called 'STG-Driver.ipynb'.  This file uses the breastcancer data set.
+
+It ran is smoke mode.  I have the following observations:
+-----------------
+1. GANERAID not  present - still!
+2. Missing Quality scores - Why don't MEDGAN and PATEGAN produce quality scores?
+RANKING BY QUALITY SCORE:
+   1. CTABGAN: 0.734
+   2. CTABGANPLUS: 0.733
+   3. TVAE: 0.698
+   4. CopulaGAN: 0.491
+   5. CTGAN: 0.468
+   6. MEDGAN: nan
+   7. PATEGAN: nan
+3.  Privacy_dashboard: cosmetic issue: When barcharts reach to 1, the text reporting privacy score impacts the title 'Overall Privacy Score (Higher = Better).  (both section 3 and section 5)
+4. trts_combrehensive_analysis.jpg.  cosmetic issue: In Similarity vs. Utility Trade-off, the various models must have distinct colors.  Looks like MEDGAN and CTABGAN are both green, CTGAN and TVAE are both purple,  PATEGAN and CTABGANPLUS are both red! (both section 3 and section 5)
+5. I thought we included a one-hot coding option for handling missingness:     "missing_strategy": "none",                   # "none" | "drop" | "median" | "mode" | "mice"
+
+
+-------------
+In similar file, STG-Driver-liver, I don't see a barchart for categorical variable among EDA output. Specifically, how is gender of patient being handled?
+[WARNING] Could not generate ROC curve for CTGAN TRTR: y_true takes value in {1.0, 2.0} and pos_label is not specified: either make y_true take value in {0, 1} or {-1, 1} or pass pos_label explicitly.
+[WARNING] Could not generate PR curve for CTGAN TRTR: y_true takes value in {1.0, 2.0} and pos_label is not specified: either make y_true take value in {0, 1} or {-1, 1} or pass pos_label explicitly.
+[WARNING] Could not generate calibration curve for CTGAN TRTR: y_true takes value in {1.0, 2.0} and pos_label is not specified: either make y_true take value in {0, 1} or {-1, 1} or pass pos_label explicitly.
+
+
+[OPTUNA] Generating visualizations for CTGAN...
+[WARNING] Optimization history plot failed for CTGAN: 
+Image export using the "kaleido" engine requires the Kaleido package,
+which can be installed using pip:
+
+    $ pip install --upgrade kaleido
+
+Section 5.2 batch evaluation failed: 'models_processed'
+Traceback (most recent call last):
+  File "/tmp/ipykernel_20578/53133864.py", line 21, in <module>
+    print(f"Models processed: {section5_batch_results['models_processed']}")
+KeyError: 'models_processed'
+

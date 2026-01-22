@@ -1,4 +1,0 @@
-What was last done: Successful run of brestcancer-testing using GPUs.
-Next Steps:
-1. Run with ntrials=50 and block out code to sample 500.
-2. Choice - manually update
