@@ -128,6 +128,8 @@ from src.models.model_factory import (
 from src.models.batch_training import (
     train_models_batch,
     extract_synthetic_data_to_globals,
+    train_models_batch_with_best_params,
+    extract_final_synthetic_to_globals,
 )
 
 from src.models.search_spaces import (
@@ -162,6 +164,11 @@ from src.data.preprocessing import (
     # Config-driven preprocessing (Phase 3)
     preprocess_dataset,
     load_and_preprocess_from_config
+)
+
+# Import EDA functions (Phase 5 - streamlined)
+from src.data.eda import (
+    run_comprehensive_eda,
 )
 
 # ============================================================================
