@@ -1,7 +1,7 @@
 ---
 title: "Project Evolution"
 output: html_document
-date: "2025-12-16"
+date: "2026-01-23"
 ---
 
 # Clinical Synthetic Data Generation Framework - Project Evolution
@@ -16,20 +16,20 @@ This document traces the evolution of the Clinical Synthetic Data Generation Fra
 
 **Branch Overview:**
 
-- **old-main** (Aug 2025) - Initial successful local execution
-- **AWS_Round1** (Sep-Oct 2025) - First AWS deployment and multi-dataset expansion
-- **main** (Oct-Nov 2025) - Stabilized AWS-compatible release
-- **AWS_Round2** (Dec 2025) - Advanced architecture with modular design and comprehensive evaluation
+- **main** (Current) - Production branch with 8-model architecture and modular design
+- **v1.0-old-main** (tag) - Archived: Initial successful local execution (Aug 2025)
+- **v2.0-aws-round1** (tag) - Archived: First AWS deployment (Sep-Oct 2025)
+- **v3.0-legacy-main** (tag) - Archived: 3-model config, stabilized release (Oct-Nov 2025)
 
 ---
 
 ## Branch Comparison Matrix
 
-| Aspect | old-main | AWS_Round1 | main | AWS_Round2 |
-|--------|----------|------------|------|------------|
-| **Status** | Archived | Archived | Stable | Active Development |
+| Aspect | v1.0-old-main (tag) | v2.0-aws-round1 (tag) | v3.0-legacy-main (tag) | main (current) |
+|--------|---------------------|----------------------|------------------------|----------------|
+| **Status** | Archived (tag) | Archived (tag) | Archived (tag) | **Active** |
 | **Environment** | Local Laptop | AWS SageMaker | AWS SageMaker | AWS SageMaker |
-| **Models Supported** | 6 (All) | 3 (CTGAN, CopulaGAN, TVAE) | 3 (CTGAN, CopulaGAN, TVAE) | 6 (All) |
+| **Models Supported** | 6 (Original) | 3 (CTGAN, CopulaGAN, TVAE) | 3 (CTGAN, CopulaGAN, TVAE) | 8 (All + PATE-GAN, MEDGAN) |
 | **Datasets** | 4 | 4 | 4 | 4 |
 | **Architecture** | Monolithic | Monolithic | Monolithic | Modular (src/) |
 | **setup.py Size** | ~3,691 lines | ~3,500 lines | ~3,500 lines | 209 lines (94% reduction) |
@@ -457,6 +457,159 @@ results = evaluate_all_available_models(
 
 ---
 
+### Phase 5: Model Expansion and Quality Refinements - **AWS_Round2** (continued)
+
+**Timeline:** January 2026
+
+**Environment:** AWS SageMaker
+
+**Status:** Active Development 🚀
+
+#### Key Achievement
+
+**Expanded model support to 8 generative models with improved quality metrics and consolidated workflow.**
+
+---
+
+#### A. New Model Implementations (Jan 2026)
+
+**PATE-GAN and MEDGAN added to the framework, bringing total model count to 8.**
+
+##### PATE-GAN (Private Aggregation of Teacher Ensembles)
+- Privacy-preserving GAN with differential privacy guarantees
+- Teacher ensemble approach for privacy-utility tradeoff
+- Integrated into Section 4 batch hyperparameter optimization
+
+##### MEDGAN (Medical GAN)
+- Autoencoder-based GAN for medical record generation
+- Pre-training phase followed by GAN training
+- Designed specifically for discrete medical features
+
+##### Integration Work
+- Added to model factory with full hyperparameter search spaces
+- Included in batch training pipeline
+- Added to comprehensive evaluation suite
+
+---
+
+#### B. Quality Score Improvements (Jan 2026)
+
+**Denormalization fixes for accurate quality score calculation.**
+
+- Fixed denormalization step in quality scoring
+- Ensured synthetic data properly transformed back to original scale
+- Improved statistical fidelity metrics accuracy
+- Corrected distribution comparison calculations
+
+---
+
+#### C. Batch Training Enhancements (Jan 2026)
+
+**Improved batch optimization workflow for all 8 models.**
+
+- Enhanced model factory for consistent instantiation
+- Improved Optuna study management per model
+- Better error handling and recovery during batch runs
+- Results persistence to EBS for session recovery
+
+---
+
+#### D. Visualization and EDA Improvements (Jan 2026)
+
+##### Categorical Visualization
+- Added categorical variable distribution plots to EDA
+- Improved handling of mixed categorical/numerical datasets
+- Enhanced Section 2 preprocessing visualizations
+
+##### Kaleido Fallback for Optuna Plots
+- Implemented fallback rendering when Kaleido unavailable
+- Ensures Optuna visualizations work across environments
+- Graceful degradation for headless servers
+
+##### Privacy Dashboard Enhancements
+- Improved 4-panel privacy risk visualization
+- Better DCR and NNDR calculation
+- Enhanced memorization risk detection
+
+---
+
+#### E. Dependency Updates (Jan 2026)
+
+**Critical package updates for compatibility and bug fixes.**
+
+| Package | Old Version | New Version | Reason |
+|---------|-------------|-------------|--------|
+| dython | 0.6.8 | 0.7.12 | GANERAID compatibility fix |
+| scikit-learn | 1.2.2 | 1.7.2 | Updated API support |
+| sdv | 1.24.1 | 1.32.1 | New features and fixes |
+| copulas | 0.12.3 | 0.14.0 | Dependency alignment |
+| rdt | 1.17.1 | 1.19.0 | SDV compatibility |
+| Faker | 37.5.3 | 40.1.2 | Bug fixes |
+| plotly | 6.2.0 | 6.4.0 | Visualization improvements |
+
+---
+
+#### F. STG-Driver Notebook Consolidation (Jan 2026)
+
+**Consolidated workflow into primary STG-Driver-breast-cancer.ipynb notebook.**
+
+- Single entry point for complete pipeline execution
+- All 8 models available in one notebook
+- Streamlined Section 4 batch training interface
+- Improved documentation and inline comments
+
+---
+
+### Phase 5 Summary Statistics
+
+#### Model Expansion
+- **Models:** 6 → 8 (added PATE-GAN, MEDGAN)
+- **Privacy models:** 1 (PATE-GAN with differential privacy)
+
+#### Quality Improvements
+- Denormalization fixes for accurate metrics
+- Categorical visualization support
+- Kaleido fallback implementation
+
+#### Dependency Updates
+- 7+ key packages updated
+- dython fix critical for GANERAID
+
+---
+
+### Phase 6: Branch Reorganization - January 2026
+
+**Timeline:** January 23, 2026
+
+**Objective:** Consolidate branch structure for clarity and maintainability
+
+#### Key Changes
+
+**Branch Consolidation:**
+- Promoted `AWS_Round2` to become the new `main` branch
+- Archived historical branches as tags for reference
+- Simplified repository structure to single active branch
+
+**Archive Tags Created:**
+| Tag | Source Branch | Description |
+|-----|---------------|-------------|
+| v1.0-old-main | old-main | Initial local implementation (Aug 2025) |
+| v2.0-aws-round1 | AWS_Round1 | First AWS migration (Sep-Oct 2025) |
+| v3.0-legacy-main | main | 3-model stable release (Oct-Nov 2025) |
+
+**Rationale:**
+- AWS_Round2 represented the most advanced, feature-complete version
+- Multiple active branches created confusion for collaborators
+- Tags preserve historical state while simplifying daily workflow
+- Single `main` branch aligns with modern Git best practices
+
+**Migration Impact:**
+- All new work should target `main` branch
+- Historical versions remain accessible via tags
+- Documentation updated to reflect new structure
+
+---
+
 ## Development Philosophy Evolution
 
 ### old-main → AWS_Round1: **"Make it work in the cloud"**
@@ -479,36 +632,30 @@ results = evaluate_all_available_models(
 
 ---
 
-## Recommended Usage by Branch
+## Recommended Usage
 
-### When to Use **old-main**
-
-- ❌ **Not recommended** - Historical reference only
-- Academic interest in original implementation
-- Understanding initial design decisions
-
-### When to Use **AWS_Round1**
-
-- ❌ **Not recommended** - Superseded by main
-- Learning about AWS migration challenges
-- Understanding multi-dataset harmonization
-
-### When to Use **main**
-
-- ✅ **Production deployments** requiring stability
-- Environments with strict version control
-- 3-model configuration (CTGAN, CopulaGAN, TVAE)
-- Conservative deployments avoiding bleeding-edge features
-
-### When to Use **AWS_Round2** (Current)
+### Use **main** Branch (Recommended)
 
 - ✅ **All new development and research**
-- Advanced evaluation requirements (30+ metrics)
-- Automated workflow needs
-- Privacy risk assessment
-- Modular architecture benefits
-- Comprehensive visualization suite
-- Future-proof codebase
+- ✅ **Production deployments**
+- ✅ Advanced evaluation requirements (30+ metrics)
+- ✅ Automated workflow with 8-model support
+- ✅ Privacy risk assessment
+- ✅ Modular architecture benefits
+- ✅ Comprehensive visualization suite
+
+### Historical Versions (Tags)
+
+Historical versions are preserved as tags for reference only:
+
+- **v1.0-old-main** - Original local implementation (Aug 2025)
+- **v2.0-aws-round1** - First AWS migration (Sep-Oct 2025)
+- **v3.0-legacy-main** - 3-model stable release (Oct-Nov 2025)
+
+To checkout a historical version:
+```bash
+git checkout v1.0-old-main  # or v2.0-aws-round1, v3.0-legacy-main
+```
 
 ---
 
@@ -559,9 +706,9 @@ results = evaluate_all_available_models(
 
 ### Short-Term (Q1 2026)
 
-- [ ] Resolve 3-model limitation in AWS environment
+- [x] Resolve 3-model limitation in AWS environment (expanded to 8 models)
+- [x] Add differential privacy mechanisms (PATE-GAN implementation)
 - [ ] Expand to additional healthcare datasets
-- [ ] Add differential privacy mechanisms
 - [ ] Implement automated quality gates
 
 ### Medium-Term (Q2-Q3 2026)
@@ -584,21 +731,18 @@ results = evaluate_all_available_models(
 
 ### For New Team Members
 
-1. **Start with main branch** to understand stable production version
-2. **Review AWS_Round2 README** for current architecture
-3. **Check docs/Task-*.md files** for detailed technical plans
+1. **Clone the repository** - `main` branch contains the production-ready version
+2. **Review README.md** for current architecture and setup
+3. **Check docs/ folder** for detailed technical documentation
 4. **Run test notebooks** to verify environment setup
 5. **Read this timeline** to understand project evolution
 
 ### Quick Start Commands
 
 ```bash
-# Clone repository
+# Clone repository (main branch is default)
 git clone https://github.com/gcicc/tableGenCompare.git
 cd tableGenCompare
-
-# Checkout development branch
-git checkout AWS_Round2
 
 # Review documentation
 cat README.md
@@ -607,8 +751,8 @@ cat docs/Project-Evolution-Timeline.md
 # Set up environment (AWS SageMaker)
 pip install -r requirements.txt
 
-# Run example notebook
-jupyter notebook STG-BreastCancer-testing.ipynb
+# Run primary workflow notebook
+jupyter notebook STG-Driver-breast-cancer.ipynb
 ```
 
 ---
@@ -634,8 +778,9 @@ For questions about this project evolution or technical details:
 
 ---
 
-**Document Version:** 1.0
-**Last Updated:** December 16, 2025
-**Current Active Branch:** AWS_Round2
+**Document Version:** 2.0
+**Last Updated:** January 23, 2026
+**Current Active Branch:** main
 **Production Branch:** main
-**Framework Version:** 4.0 (Modular Architecture)
+**Archived Tags:** v1.0-old-main, v2.0-aws-round1, v3.0-legacy-main
+**Framework Version:** 5.0 (8-Model Architecture)

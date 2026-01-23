@@ -1,0 +1,18 @@
+OK we've successefuly run a couple of the STG-Driver notebooks successfully under smoke.
+
+Look at files in tableGenCompare parent directory and remove superfluous files from the parent folder.  Do not remove and .ipynb files.
+Let me know the purpose of aws folder.  
+Since everything is working, scrutinize the requirements.txt file - I want it to sync to whatever we have working now!
+Update the readme file to focus attention on what is accomplished by STG-Driver-breast-cancer.ipynb (and the similarly organized STG-Driver files.  It suffices to read STG-Driver-breast-cancer.ipynb as others are identical, save idiosycracies with incoming datasets. Also incorporate notes from AWS_setup.md, so we have a signle readme.
+Update Project-Evolution-Timeline.md in the docs folder to reflect work since it was last updated 
+
+
+
+
+Build an .md file that provides short definitions to orient users and help them interpret results.  I.e., we need a help file.  Try to be concise but informative. Point to python documentation or libraries when appropriate.
+- for the current suite of models (CTGAN, etc.) provide some details to help the reader understand the similarities and differences and anticipated performance and relative performance (E.g., CTABGANPlus should be better than CTGAN...)
+- **30+ evaluation metrics:** Comprehensive TRTS analysis with statistical fidelity, utility, and privacy metrics
+- **Automated batch training:** Single function call handles multi-model hyperparameter optimization
+- **Privacy dashboard:** DCR, NNDR, memorization risk, and re-identification assessment
+- **Advanced visualizations:** ROC curves, PR curves, calibration plots, PCA comparisons
+- **Optuna integration:** Bayesian optimization with automatic visualization generation

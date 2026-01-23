@@ -4,33 +4,140 @@ A comprehensive benchmarking suite for evaluating synthetic tabular data generat
 
 ## Overview
 
-This project implements and compares the performance of state-of-the-art synthetic data generation methods specifically designed for clinical and healthcare tabular data. The framework provides a standardized pipeline for training, evaluating, and optimizing generative models across four distinct medical datasets.
+This project implements and compares the performance of state-of-the-art synthetic data generation methods specifically designed for clinical and healthcare tabular data. The framework provides a standardized pipeline for training, evaluating, and optimizing generative models.
+
+**Primary Workflow:** Use `STG-Driver-breast-cancer.ipynb` as the main entry point. This consolidated notebook includes the complete pipeline with all 8 generative models.
 
 ## Synthetic Data Generation Methods
 
-The framework evaluates the following generative models:
+The framework evaluates **8 generative models**:
 
-- **CTGAN** (Conditional Tabular GAN) - Standard GAN approach for tabular data
-- **CTAB-GAN** (Conditional Tabular GAN with advanced preprocessing) - Enhanced preprocessing pipeline
-- **CTAB-GAN+** (Enhanced version with WGAN-GP losses, general transforms, and improved stability) - Advanced stability improvements
-- **GANerAid** (Custom implementation) - Purpose-built clinical data generator
-- **CopulaGAN** (Copula-based GAN) - Statistical approach using copula functions
-- **TVAE** (Variational Autoencoder) - Variational approach for tabular synthesis
+| Model | Type | Description |
+|-------|------|-------------|
+| **CTGAN** | GAN | Standard GAN approach for tabular data |
+| **CTAB-GAN** | GAN | Enhanced preprocessing pipeline |
+| **CTAB-GAN+** | GAN | Advanced stability with WGAN-GP losses |
+| **GANerAid** | GAN | Purpose-built clinical data generator |
+| **CopulaGAN** | Statistical | Copula-based approach |
+| **TVAE** | VAE | Variational autoencoder for tabular synthesis |
+| **PATE-GAN** | GAN | Privacy-preserving GAN with differential privacy |
+| **MEDGAN** | GAN | Medical record generation with autoencoder |
 
 ## Datasets
 
-The framework is designed to work with four healthcare datasets:
+The framework supports healthcare datasets including:
+- **Breast Cancer** - Cancer diagnosis and prognosis data (primary)
+- **Alzheimer's Disease** - Neurological condition classification
+- **Liver Disease** - Hepatic condition assessment
+- **Pakistani Liver Patient** - Regional liver disease dataset
 
-1. **Alzheimer's Disease** - Neurological condition classification
-2. **Breast Cancer** - Cancer diagnosis and prognosis data
-3. **Liver Disease** - Hepatic condition assessment
-4. **Pakistani Liver Patient** - Regional liver disease dataset
+---
 
-Each dataset undergoes standardized preprocessing including missing value imputation using MICE (Multiple Imputation by Chained Equations) and appropriate encoding for categorical variables.
+## Quick Start
+
+### Option 1: Local Installation
+
+```bash
+# Clone repository with submodules
+git clone --recurse-submodules https://github.com/gcicc/tableGenCompare.git
+cd tableGenCompare
+
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate  # Linux/macOS
+# OR: venv\Scripts\activate  # Windows
+
+# Install dependencies
+pip install --upgrade pip
+pip install -r requirements.txt
+
+# Launch Jupyter
+jupyter notebook STG-Driver-breast-cancer.ipynb
+```
+
+### Option 2: AWS SageMaker (Recommended for GPU)
+
+See [AWS SageMaker Setup](#aws-sagemaker-setup) below.
+
+---
+
+## AWS SageMaker Setup
+
+### 1. Access AWS SageMaker
+
+1. Log in to AWS via Okta: **AWS TEC**
+2. Select environment: `tec-rnd-sqs-dev`
+3. Open **Amazon SageMaker AI** > **Notebook instances**
+
+### 2. Create Notebook Instance
+
+1. Click **Create notebook instance**
+2. Recommended settings:
+   - **Instance type:** `ml.g4dn.xlarge` (GPU-enabled)
+   - **Volume:** 50 GB (or more for large datasets/models)
+   - **IAM role:** Use existing role with appropriate permissions
+3. Under **Git repositories**, add:
+   - URL: `https://github.com/gcicc/tableGenCompare.git`
+   - Branch: `main`
+4. Create and wait until status shows **InService**
+5. Click **Open JupyterLab**
+
+### 3. Initialize Environment (First Time Only)
+
+Open a terminal in JupyterLab and run:
+
+```bash
+# Initialize conda
+source ~/anaconda3/bin/activate
+conda init bash
+exec bash
+
+# Create Python 3.10 environment (avoids wheel/build issues)
+conda create -n tablegen python=3.10 -y
+conda activate tablegen
+python -m pip install -U pip setuptools wheel
+
+# Navigate to repo and initialize submodules (CRITICAL!)
+cd ~/SageMaker/tableGenCompare
+git submodule update --init --recursive
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Register Jupyter kernel
+pip install ipykernel
+python -m ipykernel install --user --name tablegen --display-name "Python (tablegen)"
+```
+
+### 4. Select Kernel in JupyterLab
+
+**Kernel > Change Kernel > Python (tablegen)**
+
+### 5. Returning Sessions
+
+Each time you start a new session:
+
+```bash
+source ~/anaconda3/bin/activate
+conda activate tablegen
+cd ~/SageMaker/tableGenCompare
+```
+
+---
+
+## Important Notes & Gotchas
+
+- **Python version:** Use Python 3.10 on SageMaker classic Notebook Instances (avoids compatibility issues)
+- **scikit-learn:** Version 1.7.2+ is required (updated from earlier 1.2.2 pinning)
+- **dython:** Version 0.7.12+ required for GANERAID compatibility fix
+- **Submodules:** CTAB-GAN, CTAB-GAN-Plus, and GANerAid are Git submodules - always run `git submodule update --init --recursive`
+- **GPU models:** For GANerAid with CUDA, instantiate with: `GANerAidModel(device="cuda")`
+
+---
 
 ## Notebook Structure
 
-Each dataset notebook follows a standardized 5-section pipeline with harmonized chunk identifiers using the `CHUNK_{Major}_{Minor}_{Patch}_{Seq}` naming scheme:
+The STG-Driver notebook follows a standardized 5-section pipeline:
 
 ### Section 1: Setup and Data Loading
 - Environment configuration and library imports
@@ -40,267 +147,117 @@ Each dataset notebook follows a standardized 5-section pipeline with harmonized 
 - Comprehensive dataset overview and statistics
 - Missing value analysis and MICE imputation
 - Categorical encoding and feature preparation
-- Data quality assessment
 
 ### Section 3: Model Configuration
 - Model factory setup and configuration management
-- Enhanced objective functions with dynamic target column support
-- Hyperparameter space definitions for each generative model
+- Hyperparameter space definitions for all 8 models
 
 ### Section 4: Hyperparameter Optimization
 - Optuna-based Bayesian optimization for each model
 - Performance evaluation using enhanced objective functions
-- Model training with optimized parameters
-- Comprehensive logging and progress tracking
+- Batch training with comprehensive logging
 
 ### Section 5: Model Evaluation and Comparison
 - Synthetic data generation using best parameters
-- Statistical fidelity assessment
-- Utility preservation analysis
-- Cross-model performance comparison
-- Visualization and reporting
+- Statistical fidelity and utility preservation analysis
+- Privacy risk assessment
+- Cross-model performance comparison and visualization
+
+---
+
+## Modular Architecture
+
+The codebase uses a clean modular structure for maintainability:
+
+```
+tableGenCompare/
+├── setup.py              # Backward-compatible re-export layer
+├── requirements.txt      # Python dependencies
+├── STG-Driver-breast-cancer.ipynb  # Primary workflow notebook
+│
+├── src/                  # Modular source code
+│   ├── config.py         # Session management
+│   ├── models/           # Model implementations
+│   ├── data/             # Data preprocessing
+│   ├── evaluation/       # Quality, TRTS, privacy metrics
+│   ├── objective/        # Optuna objective functions
+│   ├── visualization/    # Section-specific visualizations
+│   └── utils/            # Utility functions
+│
+├── data/                 # Dataset directory
+├── results/              # Generated outputs
+│
+└── CTAB-GAN/            # Git submodules
+    CTAB-GAN-Plus/
+    GANerAid/
+```
+
+All notebooks use `from setup import *` without changes - the thin re-export layer ensures backward compatibility.
+
+---
 
 ## Key Features
 
-### Advanced Preprocessing Pipeline
-- **MICE Imputation**: Sophisticated missing value handling
-- **Dynamic Encoding**: Automatic categorical variable processing
-- **Target Column Support**: Flexible objective functions for different prediction tasks
+- **30+ evaluation metrics:** Comprehensive TRTS analysis with statistical fidelity, utility, and privacy metrics
+- **Automated batch training:** Single function call handles multi-model hyperparameter optimization
+- **Privacy dashboard:** DCR, NNDR, memorization risk, and re-identification assessment
+- **Advanced visualizations:** ROC curves, PR curves, calibration plots, PCA comparisons
+- **Optuna integration:** Bayesian optimization with automatic visualization generation
 
-### Hyperparameter Optimization
-- **Bayesian Optimization**: Optuna-powered efficient parameter search
-- **Multi-Objective Evaluation**: Balancing fidelity, utility, and privacy metrics
-- **Timeout Management**: Robust optimization with time constraints
+---
 
-### Comprehensive Evaluation
-- **Statistical Fidelity**: Distribution matching and correlation preservation
-- **Utility Preservation**: Downstream task performance maintenance
-- **Privacy Assessment**: Membership inference and attribute disclosure analysis
+## Requirements
 
-### Reproducible Framework
-- **Harmonized Chunk IDs**: Consistent code organization across all notebooks
-- **Standardized Pipeline**: Identical methodology across different datasets
-- **Version Control**: Systematic tracking of model configurations and results
-
-## Modular Architecture (Phase 4 - December 2025)
-
-The codebase has been refactored into a clean modular structure to improve maintainability and scalability:
-
-### Code Organization
-
-**setup.py** - Thin backward-compatible re-export layer (209 lines, 94.3% reduction from 3,691 lines)
-- All notebooks continue using `from setup import *` without changes
-- All functionality migrated to specialized modules in `src/`
-
-**src/** - Modular source code structure:
-- **config.py** - Session management and global configuration
-- **compat.py** - Backward compatibility patches for legacy notebook code
-- **utils/** - Utility functions (paths, documentation, parameter management)
-- **data/** - Data preprocessing and summary functions
-- **evaluation/** - Comprehensive evaluation framework
-  - quality.py - Statistical fidelity assessment
-  - trts.py - Train Real Test Synthetic (TRTS) analysis
-  - privacy.py - Privacy metrics and membership inference
-  - mode_collapse.py - Mode collapse detection
-  - hyperparameters.py - Optuna optimization analysis
-  - batch.py - Unified batch evaluation for Sections 3 & 5
-- **visualization/** - Section-specific visualization functions
-- **objective/** - Objective functions for hyperparameter optimization
-- **models/** - Model imports, wrappers, and implementations
-
-### Benefits
-
-✅ **Maintainability**: Clean separation of concerns with single-responsibility modules
-✅ **Testability**: Each module can be tested independently
-✅ **Scalability**: Easy to extend with new models or evaluation metrics
-✅ **Backward Compatibility**: All existing notebooks work without modification
-✅ **Code Reusability**: Functions organized by purpose for easy discovery
-
-### Migration Status
-
-- ✅ Phase 0-3: Complete - All core functionality migrated
-- ✅ Phase 4 (Task 4.3): Complete - setup.py streamlined to <210 lines
-- 🔄 Next: Notebook testing and validation across all 4 datasets
-
-## Installation
-
-### Prerequisites
-
-- **Python 3.11+** (recommended)
-- **Git** for cloning the repository
-- **10+ GB disk space** for models and dependencies
-- **8+ GB RAM** (16+ GB recommended for larger datasets)
-
-### Step 1: Clone the Repository
-
-```bash
-git clone https://github.com/gcicc/tableGenCompare.git
-cd tableGenCompare
-```
-
-### Step 2: Create Virtual Environment (Recommended)
-
-**On Linux/macOS:**
-```bash
-python3 -m venv venv
-source venv/bin/activate
-```
-
-**On Windows:**
-```bash
-python -m venv venv
-venv\Scripts\activate
-```
-
-### Step 3: Install Dependencies
-
-```bash
-pip install --upgrade pip
-pip install -r requirements.txt
-```
-
-**Note:** Installation may take 10-15 minutes due to large packages (PyTorch ~200MB, etc.)
-
-### Step 4: Verify Installation
-
-Test that critical imports work:
-
-```python
-python -c "import pandas, numpy, torch, sklearn, optuna, sdv; print('✓ All core packages installed successfully')"
-```
-
-### Quick Start
-
-1. **Launch Jupyter:**
-   ```bash
-   jupyter notebook
-   ```
-
-2. **Open a dataset notebook:**
-   - `SynthethicTableGenerator-Alzheimer.ipynb`
-   - `SynthethicTableGenerator-BreastCancer.ipynb`
-   - `SynthethicTableGenerator-Liver.ipynb`
-   - `SynthethicTableGenerator-Pakistani.ipynb`
-
-3. **Run sections sequentially:**
-   - Section 1: Setup and Data Loading
-   - Section 2: Data Preprocessing
-   - Section 3: Model Configuration
-   - Section 4: Hyperparameter Optimization
-   - Section 5: Model Evaluation
-
-### AWS Deployment
-
-For cloud deployment on AWS:
-
-```bash
-# On your AWS instance (Amazon Linux 2 / Ubuntu):
-sudo yum install python3.11 git -y  # Amazon Linux
-# OR
-sudo apt-get install python3.11 git -y  # Ubuntu
-
-# Clone and install
-git clone https://github.com/gcicc/tableGenCompare.git
-cd tableGenCompare
-python3.11 -m venv venv
-source venv/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
-```
-
-**AWS SageMaker Notebook:**
-```python
-!git clone https://github.com/gcicc/tableGenCompare.git
-%cd tableGenCompare
-!pip install -r requirements.txt
-```
-
-### Troubleshooting
-
-**Issue: PyTorch installation fails**
-- Solution: Ensure you have sufficient disk space (10+ GB)
-- Alternative: Install CPU-only PyTorch: `pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu`
-
-**Issue: CTAB-GAN import errors**
-- Solution: Verify Git repositories were cloned during installation
-- Check: `ls CTAB-GAN CTAB-GAN-Plus` should show directories
-
-**Issue: Out of memory during training**
-- Solution: Reduce `n_trials` parameter in Section 4 hyperparameter optimization
-- Recommended: Start with `n_trials=5` for testing
-
-### Package Versions
-
-The framework uses flexible version constraints (`>=`) to ensure compatibility while allowing updates. See `requirements.txt` for complete dependency list.
-
-**Key Dependencies:**
-- pandas >= 2.0.0
-- numpy >= 1.24.0
-- torch >= 2.0.0
-- scikit-learn >= 1.3.0
-- optuna >= 3.0.0
-- sdv >= 1.2.0 (includes CTGAN, CopulaGAN, TVAE)
-
-## Usage
-
-1. **Environment Setup**: Install required dependencies and configure Python environment
-2. **Dataset Preparation**: Place datasets in the appropriate data directory
-3. **Model Training**: Execute notebooks section by section or run complete pipeline
-4. **Hyperparameter Optimization**: Customize n_trials parameter based on computational resources
-5. **Evaluation**: Review generated synthetic data quality and utility metrics
-
-## Results and Outputs
-
-Each notebook generates:
-- **Optimized Model Parameters**: Best hyperparameter configurations for each method
-- **Synthetic Datasets**: High-quality generated data maintaining statistical properties
-- **Performance Metrics**: Comprehensive evaluation scores and comparisons
-- **Visualization**: Distribution plots, correlation matrices, and performance charts
-- **Detailed Reports**: Statistical analysis and model comparison summaries
-
-## Future Considerations
-
-Based on current development roadmap:
-
-### Infrastructure Scaling
-- **AWS Deployment**: Migration to cloud environment for enhanced computational resources
-- **Increased Optimization Trials**: Scale n_trials to 50-100 for more robust hyperparameter search
-- **Global Parameter Management**: Centralized n_trials configuration across all models
-
-### https://pypi.org/project/python-synthpop/ and other contenders
-
-### Advanced Dataset Support
-- **Multi-Level Categorical Endpoints**: Support for complex categorical target variables
-- **One-Hot Encoding Verification**: Enhanced validation for categorical variable handling
-
-### Enhanced Missing Data Handling
-- **Alternative Imputation Strategies**: Beyond MICE, explore indicator-based missingness encoding
-- **Missingness Pattern Analysis**: Deep analysis of missing data mechanisms and their preservation
-
-### Evaluation Enhancement
-- **Extended Optimization Assessment**: Comprehensive analysis of hyperparameter optimization impact on downstream performance
-- **Production-Scale Validation**: Large-scale trials (n_trials = 100+) for definitive model comparison
-
-## Technical Requirements
-
-**System Requirements:**
-- Python 3.11+ (recommended for optimal compatibility)
-- 10+ GB disk space for dependencies and models
-- 8+ GB RAM (16+ GB recommended for larger datasets)
+**System:**
+- Python 3.10+
+- 10+ GB disk space
+- 8+ GB RAM (16+ recommended)
 - GPU optional but recommended for faster training
 
-**Software Dependencies:**
-All dependencies are specified in `requirements.txt` and installed automatically via pip. See the [Installation](#installation) section for detailed setup instructions.
+**Key Dependencies:**
+- pandas, numpy, scipy
+- torch (PyTorch)
+- scikit-learn >= 1.7.2
+- sdv >= 1.32.1 (includes CTGAN, CopulaGAN, TVAE)
+- dython >= 0.7.12
+- optuna >= 4.0.0
 
-**Key Libraries:**
-- PyTorch for deep learning models
-- SDV (Synthetic Data Vault) for CTGAN, CopulaGAN, TVAE
-- CTAB-GAN and CTAB-GAN+ (installed from GitHub)
-- Optuna for hyperparameter optimization
-- Scikit-learn for preprocessing and evaluation
-- Pandas/NumPy for data manipulation
-- Matplotlib/Seaborn for visualization
+See `requirements.txt` for complete dependency list.
+
+---
+
+## Troubleshooting
+
+**PyTorch installation fails**
+- Ensure sufficient disk space (10+ GB)
+- CPU-only: `pip install torch --index-url https://download.pytorch.org/whl/cpu`
+
+**CTAB-GAN import errors**
+- Run: `git submodule update --init --recursive`
+- Verify: `ls CTAB-GAN CTAB-GAN-Plus GANerAid`
+
+**Out of memory during training**
+- Reduce `n_trials` parameter in Section 4
+- Start with `n_trials=5` for testing
+
+**Kernel not found in JupyterLab**
+- Re-run: `python -m ipykernel install --user --name tablegen --display-name "Python (tablegen)"`
+
+---
+
+## AWS Folder
+
+The `aws/` directory contains AWS CLI v2 bundled distribution for SageMaker deployment:
+- `dist/` - Bundled AWS CLI v2 executables
+- `install` - Installation script
+- `README.md` - Installation instructions
+
+This allows SageMaker notebook instances to run AWS CLI commands without manual installation.
+
+---
 
 ## Contributing
 
 This framework follows a systematic approach to synthetic data generation research, emphasizing reproducibility, comprehensive evaluation, and practical applicability to healthcare data challenges.
+
+For project evolution and development history, see `docs/Project-Evolution-Timeline.md`.
