@@ -294,6 +294,11 @@ def enhanced_objective_function_v2(real_data, synthetic_data, target_column,
     if np.isnan(combined_score) or np.isinf(combined_score):
         combined_score = 0.5
 
+    # Store component scores as trial user attributes for concise callback
+    if trial is not None and OPTUNA_AVAILABLE:
+        trial.set_user_attr('similarity_score', similarity_score)
+        trial.set_user_attr('accuracy_score', accuracy_score_final)
+
     # Print summary
     if accuracy_scores:
         print(f"[OK] TRTS Evaluation: {len(accuracy_scores)} scenarios, Average: {accuracy_score_final:.4f}")

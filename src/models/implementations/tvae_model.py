@@ -226,120 +226,114 @@ class TVAEModel(SyntheticDataModel):
     def get_hyperparameter_space(self) -> Dict[str, Dict[str, Any]]:
         """
         Get the enhanced hyperparameter search space for TVAE optimization.
-        Production-ready hyperparameter space designed for diverse tabular datasets.
-        
-        Returns:
-            Dictionary defining comprehensive hyperparameter search space
+        Practical guidance for 1k–5k rows:
+          - 'batch_size': avoid values near or above N (500/1000/2000) unless N supports it.
+          - Huge networks and very large 'latent_dim' tend to overfit small tabular data.
+          - Keep 'learning_rate' away from the very high end (1e-2 is often too aggressive).
+          - 'beta' (β-VAE): high beta can harm reconstruction/utility on small datasets; keep a moderate range.
         """
         return {
             'epochs': {
                 'type': 'int',
-                'low': 100,
-                'high': 1000,
+                'low': 200,
+                'high': 800,
                 'step': 50,
                 'default': 300,
-                'description': 'Training epochs - 300 optimal for VAE convergence in most tabular datasets'
+                'description': 'Training epochs (300 baseline; use Optuna pruning if available)'
             },
             'compress_dims': {
                 'type': 'categorical',
                 'choices': [
-                    (64, 64),            # Small datasets (<1K samples, <20 features)
-                    (128, 128),          # Medium datasets (1K-10K samples, 20-50 features)
-                    (256, 256),          # Large datasets (10K-100K samples, 50+ features)
-                    (512, 512),          # Very large datasets (100K+ samples, 100+ features)
-                    (128, 256),          # Asymmetric - expanding encoder for complex features
-                    (256, 128),          # Asymmetric - bottleneck encoder for regularization
-                    (64, 128, 64),       # Deep encoder for small-medium datasets  
-                    (128, 256, 128),     # Deep encoder for medium-large datasets
-                    (256, 512, 256),     # Deep encoder for large/complex datasets
-                    (128, 256, 512)      # Progressive expansion for very complex features
+                    (64, 64),
+                    (128, 128),
+                    (256, 128),
+                    (128, 256),
+                    (64, 128, 64),
+                    (128, 256, 128),
                 ],
                 'default': (128, 128),
-                'description': 'Encoder architecture - adaptive compression based on data complexity'
+                'description': 'Encoder architecture (pruned to small/medium options for 1k–5k rows)'
             },
             'decompress_dims': {
                 'type': 'categorical',
                 'choices': [
-                    (64, 64),            # Matches small encoder
-                    (128, 128),          # Matches medium encoder - most stable
-                    (256, 256),          # Matches large encoder  
-                    (512, 512),          # Matches very large encoder
-                    (256, 128),          # Stronger decoder for difficult reconstruction
-                    (128, 256),          # Progressive decoder expansion
-                    (64, 128, 64),       # Deep decoder for small-medium datasets
-                    (128, 256, 128),     # Deep decoder for medium-large datasets
-                    (256, 512, 256),     # Deep decoder for large/complex datasets
-                    (512, 256, 128)      # Funnel decoder for feature selection
+                    (64, 64),
+                    (128, 128),
+                    (256, 128),
+                    (128, 256),
+                    (64, 128, 64),
+                    (128, 256, 128),
                 ],
                 'default': (128, 128),
-                'description': 'Decoder architecture - balanced reconstruction capability'
+                'description': 'Decoder architecture (pruned to small/medium options for 1k–5k rows)'
             },
             'l2scale': {
                 'type': 'float',
                 'low': 1e-7,
-                'high': 1e-2,
+                'high': 1e-4,
                 'log': True,
                 'default': 1e-5,
-                'description': 'L2 regularization scale - 1e-5 optimal for preventing overfitting'
+                'description': 'L2 regularization scale (upper bound tightened to avoid underfitting)'
             },
             'batch_size': {
                 'type': 'categorical',
-                'choices': [32, 64, 128, 256, 500, 1000, 2000],
-                'default': 500,
-                'description': 'Batch size - larger batches (500+) improve VAE stability and latent space quality'
+                'choices': [32, 64, 128, 256, 500],
+                'default': 128,
+                'description': 'Batch size (for 1k–5k rows: 32–256 preferred; 500 only if N is comfortably >500)'
             },
             'loss_factor': {
                 'type': 'int',
                 'low': 1,
-                'high': 10,
+                'high': 6,
                 'step': 1,
                 'default': 2,
-                'description': 'VAE loss weighting factor - 2 balances reconstruction vs KL divergence'
+                'description': 'VAE loss weighting factor (upper range tightened for stability on small data)'
             },
             'enforce_min_max_values': {
                 'type': 'categorical',
                 'choices': [True, False],
                 'default': True,
-                'description': 'Enforce min/max constraints - True for data fidelity in production'
+                'description': 'Enforce min/max constraints (often improves fidelity for bounded columns)'
             },
             'enforce_rounding': {
                 'type': 'categorical',
                 'choices': [True, False],
                 'default': False,
-                'description': 'Enforce integer rounding - False for smoother continuous distributions'
+                'description': 'Enforce integer rounding (enable if many integer-coded columns must be integers)'
             },
             'learning_rate': {
                 'type': 'float',
                 'low': 1e-5,
-                'high': 1e-2,
+                'high': 3e-3,
                 'log': True,
                 'default': 1e-3,
-                'description': 'Learning rate for VAE training - 1e-3 optimal for Adam optimizer'
+                'description': 'Learning rate for VAE training (upper bound tightened; 1e-2 often too aggressive)'
             },
             'beta': {
                 'type': 'float',
-                'low': 0.1,
-                'high': 10.0,
+                'low': 0.3,
+                'high': 3.0,
                 'log': True,
                 'default': 1.0,
-                'description': 'Beta parameter for β-VAE - controls regularization strength in latent space'
+                'description': 'Beta parameter for β-VAE (range tightened; very high beta often hurts utility on small data)'
             },
             'latent_dim': {
                 'type': 'int',
                 'low': 16,
-                'high': 512,
+                'high': 256,
                 'step': 16,
-                'default': 128,
-                'description': 'Latent space dimensionality - 128 good balance for most tabular data'
+                'default': 64,
+                'description': 'Latent space dimensionality (upper bound tightened for 1k–5k rows)'
             },
             'dropout_rate': {
                 'type': 'float',
                 'low': 0.0,
-                'high': 0.5,
+                'high': 0.3,
                 'default': 0.1,
-                'description': 'Dropout rate for regularization - 0.1 prevents overfitting without hurting performance'
+                'description': 'Dropout rate (upper bound tightened; too much dropout can underfit small tabular data)'
             }
         }
+
     
     def save_model(self, path: str) -> None:
         """

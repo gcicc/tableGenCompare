@@ -290,7 +290,8 @@ def _create_model_objective(
                 model_name,
                 params,
                 categorical_columns,
-                target_column
+                target_column,
+                data
             )
 
             # Train model
@@ -330,7 +331,8 @@ def _get_train_kwargs(
     model_name: str,
     params: Dict[str, Any],
     categorical_columns: List[str],
-    target_column: str
+    target_column: str,
+    data: pd.DataFrame = None
 ) -> Dict[str, Any]:
     """
     Convert search space parameters to model training kwargs.
@@ -338,6 +340,12 @@ def _get_train_kwargs(
     Different models expect different parameter names and structures.
     """
     model_name = model_name.lower()
+
+    # Filter to only columns that exist in the data (handles one-hot encoding cases)
+    if data is not None:
+        existing_columns = set(data.columns)
+        categorical_columns = [col for col in categorical_columns if col in existing_columns]
+
     kwargs = {}
 
     # Common parameters that most models accept

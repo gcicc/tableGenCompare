@@ -250,41 +250,49 @@ class CTABGANModel(SyntheticDataModel):
     def get_hyperparameter_space(self) -> Dict[str, Dict[str, Any]]:
         """
         Get the hyperparameter search space for CTAB-GAN optimization.
-        
-        Returns:
-            Dictionary defining hyperparameter search space
+    
+        IMPORTANT (to avoid impacting the code base):
+          - Keys are unchanged.
+          - Structure/fields are unchanged (no new keys added).
+          - Updates are only to ranges/choices/descriptions to better fit 1k–5k row datasets.
+    
+        Practical guidance for 1k–5k rows:
+          - batch_size: include 32; 500 is often too large for ~1k rows.
+          - class_dim: very large embeddings can overfit small data; include a smaller 64 option.
+          - epochs: avoid extremely high epoch counts unless you have early stopping/pruning.
+          - num_channels: keep modest on small datasets.
         """
         return {
             "epochs": {
                 "type": "int",
-                "low": 100,
-                "high": 1000,
+                "low": 200,
+                "high": 800,
                 "step": 50,
-                "description": "Number of training epochs"
+                "description": "Number of training epochs (tuned for 1k–5k rows; consider pruning/early stopping)"
             },
             "batch_size": {
                 "type": "categorical",
-                "choices": [64, 128, 256, 500],
-                "description": "Training batch size"
+                "choices": [32, 64, 128, 256, 500],
+                "description": "Training batch size (for 1k–5k rows: 32–256 preferred; 500 only if N is comfortably >500)"
             },
             "class_dim": {
                 "type": "categorical",
-                "choices": [128, 256, 512],
-                "description": "Class embedding dimension"
+                "choices": [64, 128, 256, 512],
+                "description": "Class embedding dimension (64/128 often sufficient on small data; larger can overfit)"
             },
             "random_dim": {
                 "type": "int",
                 "low": 50,
                 "high": 200,
                 "step": 25,
-                "description": "Random noise dimension"
+                "description": "Random noise dimension (keep moderate on small datasets)"
             },
             "num_channels": {
                 "type": "int",
                 "low": 32,
                 "high": 128,
                 "step": 16,
-                "description": "Number of channels in generator/discriminator"
+                "description": "Number of channels in generator/discriminator (upper bound ok; prefer lower-mid range for 1k–5k rows)"
             }
         }
     

@@ -3,14 +3,17 @@ Batch evaluation functions for trained models.
 
 Migrated from setup.py (Phase 4, Task 4.3) - streamlining setup.py
 Unified evaluation function for both Section 3 and Section 5 trained models.
+Now integrates SDAC tabular metrics for unified output.
 """
 
 import os
+import numpy as np
 import pandas as pd
 
 # Import required evaluation functions
 from src.evaluation.quality import evaluate_synthetic_data_quality
 from src.evaluation.trts import comprehensive_trts_analysis
+from src.evaluation.sdac_metrics import compute_sdac_tabular_metrics
 from src.visualization.section5 import create_trts_visualizations
 from src.visualization.section4 import create_optuna_visualizations, create_all_models_optuna_summary
 from src.utils.paths import get_results_path
@@ -18,11 +21,14 @@ from src.data.target_integrity import sanitize_synthetic_data, sanitize_numeric
 
 
 def evaluate_trained_models(section_number, variable_pattern, scope=None, models_to_evaluate=None,
-                           real_data=None, target_col=None):
+                           real_data=None, target_col=None,
+                           protected_col=None, compute_mia=False):
     """
     Unified evaluation function for both Section 3 and Section 5 trained models.
     Replaces both evaluate_all_available_models and evaluate_section5_optimized_models
     to ensure 1:1 output correspondence and reduce code duplication.
+
+    Now produces a unified sdac_evaluation_summary.csv with all SDAC metrics.
 
     Parameters:
     - section_number: Section number for file organization (3, 5, etc.)
@@ -33,6 +39,8 @@ def evaluate_trained_models(section_number, variable_pattern, scope=None, models
     - models_to_evaluate: List of specific models to evaluate (optional, evaluates all if None)
     - real_data: Real dataset (uses 'data' from scope if not provided)
     - target_col: Target column name (uses 'target_column' from scope if not provided)
+    - protected_col: Protected attribute column for fairness metrics (None = skip fairness)
+    - compute_mia: Whether to run MIA evaluation (expensive, default False)
 
     Returns:
     - Dictionary with comprehensive results for each evaluated model
@@ -100,6 +108,8 @@ def evaluate_trained_models(section_number, variable_pattern, scope=None, models
     print("=" * 60)
     print(f"[INFO] Dataset: {dataset_id}")
     print(f"[INFO] Target column: {target_col}")
+    print(f"[INFO] Protected column: {protected_col or 'None (fairness metrics skipped)'}")
+    print(f"[INFO] MIA evaluation: {'ON' if compute_mia else 'OFF'}")
     print(f"[INFO] Variable pattern: {variable_pattern}")
     print(f"[INFO] Found {len(available_models)} trained models:")
     for model_name in available_models.keys():
@@ -115,14 +125,13 @@ def evaluate_trained_models(section_number, variable_pattern, scope=None, models
 
     # Evaluate each available model using comprehensive evaluation
     evaluation_results = {}
+    sdac_rows = []  # Collect SDAC rows for unified CSV
 
     for model_name, synthetic_data in available_models.items():
         print(f"\n{'='*20} EVALUATING {model_name} {'='*20}")
 
         try:
             # DEFENSIVE: Sanitize synthetic data before evaluation
-            # This handles inf/-inf, NaN, and target schema issues that may have
-            # slipped through model-level sanitization
             sanitized_synthetic = sanitize_synthetic_data(
                 real_df=real_data,
                 synth_df=synthetic_data,
@@ -131,7 +140,7 @@ def evaluate_trained_models(section_number, variable_pattern, scope=None, models
                 verbose=False
             )
 
-            # Use the comprehensive evaluation function for consistency
+            # Use the comprehensive evaluation function for per-model plots
             results = evaluate_synthetic_data_quality(
                 real_data=real_data,
                 synthetic_data=sanitized_synthetic,
@@ -140,10 +149,24 @@ def evaluate_trained_models(section_number, variable_pattern, scope=None, models
                 section_number=section_number,
                 dataset_identifier=dataset_id,
                 save_files=True,
-                display_plots=False,  # File-only mode for batch processing
+                display_plots=False,
                 verbose=True
             )
 
+            # Compute SDAC metrics for this model
+            print(f"\n[SDAC] Computing SDAC metrics for {model_name}...")
+            sdac_row = compute_sdac_tabular_metrics(
+                real_df=real_data,
+                synthetic_df=sanitized_synthetic,
+                target_col=target_col,
+                protected_col=protected_col,
+                compute_mia=compute_mia,
+                verbose=True
+            )
+            sdac_row['Model'] = model_name
+            sdac_rows.append(sdac_row)
+
+            results['sdac_metrics'] = sdac_row
             evaluation_results[model_name] = results
             print(f"[OK] {model_name} evaluation completed successfully!")
 
@@ -165,33 +188,31 @@ def evaluate_trained_models(section_number, variable_pattern, scope=None, models
         else:
             print(f"{model_name:<15} {'ERROR':<15} {'FAILED':<12} {'0':<8}")
 
-    # Save comparison summary
-    if evaluation_results:
+    # Save unified SDAC evaluation summary (replaces batch_evaluation_summary.csv)
+    if sdac_rows:
         try:
-            summary_data = []
-            for model_name, results in evaluation_results.items():
-                if 'error' not in results:
-                    summary_data.append({
-                        'Model': model_name,
-                        'Section': section_number,
-                        'Variable_Pattern': variable_pattern,
-                        'Quality_Score': results.get('overall_quality_score', 0),
-                        'Quality_Assessment': results.get('quality_assessment', 'Unknown'),
-                        'Statistical_Similarity': results.get('avg_statistical_similarity', 'N/A'),
-                        'PCA_Similarity': results.get('overall_pca_similarity', 'N/A'),
-                        'Files_Generated': len(results.get('files_generated', []))
-                    })
+            sdac_df = pd.DataFrame(sdac_rows)
+            # Reorder so Model is first column
+            cols = ['Model'] + [c for c in sdac_df.columns if c != 'Model']
+            sdac_df = sdac_df[cols]
 
-            if summary_data:
-                summary_df = pd.DataFrame(summary_data)
-                summary_path = get_results_path(dataset_id, section_number)
-                os.makedirs(summary_path, exist_ok=True)
-                summary_file = f"{summary_path}/batch_evaluation_summary.csv"
-                summary_df.to_csv(summary_file, index=False)
-                print(f"\n[CHART] Batch summary saved to: {summary_file}")
+            summary_path = get_results_path(dataset_id, section_number)
+            os.makedirs(summary_path, exist_ok=True)
+            sdac_file = f"{summary_path}/sdac_evaluation_summary.csv"
+            sdac_df.to_csv(sdac_file, index=False)
+            print(f"\n[SDAC] SDAC evaluation summary saved to: {sdac_file}")
+
+            # Print SDAC summary table
+            print(f"\n{'='*25} SDAC METRICS SUMMARY {'='*25}")
+            # Show key metrics per category
+            key_cols = ['Model', 'Privacy_Score', 'Fidelity_JSD', 'Fidelity_Detection_AUC',
+                       'Utility_ML_Efficacy', 'XAI_Feat_Imp_Corr']
+            available_key_cols = [c for c in key_cols if c in sdac_df.columns]
+            if available_key_cols:
+                print(sdac_df[available_key_cols].to_string(index=False, float_format='%.4f'))
 
         except Exception as e:
-            print(f"[WARNING] Could not save batch summary: {e}")
+            print(f"[WARNING] Could not save SDAC summary: {e}")
 
     # SECTION 4 OPTUNA VISUALIZATIONS
     # Automatically detect and visualize Optuna studies if present
@@ -348,8 +369,6 @@ def evaluate_trained_models(section_number, variable_pattern, scope=None, models
                     print(f"   - Total scenarios tested: {stats.get('total_scenarios_tested', 0)}")
 
                 # Phase 3: Generate privacy analysis dashboard
-                # Privacy metrics already calculated in comprehensive_trts_analysis()
-                # Check if any model has privacy metrics
                 has_privacy_metrics = any(
                     'privacy' in model_results
                     for model_results in trts_results.values()
@@ -425,6 +444,37 @@ def evaluate_trained_models(section_number, variable_pattern, scope=None, models
                         if 'files_generated' not in evaluation_results[model_name]:
                             evaluation_results[model_name]['files_generated'] = []
                         evaluation_results[model_name]['files_generated'].extend(curve_paths)
+
+                # SDAC Visualizations (radar chart + heatmap)
+                try:
+                    from src.visualization.section5 import create_sdac_radar_chart, create_sdac_heatmap
+
+                    if sdac_rows:
+                        sdac_viz_df = pd.DataFrame(sdac_rows)
+                        radar_path = create_sdac_radar_chart(
+                            sdac_df=sdac_viz_df,
+                            results_dir=results_dir,
+                            dataset_name=f"{dataset_display_name}{suffix}",
+                            save_files=True,
+                            display_plots=False,
+                            verbose=True
+                        )
+                        heatmap_path = create_sdac_heatmap(
+                            sdac_df=sdac_viz_df,
+                            results_dir=results_dir,
+                            dataset_name=f"{dataset_display_name}{suffix}",
+                            save_files=True,
+                            display_plots=False,
+                            verbose=True
+                        )
+                        for p in [radar_path, heatmap_path]:
+                            if p:
+                                for model_name in evaluation_results:
+                                    if 'files_generated' not in evaluation_results[model_name]:
+                                        evaluation_results[model_name]['files_generated'] = []
+                                    evaluation_results[model_name]['files_generated'].append(p)
+                except Exception as e:
+                    print(f"[WARNING] SDAC visualizations failed: {e}")
 
             except Exception as e:
                 print(f"[ERROR] TRTS visualization failed: {e}")

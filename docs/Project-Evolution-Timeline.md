@@ -610,6 +610,88 @@ results = evaluate_all_available_models(
 
 ---
 
+### Phase 7: SDAC Framework Adoption — February 2026
+
+**Timeline:** February 26, 2026
+
+**Environment:** AWS SageMaker
+
+**Status:** Active 🟢
+
+#### Key Achievement
+
+**Adopted the SEARCH Consortium's SDAC (Synthetic Data Anonymity and Credibility) framework as the unified evaluation taxonomy, expanding from 3 evaluation dimensions to 5.**
+
+---
+
+#### A. SDAC Evaluation Framework
+
+**Aligned all evaluation output to the SDAC taxonomy with 5 dimensions:**
+
+| SDAC Dimension | Metrics | Module |
+|---|---|---|
+| **Privacy** | DCR, NNDR, IMS, Re-identification Risk, MIA AUC | `src/evaluation/privacy.py` |
+| **Fidelity** | JSD, KS Statistic, KL Divergence, Wasserstein Distance, Detection AUC, Correlation Similarity, Contingency Similarity | `src/evaluation/fidelity.py` |
+| **Utility** | TSTR (Accuracy, F1, AUROC) across XGBoost/RF/LR, ML Efficacy, SRA | `src/evaluation/sdac_metrics.py` |
+| **Fairness** | Demographic Parity Difference, Equalized Odds Difference, Disparate Impact Ratio | `src/evaluation/fairness.py` |
+| **XAI** | Feature Importance Correlation, SHAP Distance | `src/evaluation/xai_metrics.py` |
+
+**Unified orchestrator:** `src/evaluation/sdac_metrics.py` — single function call computes all 5 dimensions and outputs `sdac_evaluation_summary.csv`.
+
+---
+
+#### B. XGBoost as Primary Classifier
+
+**Replaced Random Forest with XGBoost as the primary classifier throughout the evaluation pipeline.**
+
+- TRTS framework (`src/evaluation/trts.py`): XGBoost runs all 4 scenarios (TRTR, TRTS, TSTR, TSTS) as primary; RF as secondary under `*_RF` keys
+- SDAC Utility metrics: XGBoost-based TSTR accuracy/F1/AUROC as headline metrics
+- Falls back to RF-only if XGBoost is not installed
+
+---
+
+#### C. New Evaluation Modules
+
+| File | Description |
+|---|---|
+| `src/evaluation/sdac_metrics.py` | Unified SDAC orchestrator |
+| `src/evaluation/fidelity.py` | KS, KL, Wasserstein, Detection AUC, Contingency Similarity |
+| `src/evaluation/fairness.py` | Demographic Parity, Equalized Odds, Disparate Impact |
+| `src/evaluation/xai_metrics.py` | Feature Importance Correlation, SHAP Distance |
+
+---
+
+#### D. New Visualizations
+
+- **SDAC Radar Chart** — composite score per SDAC dimension, one trace per model
+- **SDAC Heatmap** — models × metrics grid with per-column normalization, color-coded by SDAC category
+
+---
+
+#### E. Batch Pipeline Integration
+
+- `evaluate_trained_models()` accepts `protected_col` and `compute_mia` parameters
+- Section 3 runs with `compute_mia=False` (fast demo)
+- Section 5.2 runs with `compute_mia=True` (full SDAC evaluation on optimized models)
+- Fairness columns are NaN when `protected_col` is not specified
+
+---
+
+### Phase 7 Summary Statistics
+
+#### Evaluation Expansion
+- **Dimensions:** 3 (Privacy, Fidelity, Utility) → 5 (+Fairness, +XAI)
+- **New modules:** 4 (sdac_metrics.py, fidelity.py, fairness.py, xai_metrics.py)
+- **New metrics:** 12+ (KS, KL, WD, Detection AUC, Contingency Sim, Dem Parity, Eq Odds, Disp Impact, Feature Imp Corr, SHAP Dist, SRA, MIA AUC)
+- **Primary classifier:** Random Forest → XGBoost
+
+#### Output Changes
+- **Replaced:** Scattered CSVs (`batch_evaluation_summary.csv`, `privacy_summary.csv`)
+- **New:** Unified `sdac_evaluation_summary.csv` with SDAC category-prefixed columns
+- **Retained:** `trts_detailed_results.csv` for drill-down analysis
+
+---
+
 ## Development Philosophy Evolution
 
 ### old-main → AWS_Round1: **"Make it work in the cloud"**
@@ -708,6 +790,8 @@ git checkout v1.0-old-main  # or v2.0-aws-round1, v3.0-legacy-main
 
 - [x] Resolve 3-model limitation in AWS environment (expanded to 8 models)
 - [x] Add differential privacy mechanisms (PATE-GAN implementation)
+- [x] Adopt SDAC evaluation framework (5-dimension taxonomy)
+- [x] XGBoost as primary classifier throughout pipeline
 - [ ] Expand to additional healthcare datasets
 - [ ] Implement automated quality gates
 
@@ -778,9 +862,9 @@ For questions about this project evolution or technical details:
 
 ---
 
-**Document Version:** 2.0
-**Last Updated:** January 23, 2026
+**Document Version:** 3.0
+**Last Updated:** February 26, 2026
 **Current Active Branch:** main
 **Production Branch:** main
 **Archived Tags:** v1.0-old-main, v2.0-aws-round1, v3.0-legacy-main
-**Framework Version:** 5.0 (8-Model Architecture)
+**Framework Version:** 7.0 (SDAC Evaluation Framework)
