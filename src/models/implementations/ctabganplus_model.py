@@ -296,50 +296,54 @@ class CTABGANPlusModel(SyntheticDataModel):
     def get_hyperparameter_space(self) -> Dict[str, Dict[str, Any]]:
         """
         Get the hyperparameter search space for CTAB-GAN+ optimization.
-        
-        Returns:
-            Dictionary defining hyperparameter search space (enhanced from CTAB-GAN)
+        Practical guidance for 1k–5k rows:
+          - batch_size: include smaller values; 512 can be too large for ~1k rows.
+          - class_dim / num_channels: very large values can overfit small tabular data and slow training.
+          - random_dim: extremely large noise vectors rarely help on small data; keep moderate.
+          - epochs: very high epochs can overfit; keep a sane upper bound and rely on pruning/early stopping if possible.
+          - test_ratio: with 1k rows, 0.3 leaves little training data; keep closer to 0.1–0.2.
         """
         return {
             "epochs": {
                 "type": "int",
-                "low": 150,  # Higher minimum for better stability
-                "high": 1200,  # Higher maximum for enhanced performance
+                "low": 200,
+                "high": 800,
                 "step": 50,
-                "description": "Number of training epochs (enhanced range)"
+                "description": "Number of training epochs (tuned for 1k–5k rows; consider pruning/early stopping)"
             },
             "batch_size": {
                 "type": "categorical",
-                "choices": [64, 128, 256, 512],  # Additional batch size option
-                "description": "Training batch size"
+                "choices": [32, 64, 128, 256, 512],
+                "description": "Training batch size (for 1k–5k rows: 32–256 preferred; 512 only if N is large enough)"
             },
             "class_dim": {
                 "type": "categorical",
-                "choices": [128, 256, 512, 1024],  # Higher dimension option
-                "description": "Class embedding dimension (enhanced)"
+                "choices": [64, 128, 256, 512],
+                "description": "Class embedding dimension (for small data, 128–256 often sufficient; very large can overfit)"
             },
             "random_dim": {
                 "type": "int",
                 "low": 50,
-                "high": 250,  # Higher range for more noise diversity
+                "high": 200,
                 "step": 25,
-                "description": "Random noise dimension (enhanced)"
+                "description": "Random noise dimension (moderate range for 1k–5k rows; higher isn't always better)"
             },
             "num_channels": {
                 "type": "int",
                 "low": 32,
-                "high": 256,  # Higher maximum for complex data
+                "high": 192,
                 "step": 32,
-                "description": "Number of channels in generator/discriminator (enhanced)"
+                "description": "Number of channels in generator/discriminator (cap tightened to reduce overfitting on small data)"
             },
             "test_ratio": {
                 "type": "float",
                 "low": 0.1,
-                "high": 0.3,
+                "high": 0.2,
                 "step": 0.05,
-                "description": "Test data ratio for validation"
+                "description": "Test data ratio for validation (for 1k rows, keep holdout modest to preserve training signal)"
             }
         }
+
     
     def save_model(self, path: str) -> None:
         """

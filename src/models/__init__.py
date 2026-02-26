@@ -30,6 +30,17 @@ from .batch_optimization import (
     extract_studies_to_globals,
 )
 
+# Staged optimization (Phase 5 - February 2026)
+from .staged_optimization import (
+    StagedOptimizationConfig,
+    ModelOptimizationState,
+    TrialTimeTracker,
+    ConvergenceAnalyzer,
+    StudyPersistence,
+    ConciseTrialCallback,
+    StagedOptimizationManager,
+)
+
 __all__ = [
     # Base classes
     "SyntheticDataModel",
@@ -44,4 +55,12 @@ __all__ = [
     # Batch optimization
     "optimize_models_batch",
     "extract_studies_to_globals",
+    # Staged optimization
+    "StagedOptimizationConfig",
+    "ModelOptimizationState",
+    "TrialTimeTracker",
+    "ConvergenceAnalyzer",
+    "StudyPersistence",
+    "ConciseTrialCallback",
+    "StagedOptimizationManager",
 ]

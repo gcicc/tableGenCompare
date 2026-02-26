@@ -9,6 +9,82 @@ import pandas as pd
 import numpy as np
 from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import roc_auc_score
+from sklearn.preprocessing import LabelEncoder
+
+
+def compute_mia_auc(real_df, synth_df, target_col=None, verbose=True):
+    """
+    Membership Inference Attack (MIA) AUC via shadow-model approach.
+
+    Trains a classifier to predict whether a record was in the training set
+    (real data) or not (synthetic data used as out-of-distribution proxy).
+    AUC close to 0.5 means the synthetic data does not leak membership info.
+    AUC close to 1.0 means high privacy risk.
+
+    Parameters
+    ----------
+    real_df, synth_df : pd.DataFrame
+    target_col : str, optional
+        Target column to exclude from features.
+    verbose : bool
+
+    Returns
+    -------
+    dict : {'MIA_AUC': float}
+    """
+    try:
+        # Prepare features
+        numeric_cols = real_df.select_dtypes(include=[np.number]).columns.tolist()
+        if target_col and target_col in numeric_cols:
+            numeric_cols.remove(target_col)
+        common = [c for c in numeric_cols if c in synth_df.columns]
+
+        if len(common) < 1:
+            return {'MIA_AUC': np.nan}
+
+        X_real = real_df[common].fillna(0).values
+        X_synth = synth_df[common].fillna(0).values
+
+        # Balance datasets
+        n = min(len(X_real), len(X_synth))
+        if n < 30:
+            if verbose:
+                print("   [MIA] Not enough records for MIA evaluation")
+            return {'MIA_AUC': np.nan}
+
+        X_real_sub = X_real[:n]
+        X_synth_sub = X_synth[:n]
+
+        # Label: 1 = member (real), 0 = non-member (synthetic)
+        X = np.vstack([X_real_sub, X_synth_sub])
+        y = np.array([1] * n + [0] * n)
+
+        # Standardize
+        scaler = StandardScaler()
+        X_scaled = scaler.fit_transform(X)
+
+        # Shadow model: train/test split
+        X_train, X_test, y_train, y_test = train_test_split(
+            X_scaled, y, test_size=0.3, random_state=42, stratify=y
+        )
+
+        clf = RandomForestClassifier(n_estimators=100, random_state=42, max_depth=10)
+        clf.fit(X_train, y_train)
+        y_proba = clf.predict_proba(X_test)[:, 1]
+        mia_auc = roc_auc_score(y_test, y_proba)
+
+        if verbose:
+            print(f"   [MIA] Membership Inference Attack AUC: {mia_auc:.4f}")
+
+        return {'MIA_AUC': float(mia_auc)}
+
+    except Exception as e:
+        if verbose:
+            print(f"   [MIA] MIA evaluation failed: {e}")
+        return {'MIA_AUC': np.nan}
 
 
 def calculate_privacy_metrics(real_data, synthetic_data, target_column=None,

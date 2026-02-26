@@ -157,11 +157,15 @@ The STG-Driver notebook follows a standardized 5-section pipeline:
 - Performance evaluation using enhanced objective functions
 - Batch training with comprehensive logging
 
-### Section 5: Model Evaluation and Comparison
+### Section 5: Model Evaluation and Comparison (SDAC Framework)
 - Synthetic data generation using best parameters
-- Statistical fidelity and utility preservation analysis
-- Privacy risk assessment
-- Cross-model performance comparison and visualization
+- **SDAC-aligned evaluation** across 5 dimensions: Privacy, Fidelity, Utility, Fairness, XAI
+- Privacy risk assessment (DCR, NNDR, MIA, memorization, re-identification)
+- Fidelity analysis (JSD, KS, KL, Wasserstein, Detection AUC)
+- Utility preservation (TSTR with XGBoost/RF/LR, ML Efficacy, SRA)
+- Fairness metrics (Demographic Parity, Equalized Odds, Disparate Impact)
+- XAI metrics (Feature Importance Correlation, SHAP Distance)
+- Cross-model comparison via SDAC radar chart and heatmap
 
 ---
 
@@ -179,7 +183,15 @@ tableGenCompare/
 │   ├── config.py         # Session management
 │   ├── models/           # Model implementations
 │   ├── data/             # Data preprocessing
-│   ├── evaluation/       # Quality, TRTS, privacy metrics
+│   ├── evaluation/       # SDAC evaluation framework
+│   │   ├── sdac_metrics.py  # Unified SDAC orchestrator
+│   │   ├── quality.py       # Statistical fidelity
+│   │   ├── fidelity.py      # KS, KL, WD, Detection AUC
+│   │   ├── trts.py          # TRTS framework (XGBoost primary)
+│   │   ├── privacy.py       # DCR, NNDR, MIA, memorization
+│   │   ├── fairness.py      # Demographic parity, equalized odds
+│   │   ├── xai_metrics.py   # Feature importance, SHAP distance
+│   │   └── batch.py         # Batch evaluation pipeline
 │   ├── objective/        # Optuna objective functions
 │   ├── visualization/    # Section-specific visualizations
 │   └── utils/            # Utility functions
@@ -198,10 +210,13 @@ All notebooks use `from setup import *` without changes - the thin re-export lay
 
 ## Key Features
 
+- **SDAC Framework:** Evaluation aligned to the SEARCH Consortium's Synthetic Data Anonymity and Credibility (SDAC) taxonomy across 5 dimensions — Privacy, Fidelity, Utility, Fairness, XAI
+- **Unified SDAC output:** Single `sdac_evaluation_summary.csv` with all metrics organized by SDAC category
+- **XGBoost-primary classifiers:** XGBoost as default classifier across TSTR and utility evaluation, with RF and LR as secondary
 - **30+ evaluation metrics:** Comprehensive TRTS analysis with statistical fidelity, utility, and privacy metrics
 - **Automated batch training:** Single function call handles multi-model hyperparameter optimization
-- **Privacy dashboard:** DCR, NNDR, memorization risk, and re-identification assessment
-- **Advanced visualizations:** ROC curves, PR curves, calibration plots, PCA comparisons
+- **Privacy dashboard:** DCR, NNDR, MIA AUC, memorization risk, and re-identification assessment
+- **Advanced visualizations:** SDAC radar chart, SDAC heatmap, ROC curves, PR curves, calibration plots, PCA comparisons
 - **Optuna integration:** Bayesian optimization with automatic visualization generation
 
 ---
@@ -218,6 +233,7 @@ All notebooks use `from setup import *` without changes - the thin re-export lay
 - pandas, numpy, scipy
 - torch (PyTorch)
 - scikit-learn >= 1.7.2
+- xgboost == 2.1.3
 - sdv >= 1.32.1 (includes CTGAN, CopulaGAN, TVAE)
 - dython >= 0.7.12
 - optuna >= 4.0.0

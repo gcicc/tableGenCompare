@@ -3,6 +3,7 @@ TRTS (Train Real Test Synthetic) Analysis Functions
 
 This module contains functions for comprehensive TRTS analysis,
 including expanded classification metrics (15+) and privacy-aware evaluation.
+Runs both RandomForest and XGBoost classifiers for each scenario.
 """
 
 import time
@@ -15,10 +16,17 @@ from sklearn.metrics import (
     precision_recall_fscore_support,
     matthews_corrcoef, cohen_kappa_score,
     roc_auc_score, average_precision_score,
-    confusion_matrix, brier_score_loss  # Phase 3: For probability calibration metric
+    confusion_matrix, brier_score_loss
 )
 from sklearn.preprocessing import LabelEncoder, label_binarize
 from .privacy import calculate_privacy_metrics
+
+# Try to import XGBoost
+try:
+    from xgboost import XGBClassifier
+    XGBOOST_AVAILABLE = True
+except ImportError:
+    XGBOOST_AVAILABLE = False
 
 
 def calculate_comprehensive_classification_metrics(y_true, y_pred, y_pred_proba=None, verbose=False):
@@ -130,7 +138,7 @@ def calculate_comprehensive_classification_metrics(y_true, y_pred, y_pred_proba=
         # Youden's J Statistic = Sensitivity + Specificity - 1
         youden_j = recall + specificity - 1
 
-        # Fowlkes–Mallows Index = sqrt(Precision × Recall)
+        # Fowlkes-Mallows Index = sqrt(Precision x Recall)
         fmi = np.sqrt(precision * recall) if (precision > 0 and recall > 0) else 0
 
         # F-beta scores (beta=0.5 precision-weighted, beta=2.0 recall-weighted)
@@ -295,6 +303,66 @@ def calculate_comprehensive_classification_metrics(y_true, y_pred, y_pred_proba=
         }
 
 
+def _run_scenario(clf, X_train, y_train, X_test, y_test, scenario_name,
+                  store_predictions=False, verbose=True, clf_label="RF"):
+    """
+    Run a single TRTS scenario with a given classifier.
+
+    Parameters
+    ----------
+    clf : sklearn-compatible classifier
+    X_train, y_train : training data
+    X_test, y_test : test data
+    scenario_name : str
+        Human-readable scenario name
+    store_predictions : bool
+    verbose : bool
+    clf_label : str
+        Classifier label for logging (e.g., "RF", "XGB")
+
+    Returns
+    -------
+    dict : scenario results with metrics, timing, and optional predictions
+    """
+    start_time = time.time()
+    try:
+        clf.fit(X_train, y_train)
+        y_pred = clf.predict(X_test)
+        y_pred_proba = clf.predict_proba(X_test) if hasattr(clf, 'predict_proba') else None
+        elapsed = time.time() - start_time
+
+        metrics = calculate_comprehensive_classification_metrics(
+            y_test, y_pred, y_pred_proba, verbose=verbose
+        )
+
+        result = {
+            'scenario': scenario_name,
+            'status': 'success',
+            'training_time': elapsed,
+            **metrics
+        }
+
+        if store_predictions:
+            result['predictions'] = {
+                'y_true': np.array(y_test).copy(),
+                'y_pred': y_pred.copy(),
+                'y_pred_proba': y_pred_proba.copy() if y_pred_proba is not None else None,
+                'classes': clf.classes_.tolist() if hasattr(clf, 'classes_') else []
+            }
+
+        if verbose:
+            print(f"   [{clf_label}] Accuracy: {metrics['accuracy']:.4f} | "
+                  f"Balanced Acc: {metrics['balanced_accuracy']:.4f} | "
+                  f"MCC: {metrics['mcc']:.4f} (Time: {elapsed:.3f}s)")
+
+        return result
+
+    except Exception as e:
+        if verbose:
+            print(f"   [{clf_label}] {scenario_name} failed: {e}")
+        return {'accuracy': 0.0, 'error': str(e), 'status': 'failed'}
+
+
 def comprehensive_trts_analysis(real_data, synthetic_data, target_column,
                                test_size=0.2, random_state=42, n_estimators=100,
                                verbose=True, store_predictions=False):
@@ -305,8 +373,10 @@ def comprehensive_trts_analysis(real_data, synthetic_data, target_column,
     - TSTR: Train Synthetic, Test Real
     - TSTS: Train Synthetic, Test Synthetic
 
-    Enhanced with comprehensive classification metrics (balanced accuracy, precision,
-    recall, F1, specificity, sensitivity, NPV, FPR, FNR, MCC, Cohen's Kappa, AUROC, AUPRC).
+    Runs both XGBoost (primary) and RandomForest for each scenario.
+    XGB results are stored as primary keys (TRTR, TRTS, TSTR, TSTS).
+    RF results are stored under '{SCENARIO}_RF' keys.
+    Falls back to RF as primary if XGBoost is not available.
 
     Parameters:
     -----------
@@ -321,7 +391,7 @@ def comprehensive_trts_analysis(real_data, synthetic_data, target_column,
     random_state : int
         Random seed for reproducibility
     n_estimators : int
-        Number of trees in RandomForest
+        Number of trees in RandomForest / XGBoost
     verbose : bool
         Print detailed results
     store_predictions : bool, default=False
@@ -332,12 +402,18 @@ def comprehensive_trts_analysis(real_data, synthetic_data, target_column,
     Returns:
     --------
     dict : Dictionary with detailed TRTS results including 15+ metrics per scenario.
+          Primary (XGB if available, else RF) under TRTR/TRTS/TSTR/TSTS keys.
+          Secondary under TRTR_RF/TRTS_RF/TSTR_RF/TSTS_RF keys (or _XGB if RF is primary).
           If store_predictions=True, each scenario dict also contains 'predictions' key
           with y_true, y_pred, y_pred_proba, and class labels.
     """
     if verbose:
-        print("[ANALYSIS] COMPREHENSIVE TRTS FRAMEWORK ANALYSIS (15+ Metrics)")
+        print("[ANALYSIS] COMPREHENSIVE TRTS FRAMEWORK ANALYSIS (RF + XGBoost)")
         print("=" * 60)
+        if XGBOOST_AVAILABLE:
+            print("   [OK] XGBoost available - running dual-classifier analysis")
+        else:
+            print("   [WARNING] XGBoost not available - running RF only")
 
     # Prepare data
     X_real = real_data.drop(columns=[target_column])
@@ -397,168 +473,55 @@ def comprehensive_trts_analysis(real_data, synthetic_data, target_column,
 
     results = {}
 
-    # SCENARIO 1: TRTR - Train Real, Test Real (Baseline)
-    if verbose:
-        print(f"\n[PROCESS] 1. TRTR - Train Real, Test Real (Baseline)")
+    # Define the 4 TRTS scenarios
+    scenarios = [
+        ('TRTR', 'Train Real, Test Real',
+         X_real_train, y_real_train, X_real_test, y_real_test),
+        ('TRTS', 'Train Real, Test Synthetic',
+         X_real_train, y_real_train, X_synth_test, y_synth_test),
+        ('TSTR', 'Train Synthetic, Test Real',
+         X_synth_train, y_synth_train, X_real_test, y_real_test),
+        ('TSTS', 'Train Synthetic, Test Synthetic',
+         X_synth_train, y_synth_train, X_synth_test, y_synth_test),
+    ]
 
-    start_time = time.time()
-    try:
-        rf_trtr = RandomForestClassifier(n_estimators=n_estimators, random_state=random_state, max_depth=10)
-        rf_trtr.fit(X_real_train, y_real_train)
-        pred_trtr = rf_trtr.predict(X_real_test)
-        pred_proba_trtr = rf_trtr.predict_proba(X_real_test)
-        trtr_time = time.time() - start_time
-
-        # Calculate comprehensive metrics
-        metrics = calculate_comprehensive_classification_metrics(
-            y_real_test, pred_trtr, pred_proba_trtr, verbose=verbose
-        )
-
-        results['TRTR'] = {
-            'scenario': 'Train Real, Test Real',
-            'status': 'success',
-            'training_time': trtr_time,
-            **metrics  # Unpack all 15+ metrics
-        }
-
-        # Phase 1: Conditionally store predictions for curve generation
-        if store_predictions:
-            results['TRTR']['predictions'] = {
-                'y_true': y_real_test.copy(),
-                'y_pred': pred_trtr.copy(),
-                'y_pred_proba': pred_proba_trtr.copy() if pred_proba_trtr is not None else None,
-                'classes': rf_trtr.classes_.tolist()
-            }
-
+    for idx, (key, name, X_tr, y_tr, X_te, y_te) in enumerate(scenarios, 1):
         if verbose:
-            print(f"   [OK] TRTR Accuracy: {metrics['accuracy']:.4f} | Balanced Acc: {metrics['balanced_accuracy']:.4f} | MCC: {metrics['mcc']:.4f} (Time: {trtr_time:.3f}s)")
-    except Exception as e:
-        results['TRTR'] = {'accuracy': 0.0, 'error': str(e), 'status': 'failed'}
-        if verbose:
-            print(f"   [ERROR] TRTR failed: {e}")
+            print(f"\n[PROCESS] {idx}. {key} - {name}")
 
-    # SCENARIO 2: TRTS - Train Real, Test Synthetic
-    if verbose:
-        print(f"[PROCESS] 2. TRTS - Train Real, Test Synthetic")
+        if XGBOOST_AVAILABLE:
+            # --- XGBoost (primary) ---
+            xgb = XGBClassifier(
+                n_estimators=n_estimators, random_state=random_state, max_depth=6,
+                eval_metric='logloss', verbosity=0
+            )
+            results[key] = _run_scenario(
+                xgb, X_tr, y_tr, X_te, y_te, name,
+                store_predictions=store_predictions, verbose=verbose, clf_label="XGB"
+            )
 
-    start_time = time.time()
-    try:
-        rf_trts = RandomForestClassifier(n_estimators=n_estimators, random_state=random_state, max_depth=10)
-        rf_trts.fit(X_real_train, y_real_train)
-        pred_trts = rf_trts.predict(X_synth_test)
-        pred_proba_trts = rf_trts.predict_proba(X_synth_test)
-        trts_time = time.time() - start_time
+            # --- RandomForest (secondary) ---
+            rf = RandomForestClassifier(
+                n_estimators=n_estimators, random_state=random_state, max_depth=10
+            )
+            results[f'{key}_RF'] = _run_scenario(
+                rf, X_tr, y_tr, X_te, y_te, name,
+                store_predictions=store_predictions, verbose=verbose, clf_label="RF"
+            )
+        else:
+            # --- RandomForest only (fallback when XGBoost not installed) ---
+            rf = RandomForestClassifier(
+                n_estimators=n_estimators, random_state=random_state, max_depth=10
+            )
+            results[key] = _run_scenario(
+                rf, X_tr, y_tr, X_te, y_te, name,
+                store_predictions=store_predictions, verbose=verbose, clf_label="RF"
+            )
 
-        # Calculate comprehensive metrics
-        metrics = calculate_comprehensive_classification_metrics(
-            y_synth_test, pred_trts, pred_proba_trts, verbose=verbose
-        )
-
-        results['TRTS'] = {
-            'scenario': 'Train Real, Test Synthetic',
-            'status': 'success',
-            'training_time': trts_time,
-            **metrics
-        }
-
-        # Phase 1: Conditionally store predictions for curve generation
-        if store_predictions:
-            results['TRTS']['predictions'] = {
-                'y_true': y_synth_test.copy(),
-                'y_pred': pred_trts.copy(),
-                'y_pred_proba': pred_proba_trts.copy() if pred_proba_trts is not None else None,
-                'classes': rf_trts.classes_.tolist()
-            }
-
-        if verbose:
-            print(f"   [OK] TRTS Accuracy: {metrics['accuracy']:.4f} | Balanced Acc: {metrics['balanced_accuracy']:.4f} | MCC: {metrics['mcc']:.4f} (Time: {trts_time:.3f}s)")
-    except Exception as e:
-        results['TRTS'] = {'accuracy': 0.0, 'error': str(e), 'status': 'failed'}
-        if verbose:
-            print(f"   [ERROR] TRTS failed: {e}")
-
-    # SCENARIO 3: TSTR - Train Synthetic, Test Real
-    if verbose:
-        print(f"[PROCESS] 3. TSTR - Train Synthetic, Test Real")
-
-    start_time = time.time()
-    try:
-        rf_tstr = RandomForestClassifier(n_estimators=n_estimators, random_state=random_state, max_depth=10)
-        rf_tstr.fit(X_synth_train, y_synth_train)
-        pred_tstr = rf_tstr.predict(X_real_test)
-        pred_proba_tstr = rf_tstr.predict_proba(X_real_test)
-        tstr_time = time.time() - start_time
-
-        # Calculate comprehensive metrics
-        metrics = calculate_comprehensive_classification_metrics(
-            y_real_test, pred_tstr, pred_proba_tstr, verbose=verbose
-        )
-
-        results['TSTR'] = {
-            'scenario': 'Train Synthetic, Test Real',
-            'status': 'success',
-            'training_time': tstr_time,
-            **metrics
-        }
-
-        # Phase 1: Conditionally store predictions for curve generation
-        if store_predictions:
-            results['TSTR']['predictions'] = {
-                'y_true': y_real_test.copy(),
-                'y_pred': pred_tstr.copy(),
-                'y_pred_proba': pred_proba_tstr.copy() if pred_proba_tstr is not None else None,
-                'classes': rf_tstr.classes_.tolist()
-            }
-
-        if verbose:
-            print(f"   [OK] TSTR Accuracy: {metrics['accuracy']:.4f} | Balanced Acc: {metrics['balanced_accuracy']:.4f} | MCC: {metrics['mcc']:.4f} (Time: {tstr_time:.3f}s)")
-    except Exception as e:
-        results['TSTR'] = {'accuracy': 0.0, 'error': str(e), 'status': 'failed'}
-        if verbose:
-            print(f"   [ERROR] TSTR failed: {e}")
-
-    # SCENARIO 4: TSTS - Train Synthetic, Test Synthetic
-    if verbose:
-        print(f"[PROCESS] 4. TSTS - Train Synthetic, Test Synthetic")
-
-    start_time = time.time()
-    try:
-        rf_tsts = RandomForestClassifier(n_estimators=n_estimators, random_state=random_state, max_depth=10)
-        rf_tsts.fit(X_synth_train, y_synth_train)
-        pred_tsts = rf_tsts.predict(X_synth_test)
-        pred_proba_tsts = rf_tsts.predict_proba(X_synth_test)
-        tsts_time = time.time() - start_time
-
-        # Calculate comprehensive metrics
-        metrics = calculate_comprehensive_classification_metrics(
-            y_synth_test, pred_tsts, pred_proba_tsts, verbose=verbose
-        )
-
-        results['TSTS'] = {
-            'scenario': 'Train Synthetic, Test Synthetic',
-            'status': 'success',
-            'training_time': tsts_time,
-            **metrics
-        }
-
-        # Phase 1: Conditionally store predictions for curve generation
-        if store_predictions:
-            results['TSTS']['predictions'] = {
-                'y_true': y_synth_test.copy(),
-                'y_pred': pred_tsts.copy(),
-                'y_pred_proba': pred_proba_tsts.copy() if pred_proba_tsts is not None else None,
-                'classes': rf_tsts.classes_.tolist()
-            }
-
-        if verbose:
-            print(f"   [OK] TSTS Accuracy: {metrics['accuracy']:.4f} | Balanced Acc: {metrics['balanced_accuracy']:.4f} | MCC: {metrics['mcc']:.4f} (Time: {tsts_time:.3f}s)")
-    except Exception as e:
-        results['TSTS'] = {'accuracy': 0.0, 'error': str(e), 'status': 'failed'}
-        if verbose:
-            print(f"   [ERROR] TSTS failed: {e}")
-
-    # Calculate summary metrics
-    successful_scenarios = [k for k, v in results.items() if v.get('status') == 'success']
+    # Calculate summary metrics (primary classifier: XGB if available, else RF)
+    primary_scenarios = ['TRTR', 'TRTS', 'TSTR', 'TSTS']
+    primary_label = "XGB" if XGBOOST_AVAILABLE else "RF"
+    successful_scenarios = [k for k in primary_scenarios if results.get(k, {}).get('status') == 'success']
     if successful_scenarios:
         accuracies = [results[k]['accuracy'] for k in successful_scenarios]
         times = [results[k]['training_time'] for k in successful_scenarios]
@@ -568,14 +531,37 @@ def comprehensive_trts_analysis(real_data, synthetic_data, target_column,
             'accuracy_std': np.std(accuracies),
             'total_training_time': sum(times),
             'successful_scenarios': len(successful_scenarios),
-            'baseline_accuracy': results.get('TRTR', {}).get('accuracy', 0.0)
+            'baseline_accuracy': results.get('TRTR', {}).get('accuracy', 0.0),
+            'primary_classifier': primary_label
         }
 
         if verbose:
-            print(f"\n[CHART] Summary Statistics:")
+            print(f"\n[CHART] {primary_label} Summary Statistics (Primary):")
             print(f"   - Successful scenarios: {len(successful_scenarios)}/4")
             print(f"   - Average accuracy: {np.mean(accuracies):.4f} (+/-{np.std(accuracies):.4f})")
             print(f"   - Total training time: {sum(times):.3f}s")
+
+    # Secondary classifier summary (RF when XGB is primary)
+    if XGBOOST_AVAILABLE:
+        rf_scenarios = [f'{k}_RF' for k in primary_scenarios]
+        successful_rf = [k for k in rf_scenarios if results.get(k, {}).get('status') == 'success']
+        if successful_rf:
+            rf_accs = [results[k]['accuracy'] for k in successful_rf]
+            rf_times = [results[k]['training_time'] for k in successful_rf]
+
+            results['summary_rf'] = {
+                'average_accuracy': np.mean(rf_accs),
+                'accuracy_std': np.std(rf_accs),
+                'total_training_time': sum(rf_times),
+                'successful_scenarios': len(successful_rf),
+                'baseline_accuracy': results.get('TRTR_RF', {}).get('accuracy', 0.0)
+            }
+
+            if verbose:
+                print(f"\n[CHART] RF Summary Statistics (Secondary):")
+                print(f"   - Successful scenarios: {len(successful_rf)}/4")
+                print(f"   - Average accuracy: {np.mean(rf_accs):.4f} (+/-{np.std(rf_accs):.4f})")
+                print(f"   - Total training time: {sum(rf_times):.3f}s")
 
     # Calculate privacy metrics
     privacy_metrics = calculate_privacy_metrics(

@@ -353,83 +353,95 @@ class PATEGANModel(SyntheticDataModel):
     def get_hyperparameter_space(self) -> Dict[str, Dict[str, Any]]:
         """
         Get the hyperparameter search space for PATE-GAN optimization.
-
-        Returns:
-            Dictionary defining hyperparameter search space
+        Practical guidance for 1k–5k row datasets:
+          - num_teachers: keep relatively small (too many teachers => too few rows per teacher).
+          - noise_multiplier: widen slightly; privacy/utility trade-off is sensitive.
+          - target_epsilon: recommend fixing per study or enforcing consistency in code (avoid free co-tuning
+            with noise_multiplier unless your accountant ties them together).
         """
         return {
             "epochs": {
                 "type": "int",
-                "low": 100,
-                "high": 500,
+                "low": 200,
+                "high": 400,
                 "step": 50,
                 "default": 300,
-                "description": "Training epochs"
+                "description": "Training epochs (recommend Optuna pruning if available)"
             },
             "batch_size": {
                 "type": "categorical",
                 "choices": [32, 64, 128, 256],
                 "default": 64,
-                "description": "Training batch size"
+                "description": "Training batch size (for 1k–5k rows, 32/64/128 often best; 256 can be too large for 1k)"
             },
             "generator_dim": {
                 "type": "categorical",
                 "choices": [(128, 128), (256, 256), (256, 128), (128, 256, 128)],
                 "default": (256, 256),
-                "description": "Generator hidden layer dimensions"
+                "description": "Generator hidden layer dimensions (smaller options can be more stable on 1k–5k rows)"
             },
             "discriminator_dim": {
                 "type": "categorical",
                 "choices": [(128, 128), (256, 256), (256, 128), (128, 256, 128)],
                 "default": (256, 256),
-                "description": "Discriminator hidden layer dimensions"
+                "description": "Discriminator hidden layer dimensions (consider modest capacity on small data)"
             },
             "generator_lr": {
                 "type": "float",
-                "low": 1e-5,
-                "high": 1e-3,
+                "low": 3e-5,
+                "high": 3e-4,
                 "log": True,
                 "default": 1e-4,
-                "description": "Generator learning rate"
+                "description": "Generator learning rate (narrowed for stability on small datasets)"
             },
             "discriminator_lr": {
                 "type": "float",
-                "low": 1e-5,
-                "high": 1e-3,
+                "low": 3e-5,
+                "high": 3e-4,
                 "log": True,
                 "default": 1e-4,
-                "description": "Discriminator learning rate"
+                "description": "Discriminator learning rate (narrowed for stability; often <= generator_lr helps)"
             },
             "num_teachers": {
                 "type": "int",
                 "low": 5,
-                "high": 50,
-                "step": 5,
-                "default": 10,
-                "description": "Number of teacher discriminators"
+                "high": 10,
+                "step": 1,
+                "default": 5,
+                "description": "Number of teacher discriminators (for 1k–5k rows, keep low so each teacher has enough data)"
             },
+    
+            # Gaussian vote-noise (your chosen approach)
             "noise_multiplier": {
                 "type": "float",
                 "low": 0.5,
-                "high": 2.0,
-                "default": 1.0,
-                "description": "Noise multiplier for privacy"
-            },
-            "target_epsilon": {
-                "type": "float",
-                "low": 0.1,
-                "high": 10.0,
+                "high": 5.0,
                 "log": True,
                 "default": 1.0,
-                "description": "Target privacy epsilon"
+                "description": "Gaussian noise strength for teacher-vote aggregation (higher = more privacy, lower utility)"
             },
+    
+            # Keep this parameter name for compatibility, but prefer fixing per study OR enforcing consistency.
+            "target_epsilon": {
+                "type": "float",
+                "low": 0.5,
+                "high": 16.0,
+                "log": True,
+                "default": 4.0,
+                "description": (
+                    "Target privacy epsilon. Recommendation: fix per study (e.g., 2/4/8) and derive noise in code, "
+                    "or treat epsilon as a constraint/metric—avoid freely co-tuning with noise_multiplier unless enforced."
+                )
+            },
+    
+            # Laplace option (kept for compatibility; should be ignored unless you implement Laplace aggregation)
             "lap_scale": {
                 "type": "float",
                 "low": 0.01,
                 "high": 1.0,
                 "log": True,
                 "default": 0.1,
-                "description": "Laplace noise scale"
+                "description": "Laplace noise scale (ONLY if using Laplace vote-noise instead of Gaussian noise_multiplier)"
             }
         }
 

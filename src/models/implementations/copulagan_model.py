@@ -94,138 +94,143 @@ class CopulaGANModel(SyntheticDataModel):
     def get_hyperparameter_space(self) -> Dict[str, Dict[str, Any]]:
         """
         Get the enhanced hyperparameter search space for CopulaGAN optimization.
-        Production-ready hyperparameter space designed for diverse tabular datasets.
-        
-        Returns:
-            Dictionary defining comprehensive hyperparameter space for CopulaGAN
+        Practical guidance for 1k–5k rows:
+          - batch_size should not exceed dataset size; very large batches (500/1000/2000) usually do not help
+            on small datasets and can reduce the number of updates per epoch dramatically.
+          - very deep/wide networks (e.g., 512–1024 stacks) are usually overkill and can overfit or destabilize.
+          - pac should be small-to-moderate; pac too large relative to batch_size can be problematic.
         """
         return {
             "epochs": {
                 "type": "int",
-                "low": 100,
-                "high": 800,
+                "low": 200,
+                "high": 600,
                 "step": 50,
                 "default": 300,
-                "description": "Training epochs - 300 optimal for copula modeling convergence"
+                "description": "Training epochs (300 is a reasonable baseline; use Optuna pruning if available)"
             },
             "batch_size": {
                 "type": "categorical",
-                "choices": [32, 64, 128, 256, 500, 1000, 2000],
-                "default": 500,
-                "description": "Batch size - larger batches (500+) improve GAN stability and copula learning"
+                # For 1k–5k rows, these are the most practical. Keeping your key and structure unchanged.
+                "choices": [32, 64, 128, 256, 500],
+                "default": 128,
+                "description": (
+                    "Batch size. Recommendation for 1k–5k rows: 32–256 (500 only if N is comfortably >500). "
+                    "Avoid batch_size > N."
+                )
             },
             "generator_lr": {
                 "type": "float",
-                "low": 5e-6,
-                "high": 5e-3,
+                "low": 1e-5,
+                "high": 1e-3,
                 "log": True,
                 "default": 2e-4,
-                "description": "Generator learning rate - 2e-4 optimal for copula-based adversarial training"
+                "description": "Generator learning rate (narrowed to common stable region for tabular GANs)"
             },
             "discriminator_lr": {
                 "type": "float",
-                "low": 5e-6,
-                "high": 5e-3,
+                "low": 1e-5,
+                "high": 1e-3,
                 "log": True,
                 "default": 2e-4,
-                "description": "Discriminator learning rate - balanced with generator for stable training"
+                "description": "Discriminator learning rate (narrowed; consider <= generator_lr if training is unstable)"
             },
             "generator_dim": {
                 "type": "categorical",
                 "choices": [
-                    (128, 128),          # Small datasets (<1K samples, <20 features)
-                    (256, 256),          # Medium datasets (1K-10K samples, 20-50 features)
-                    (512, 512),          # Large datasets (10K-100K samples, 50+ features)
-                    (256, 512),          # Asymmetric for complex copula modeling
-                    (512, 256),          # Bottleneck for regularization in copula space
-                    (128, 256, 128),     # Deep generator for small-medium datasets
-                    (256, 512, 256),     # Deep generator for medium-large datasets
-                    (512, 1024, 512),    # Deep generator for large/complex datasets
-                    (128, 256, 512, 256), # Very deep for complex dependencies
-                    (256, 512, 1024, 512) # Very deep for very complex copula structures
+                    (128, 128),          # Small / regularized
+                    (256, 256),          # Common default
+                    (256, 128),          # Slightly smaller / more stable
+                    (256, 512),          # Asymmetric for harder dependencies
+                    (128, 256, 128),     # Deeper but still modest
+                    (256, 512, 256),     # Medium complexity
                 ],
                 "default": (256, 256),
-                "description": "Generator architecture - adaptive to dataset complexity and copula modeling needs"
+                "description": (
+                    "Generator architecture. For 1k–5k rows, prefer modest sizes; very large (512/1024 stacks) "
+                    "often overfit or destabilize."
+                )
             },
             "discriminator_dim": {
                 "type": "categorical",
                 "choices": [
-                    (128, 128),          # Matches small generator
-                    (256, 256),          # Matches medium generator - most stable
-                    (512, 512),          # Matches large generator
-                    (256, 512),          # Stronger discriminator for challenging copula structures
-                    (512, 256),          # Funnel discriminator for feature selection in copula space
-                    (128, 256, 128),     # Deep discriminator for small datasets
-                    (256, 512, 256),     # Deep discriminator for medium datasets
-                    (512, 1024, 512),    # Deep discriminator for complex datasets
-                    (128, 256, 512, 256), # Very deep for complex dependency detection
-                    (512, 1024, 512, 256) # Very deep for challenging copula modeling
+                    (128, 128),
+                    (256, 256),
+                    (256, 128),
+                    (256, 512),
+                    (128, 256, 128),
+                    (256, 512, 256),
                 ],
                 "default": (256, 256),
-                "description": "Discriminator architecture - balanced complexity for copula space discrimination"
+                "description": (
+                    "Discriminator architecture. Keep comparable to generator; overly strong discriminator can harm training."
+                )
             },
             "pac": {
                 "type": "int",
                 "low": 1,
-                "high": 20,
+                "high": 10,
                 "step": 1,
-                "default": 10,
-                "description": "PackedGAN group size - 10 optimal for most copula structures"
+                "default": 5,
+                "description": (
+                    "PackedGAN group size. For 1k–5k rows, 1–5 is a safe starting range; "
+                    "keep pac well below batch_size."
+                )
             },
             "generator_decay": {
                 "type": "float",
                 "low": 1e-8,
-                "high": 1e-3,
+                "high": 1e-4,
                 "log": True,
                 "default": 1e-6,
-                "description": "Generator L2 regularization - prevents overfitting in copula modeling"
+                "description": "Generator L2 regularization (upper bound tightened; helps prevent overfitting on small data)"
             },
             "discriminator_decay": {
                 "type": "float",
                 "low": 1e-8,
-                "high": 1e-3,
+                "high": 1e-4,
                 "log": True,
                 "default": 1e-6,
-                "description": "Discriminator L2 regularization - maintains training balance"
+                "description": "Discriminator L2 regularization (upper bound tightened; keep balanced with generator_decay)"
             },
             "discriminator_steps": {
                 "type": "int",
                 "low": 1,
-                "high": 5,
+                "high": 3,
                 "step": 1,
                 "default": 1,
-                "description": "Discriminator training steps per generator step - 1 for balanced copula learning"
+                "description": "Discriminator steps per generator step (1 is default; 2–3 if discriminator is lagging)"
             },
             "beta1": {
                 "type": "float",
-                "low": 0.1,
-                "high": 0.9,
+                "low": 0.3,
+                "high": 0.7,
                 "default": 0.5,
-                "description": "Adam optimizer beta1 parameter - 0.5 optimal for GAN training stability"
+                "description": "Adam beta1 (tightened around common GAN-stable values)"
             },
             "beta2": {
                 "type": "float",
-                "low": 0.9,
+                "low": 0.95,
                 "high": 0.999,
                 "default": 0.999,
-                "description": "Adam optimizer beta2 parameter - 0.999 for smooth convergence"
+                "description": "Adam beta2 (tightened; 0.99–0.999 are common stable values)"
             },
             "copula_regularization": {
                 "type": "float",
                 "low": 0.0,
-                "high": 1.0,
+                "high": 0.5,
                 "default": 0.1,
-                "description": "Copula structure regularization strength - 0.1 preserves marginal distributions"
+                "description": "Copula structure regularization strength (upper bound tightened to avoid over-regularizing)"
             },
             "gradient_penalty": {
                 "type": "float",
                 "low": 0.0,
-                "high": 10.0,
+                "high": 5.0,
                 "default": 0.0,
-                "description": "Gradient penalty coefficient - 0 for standard training, >0 for WGAN-GP style"
+                "description": "Gradient penalty coefficient (0 for standard; try 1–5 if training is unstable)"
             }
-        }
-    
+        }    
+        
     def set_config(self, config: Dict[str, Any]) -> None:
         """
         Set model configuration parameters.

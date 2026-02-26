@@ -199,87 +199,85 @@ class CTGANModel(SyntheticDataModel):
     def get_hyperparameter_space(self) -> Dict[str, Dict[str, Any]]:
         """
         Get the enhanced hyperparameter search space for CTGAN optimization.
-        Production-ready hyperparameter space designed for diverse tabular datasets.
-        
-        Returns:
-            Dictionary defining comprehensive hyperparameter search space
+        Practical guidance for 1k–5k rows:
+          - batch_size: very large batches (500/1000) often reduce the number of updates per epoch and can hurt.
+            Keep 32–256 as primary; 500 only if N is comfortably >500.
+          - pac: must be <= batch_size; very large pac can be problematic on small data. Prefer 1–5.
+          - Very large networks (512/1024 stacks) are often unnecessary and can destabilize/overfit on small data.
+          - Narrow LR search away from very high values (5e-3 can be too aggressive).
         """
         return {
             'epochs': {
                 'type': 'int',
-                'low': 100,
-                'high': 1000,
+                'low': 200,
+                'high': 800,
                 'step': 50,
                 'default': 300,
-                'description': 'Training epochs - 300 optimal for most tabular datasets'
+                'description': 'Training epochs (300 baseline; use Optuna pruning if available)'
             },
             'batch_size': {
                 'type': 'categorical',
-                'choices': [32, 64, 128, 256, 500, 1000],
-                'default': 500,
-                'description': 'Batch size - larger batches (500+) work well for CTGAN stability'
+                'choices': [32, 64, 128, 256, 500],
+                'default': 128,
+                'description': 'Batch size (for 1k–5k rows: 32–256 preferred; 500 only if N is comfortably >500)'
             },
             'generator_lr': {
                 'type': 'float',
-                'low': 5e-6,
-                'high': 5e-3,
+                'low': 1e-5,
+                'high': 1e-3,
                 'log': True,
                 'default': 2e-4,
-                'description': 'Generator learning rate - 2e-4 optimal for Adam optimizer'
+                'description': 'Generator learning rate (upper bound tightened for stability)'
             },
             'discriminator_lr': {
                 'type': 'float',
-                'low': 5e-6,
-                'high': 5e-3,
+                'low': 1e-5,
+                'high': 1e-3,
                 'log': True,
                 'default': 2e-4,
-                'description': 'Discriminator learning rate - balanced with generator'
+                'description': 'Discriminator learning rate (upper bound tightened; consider <= generator_lr if unstable)'
             },
             'generator_dim': {
                 'type': 'categorical',
                 'choices': [
-                    (128, 128),          # Small datasets (<1K samples, <20 features)
-                    (256, 256),          # Medium datasets (1K-10K samples, 20-50 features) 
-                    (512, 512),          # Large datasets (10K-100K samples, 50+ features)
-                    (256, 512),          # Asymmetric for complex feature interactions
-                    (512, 256),          # Bottleneck architecture for regularization
-                    (128, 256, 128),     # Deep architecture for small-medium datasets
-                    (256, 512, 256),     # Deep architecture for medium-large datasets
-                    (512, 1024, 512)     # Deep architecture for very large/complex datasets
+                    (128, 128),
+                    (256, 256),
+                    (256, 128),
+                    (256, 512),
+                    (128, 256, 128),
+                    (256, 512, 256),
                 ],
                 'default': (256, 256),
-                'description': 'Generator architecture - adaptive to dataset complexity'
+                'description': 'Generator architecture (pruned to small/medium options for 1k–5k rows)'
             },
             'discriminator_dim': {
                 'type': 'categorical',
                 'choices': [
-                    (128, 128),          # Matches small generator
-                    (256, 256),          # Matches medium generator - most stable
-                    (512, 512),          # Matches large generator
-                    (256, 512),          # Stronger discriminator for hard datasets
-                    (512, 256),          # Funnel architecture for feature selection
-                    (128, 256, 128),     # Deep discriminator for small datasets
-                    (256, 512, 256),     # Deep discriminator for medium datasets
-                    (512, 1024, 512)     # Deep discriminator for complex datasets
+                    (128, 128),
+                    (256, 256),
+                    (256, 128),
+                    (256, 512),
+                    (128, 256, 128),
+                    (256, 512, 256),
                 ],
                 'default': (256, 256),
-                'description': 'Discriminator architecture - balanced with generator complexity'
+                'description': 'Discriminator architecture (pruned to small/medium options for 1k–5k rows)'
             },
             'pac': {
                 'type': 'int',
                 'low': 1,
-                'high': 20,
+                'high': 10,
                 'step': 1,
-                'default': 10,
-                'description': 'PackedGAN discriminator group size - 10 optimal for most datasets'
+                'default': 5,
+                'description': 'PackedGAN discriminator group size (for 1k–5k rows: 1–5 is a safe starting range; keep pac <= batch_size)'
             },
             'discriminator_steps': {
                 'type': 'int',
                 'low': 1,
-                'high': 5,
+                'high': 3,
                 'step': 1,
                 'default': 1,
-                'description': 'Discriminator training steps per generator step - 1 for balanced training'
+                'description': 'Discriminator steps per generator step (1 baseline; 2–3 if discriminator is lagging)'
             },
             'generator_decay': {
                 'type': 'float',
@@ -298,6 +296,7 @@ class CTGANModel(SyntheticDataModel):
                 'description': 'Discriminator L2 weight decay for regularization'
             }
         }
+
     
     def save_model(self, path: str) -> None:
         """

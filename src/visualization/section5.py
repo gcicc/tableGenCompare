@@ -942,3 +942,288 @@ def create_trts_calibration_curves(trts_results_dict, model_names, results_dir,
         plt.close()
 
     return output_path
+
+
+# ============================================================
+# SDAC Visualizations
+# ============================================================
+
+def create_sdac_radar_chart(sdac_df, results_dir, dataset_name="Dataset",
+                            save_files=True, display_plots=False, verbose=True):
+    """
+    SDAC radar chart: one axis per category composite score, one trace per model.
+
+    Composite scores per category are computed by normalizing key metrics to [0, 1]
+    (higher = better for all axes) and averaging within each SDAC category.
+
+    Parameters
+    ----------
+    sdac_df : pd.DataFrame
+        DataFrame with one row per model, columns from compute_sdac_tabular_metrics.
+    results_dir : str or Path
+    dataset_name : str
+    save_files, display_plots, verbose : bool
+
+    Returns
+    -------
+    str or None : path to saved PNG
+    """
+    import os
+
+    if sdac_df is None or len(sdac_df) == 0:
+        return None
+
+    if verbose:
+        print("\n[VIZ] Generating SDAC radar chart...")
+
+    # Compute composite scores per category (higher = better, 0-1 scale)
+    composites = []
+    for _, row in sdac_df.iterrows():
+        model = row.get('Model', 'Unknown')
+
+        # Privacy: privacy_score already 0-1 higher=better
+        privacy = row.get('Privacy_Score', np.nan)
+
+        # Fidelity: JSD similarity (0-1, higher=better), 1-KS (lower KS=better),
+        #           1-Detection_AUC+0.5 (closer to 0.5 = better)
+        fid_components = []
+        jsd = row.get('Fidelity_JSD', np.nan)
+        if not np.isnan(jsd):
+            fid_components.append(jsd)
+        ks = row.get('Fidelity_KS', np.nan)
+        if not np.isnan(ks):
+            fid_components.append(1 - ks)  # lower KS = better
+        det = row.get('Fidelity_Detection_AUC', np.nan)
+        if not np.isnan(det):
+            # AUC near 0.5 is ideal; transform: 1 - |AUC - 0.5| * 2
+            fid_components.append(1 - abs(det - 0.5) * 2)
+        corr_val = row.get('Fidelity_Corr_Sim', np.nan)
+        if not np.isnan(corr_val):
+            fid_components.append(corr_val)
+        fidelity = np.mean(fid_components) if fid_components else np.nan
+
+        # Utility: ML_Efficacy (0-1 accuracy-like)
+        utility = row.get('Utility_ML_Efficacy', np.nan)
+
+        # Fairness: 1 - Dem_Parity (lower diff = better), Disp_Impact (higher=better)
+        fair_components = []
+        dp = row.get('Fairness_Dem_Parity', np.nan)
+        if not np.isnan(dp):
+            fair_components.append(1 - dp)
+        di = row.get('Fairness_Disp_Impact', np.nan)
+        if not np.isnan(di):
+            fair_components.append(di)
+        fairness = np.mean(fair_components) if fair_components else np.nan
+
+        # XAI: Feature Importance Corr (higher = better)
+        xai = row.get('XAI_Feat_Imp_Corr', np.nan)
+
+        composites.append({
+            'Model': model,
+            'Privacy': privacy,
+            'Fidelity': fidelity,
+            'Utility': utility,
+            'Fairness': fairness,
+            'XAI': xai
+        })
+
+    comp_df = pd.DataFrame(composites)
+    categories = ['Privacy', 'Fidelity', 'Utility', 'Fairness', 'XAI']
+
+    # Filter to categories that have at least one non-NaN value
+    active_cats = [c for c in categories if comp_df[c].notna().any()]
+    if len(active_cats) < 3:
+        if verbose:
+            print("[VIZ] Not enough categories with data for radar chart (need >= 3)")
+        return None
+
+    # Radar chart
+    N = len(active_cats)
+    angles = np.linspace(0, 2 * np.pi, N, endpoint=False).tolist()
+    angles += angles[:1]  # close the polygon
+
+    fig, ax = plt.subplots(figsize=(8, 8), subplot_kw=dict(polar=True))
+    ax.set_theta_offset(np.pi / 2)
+    ax.set_theta_direction(-1)
+
+    ax.set_xticks(angles[:-1])
+    ax.set_xticklabels(active_cats, fontsize=12, fontweight='bold')
+    ax.set_ylim(0, 1)
+
+    for _, row in comp_df.iterrows():
+        values = [row[c] if not np.isnan(row[c]) else 0 for c in active_cats]
+        values += values[:1]
+        color = _get_model_color(row['Model'])
+        ax.plot(angles, values, 'o-', linewidth=2, label=row['Model'], color=color)
+        ax.fill(angles, values, alpha=0.1, color=color)
+
+    ax.legend(loc='upper right', bbox_to_anchor=(1.3, 1.1))
+    ax.set_title(f'{dataset_name}\nSDAC Category Composite Scores', fontsize=14,
+                fontweight='bold', pad=20)
+
+    output_path = None
+    if save_files:
+        results_path = Path(results_dir)
+        results_path.mkdir(parents=True, exist_ok=True)
+        output_path = str(results_path / 'sdac_radar_chart.png')
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        if verbose:
+            print(f"[VIZ] Saved: sdac_radar_chart.png")
+
+    if display_plots:
+        plt.show()
+    else:
+        plt.close()
+
+    return output_path
+
+
+def create_sdac_heatmap(sdac_df, results_dir, dataset_name="Dataset",
+                        save_files=True, display_plots=False, verbose=True):
+    """
+    SDAC heatmap: models x metrics, color-coded by category.
+
+    Parameters
+    ----------
+    sdac_df : pd.DataFrame
+        DataFrame with one row per model, columns from compute_sdac_tabular_metrics.
+    results_dir : str or Path
+    dataset_name : str
+    save_files, display_plots, verbose : bool
+
+    Returns
+    -------
+    str or None : path to saved PNG
+    """
+    import os
+
+    if sdac_df is None or len(sdac_df) == 0:
+        return None
+
+    if verbose:
+        print("[VIZ] Generating SDAC heatmap...")
+
+    # Select key metrics for the heatmap (one per SDAC sub-metric)
+    metric_order = [
+        'Privacy_DCR', 'Privacy_NNDR', 'Privacy_IMS', 'Privacy_ReID_Risk', 'Privacy_MIA_AUC',
+        'Fidelity_JSD', 'Fidelity_KS', 'Fidelity_KL', 'Fidelity_Corr_Sim',
+        'Fidelity_WD', 'Fidelity_Detection_AUC',
+        'Utility_TSTR_Acc_RF', 'Utility_TSTR_F1_RF', 'Utility_ML_Efficacy', 'Utility_SRA',
+        'Fairness_Dem_Parity', 'Fairness_Eq_Odds', 'Fairness_Disp_Impact',
+        'XAI_Feat_Imp_Corr', 'XAI_SHAP_Dist',
+    ]
+
+    # Filter to columns that exist
+    available_metrics = [m for m in metric_order if m in sdac_df.columns]
+    if not available_metrics:
+        if verbose:
+            print("[VIZ] No SDAC metrics available for heatmap")
+        return None
+
+    # Build heatmap matrix
+    models = sdac_df['Model'].tolist()
+    heat_data = sdac_df.set_index('Model')[available_metrics]
+
+    # Category color bar
+    category_colors = {
+        'Privacy': '#e74c3c',
+        'Fidelity': '#3498db',
+        'Utility': '#2ecc71',
+        'Fairness': '#f39c12',
+        'XAI': '#9b59b6'
+    }
+
+    col_colors = []
+    for m in available_metrics:
+        prefix = m.split('_')[0]
+        col_colors.append(category_colors.get(prefix, '#95a5a6'))
+
+    # Figure size scales with number of metrics
+    fig_width = max(14, len(available_metrics) * 0.8)
+    fig_height = max(5, len(models) * 0.9 + 4)
+
+    fig, ax = plt.subplots(figsize=(fig_width, fig_height))
+
+    # Normalize each column to [0, 1] for consistent color mapping.
+    # Raw values are shown as annotations; colors reflect relative standing.
+    display_data = heat_data.copy()
+    normalized_data = heat_data.copy()
+    for col in normalized_data.columns:
+        col_vals = normalized_data[col].dropna()
+        if len(col_vals) > 0:
+            cmin, cmax = col_vals.min(), col_vals.max()
+            if cmax > cmin:
+                normalized_data[col] = (normalized_data[col] - cmin) / (cmax - cmin)
+            else:
+                normalized_data[col] = 0.5  # all same value
+        else:
+            normalized_data[col] = np.nan
+
+    # Create heatmap using normalized values for color
+    im = ax.imshow(normalized_data.values, aspect='auto', cmap='RdYlGn',
+                   vmin=0, vmax=1)
+
+    # Move x-axis labels to bottom (default) so category bar can go on top
+    ax.tick_params(top=False, bottom=True, labeltop=False, labelbottom=True)
+
+    # Axis labels
+    ax.set_xticks(np.arange(len(available_metrics)))
+    ax.set_yticks(np.arange(len(models)))
+    short_labels = [m.replace('Privacy_', 'P:').replace('Fidelity_', 'F:')
+                    .replace('Utility_', 'U:').replace('Fairness_', 'Fr:')
+                    .replace('XAI_', 'X:') for m in available_metrics]
+    ax.set_xticklabels(short_labels, rotation=45, ha='right', fontsize=9)
+    ax.set_yticklabels(models, fontsize=11)
+
+    # Add raw value annotations (not normalized)
+    for i in range(len(models)):
+        for j in range(len(available_metrics)):
+            val = display_data.iloc[i, j]
+            norm_val = normalized_data.iloc[i, j]
+            if not np.isnan(val):
+                # Contrast text against the normalized color
+                text_color = 'white' if (not np.isnan(norm_val) and (norm_val < 0.3 or norm_val > 0.8)) else 'black'
+                ax.text(j, i, f'{val:.3f}', ha='center', va='center',
+                       fontsize=7, color=text_color)
+            else:
+                ax.text(j, i, 'N/A', ha='center', va='center',
+                       fontsize=7, color='gray')
+
+    # Category color strip above the heatmap (above row -0.5)
+    strip_y = -0.6  # just above the top edge of the heatmap
+    strip_h = 0.15
+    for j, color in enumerate(col_colors):
+        ax.add_patch(plt.Rectangle((j - 0.5, strip_y - strip_h), 1, strip_h,
+                                   color=color, clip_on=False))
+
+    # Category legend below the plot (horizontal, no overlap)
+    from matplotlib.patches import Patch
+    legend_elements = [Patch(facecolor=c, label=cat)
+                      for cat, c in category_colors.items()]
+    ax.legend(handles=legend_elements, loc='upper center',
+             bbox_to_anchor=(0.5, -0.18), ncol=len(category_colors),
+             title='SDAC Category', fontsize=9, frameon=True)
+
+    # Colorbar: normalized scale [0, 1]
+    cbar = plt.colorbar(im, ax=ax, shrink=0.8)
+    cbar.set_label('Relative Score (per-column normalized)', fontsize=9)
+
+    ax.set_title(f'{dataset_name} - SDAC Metrics Heatmap', fontsize=14,
+                fontweight='bold', pad=20)
+    plt.tight_layout(rect=[0, 0.06, 1, 1])  # leave room at bottom for legend
+
+    output_path = None
+    if save_files:
+        results_path = Path(results_dir)
+        results_path.mkdir(parents=True, exist_ok=True)
+        output_path = str(results_path / 'sdac_heatmap.png')
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        if verbose:
+            print(f"[VIZ] Saved: sdac_heatmap.png")
+
+    if display_plots:
+        plt.show()
+    else:
+        plt.close()
+
+    return output_path

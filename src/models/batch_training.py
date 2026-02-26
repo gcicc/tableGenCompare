@@ -265,6 +265,10 @@ def _get_model_train_kwargs(
     if categorical_columns is None:
         categorical_columns = _auto_detect_categorical(data, target_column)
 
+    # Filter to only columns that exist in the data (handles one-hot encoding cases)
+    existing_columns = set(data.columns)
+    categorical_columns = [col for col in categorical_columns if col in existing_columns]
+
     # Base kwargs for all models
     kwargs = {}
 
@@ -705,6 +709,10 @@ def _prepare_training_kwargs_with_best_params(
     # Auto-detect categorical columns if not provided
     if categorical_columns is None:
         categorical_columns = _auto_detect_categorical(data, target_column)
+
+    # Filter to only columns that exist in the data (handles one-hot encoding cases)
+    existing_columns = set(data.columns)
+    categorical_columns = [col for col in categorical_columns if col in existing_columns]
 
     # Start with best params
     kwargs = dict(best_params)

@@ -323,18 +323,20 @@ class MEDGANModel(SyntheticDataModel):
     def get_hyperparameter_space(self) -> Dict[str, Dict[str, Any]]:
         """
         Get the hyperparameter search space for MEDGAN optimization.
-
-        Returns:
-            Dictionary defining hyperparameter search space
+        Practical guidance for 1k–5k rows:
+          - batch_size: include smaller values; 512 is often too large unless N is near the top of your range.
+          - learning rates: 1e-2 is frequently unstable for GAN portions; narrow to a more typical stable band.
+          - latent_dim / network sizes: keep modest to avoid overfitting and AE dominating.
+          - l2_reg: very large regularization can underfit; cap upper range.
         """
         return {
             "epochs": {
                 "type": "int",
-                "low": 100,
+                "low": 200,
                 "high": 500,
                 "step": 50,
                 "default": 300,
-                "description": "GAN training epochs"
+                "description": "GAN training epochs (use Optuna pruning if available)"
             },
             "pretrain_epochs": {
                 "type": "int",
@@ -342,71 +344,71 @@ class MEDGANModel(SyntheticDataModel):
                 "high": 200,
                 "step": 25,
                 "default": 100,
-                "description": "Autoencoder pretraining epochs"
+                "description": "Autoencoder pretraining epochs (pretrain helps a lot on small tabular data)"
             },
             "batch_size": {
                 "type": "categorical",
-                "choices": [64, 128, 256, 512],
-                "default": 128,
-                "description": "Training batch size"
+                "choices": [32, 64, 128, 256, 512],
+                "default": 64,
+                "description": "Training batch size (for 1k–5k rows: 32/64/128 usually best; avoid 512 unless N is large enough)"
             },
             "latent_dim": {
                 "type": "int",
-                "low": 64,
-                "high": 256,
+                "low": 32,
+                "high": 192,
                 "step": 32,
-                "default": 128,
-                "description": "Latent space dimensionality"
+                "default": 96,
+                "description": "Latent space dimensionality (smaller often generalizes better on 1k–5k rows)"
             },
             "autoencoder_dim": {
                 "type": "categorical",
                 "choices": [(64, 64), (128, 128), (256, 128), (128, 256, 128)],
                 "default": (128, 128),
-                "description": "Autoencoder hidden dimensions"
+                "description": "Autoencoder hidden dimensions (keep modest for small data)"
             },
             "generator_dim": {
                 "type": "categorical",
                 "choices": [(64, 64), (128, 128), (256, 128), (128, 256, 128)],
                 "default": (128, 128),
-                "description": "Generator hidden dimensions"
+                "description": "Generator hidden dimensions (avoid over-large nets on small data)"
             },
             "discriminator_dim": {
                 "type": "categorical",
                 "choices": [(128, 64), (256, 128), (256, 256), (256, 128, 64)],
                 "default": (256, 128),
-                "description": "Discriminator hidden dimensions"
+                "description": "Discriminator hidden dimensions (keep balanced; overly strong discriminator can destabilize)"
             },
             "autoencoder_lr": {
                 "type": "float",
-                "low": 1e-4,
-                "high": 1e-2,
+                "low": 3e-4,
+                "high": 3e-3,
                 "log": True,
                 "default": 1e-3,
-                "description": "Autoencoder learning rate"
+                "description": "Autoencoder learning rate (narrowed for stability)"
             },
             "generator_lr": {
                 "type": "float",
                 "low": 1e-4,
-                "high": 1e-2,
+                "high": 3e-3,
                 "log": True,
-                "default": 1e-3,
-                "description": "Generator learning rate"
+                "default": 5e-4,
+                "description": "Generator learning rate (narrowed; 1e-2 often unstable)"
             },
             "discriminator_lr": {
                 "type": "float",
                 "low": 1e-4,
-                "high": 1e-2,
+                "high": 3e-3,
                 "log": True,
-                "default": 1e-3,
-                "description": "Discriminator learning rate"
+                "default": 5e-4,
+                "description": "Discriminator learning rate (narrowed; consider <= generator_lr if unstable)"
             },
             "l2_reg": {
                 "type": "float",
-                "low": 1e-5,
-                "high": 1e-2,
+                "low": 1e-6,
+                "high": 1e-3,
                 "log": True,
-                "default": 1e-3,
-                "description": "L2 regularization weight"
+                "default": 1e-4,
+                "description": "L2 regularization weight (tightened; too large can underfit on small data)"
             }
         }
 
