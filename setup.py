@@ -28,7 +28,6 @@ from src.config import (
     NOTEBOOK_CONFIG_DEFAULTS,
     get_default_config,
     validate_config,
-    get_n_trials
 )
 
 # Import path utilities

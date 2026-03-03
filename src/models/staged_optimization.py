@@ -470,6 +470,36 @@ class StagedOptimizationManager:
                 })
         return pd.DataFrame(data)
 
+    def get_smoke_recommendations(self) -> pd.DataFrame:
+        """Generate smoke-mode recommendations: 1-hour budget and 20-trial estimates."""
+        rows = []
+        for model_name in self._models_to_run:
+            tph = self.time_tracker.get_trials_per_hour(model_name)
+            avg_s = self.time_tracker.get_avg_trial_time(model_name)
+            t20 = self.time_tracker.estimate_time_for_trials(model_name, 20)
+            trials_in_1hr = int(tph) if tph > 0 else 0
+            recommended = min(trials_in_1hr, 50) if trials_in_1hr > 0 else 10
+            rows.append({
+                'model': model_name,
+                'avg_trial_sec': round(avg_s, 1),
+                'trials_per_hour': round(tph, 1),
+                'trials_in_1hr': trials_in_1hr,
+                'time_for_20_trials_min': round(t20, 1),
+                'recommended_pilot': recommended,
+            })
+        return pd.DataFrame(rows)
+
+    def _create_fresh_study(self, model_name: str) -> 'optuna.Study':
+        """Create a new Optuna study for a model."""
+        pruner_config = get_pruner_config(model_name)
+        pruner = MedianPruner(**pruner_config) if pruner_config else None
+
+        return optuna.create_study(
+            direction="maximize",
+            pruner=pruner,
+            study_name=f"{model_name}_hpo_{self.dataset_identifier}"
+        )
+
     def _run_model_optimization(
         self,
         model_name: str,
@@ -491,14 +521,7 @@ class StagedOptimizationManager:
                 print(f"  Resuming from {state.total_trials} existing trials")
             else:
                 # Create new study
-                pruner_config = get_pruner_config(model_name)
-                pruner = MedianPruner(**pruner_config) if pruner_config else None
-
-                study = optuna.create_study(
-                    direction="maximize",
-                    pruner=pruner,
-                    study_name=f"{model_name}_hpo_{self.dataset_identifier}"
-                )
+                study = self._create_fresh_study(model_name)
                 state = ModelOptimizationState(model_name=model_name)
 
             # Create objective and callback
@@ -515,6 +538,7 @@ class StagedOptimizationManager:
             # Run optimization
             state.status = "running"
             start_time = time.time()
+            incompatible_study_reset = False
 
             for trial_idx in range(n_trials):
                 self.time_tracker.start_trial(model_name)
@@ -529,9 +553,30 @@ class StagedOptimizationManager:
                 except optuna.TrialPruned:
                     pass
                 except Exception as e:
-                    if not self.config.continue_on_error:
-                        raise
-                    logger.warning(f"Trial failed for {model_name}: {e}")
+                    err_msg = str(e)
+                    # Detect incompatible study (e.g. run_mode changed debug->full)
+                    if "dynamic value space" in err_msg and not incompatible_study_reset:
+                        incompatible_study_reset = True
+                        print(f"  [WARN] Incompatible study detected (search space changed). Starting fresh.")
+                        study = self._create_fresh_study(model_name)
+                        state = ModelOptimizationState(model_name=model_name)
+                        callback.cumulative_trial_count = 0
+                        # Retry this trial with the fresh study
+                        try:
+                            study.optimize(
+                                objective,
+                                n_trials=1,
+                                callbacks=[callback],
+                                show_progress_bar=False
+                            )
+                        except Exception as retry_e:
+                            if not self.config.continue_on_error:
+                                raise
+                            logger.warning(f"Trial failed for {model_name}: {retry_e}")
+                    else:
+                        if not self.config.continue_on_error:
+                            raise
+                        logger.warning(f"Trial failed for {model_name}: {e}")
 
                 self.time_tracker.end_trial(model_name)
 

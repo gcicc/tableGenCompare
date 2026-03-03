@@ -51,7 +51,6 @@ NOTEBOOK_CONFIG_DEFAULTS: Dict[str, Any] = {
     # Tuning
     "tuning_mode": "smoke",                 # smoke | full
     "n_trials_smoke": 5,                    # trials for smoke testing
-    "n_trials_full": 50,                    # trials for full optimization
     "timeout_seconds": None,                # optional timeout per study
 }
 
@@ -165,14 +164,6 @@ def validate_config(config: Dict[str, Any], strict: bool = False) -> Dict[str, A
             warnings_list.append(msg + ". Using 5.")
             validated["n_trials_smoke"] = 5
 
-    if not isinstance(validated["n_trials_full"], int) or validated["n_trials_full"] <= 0:
-        msg = "'n_trials_full' must be a positive integer"
-        if strict:
-            errors.append(msg)
-        else:
-            warnings_list.append(msg + ". Using 50.")
-            validated["n_trials_full"] = 50
-
     # Validate timeout_seconds if provided
     if validated["timeout_seconds"] is not None:
         if not isinstance(validated["timeout_seconds"], (int, float)) or validated["timeout_seconds"] <= 0:
@@ -192,21 +183,6 @@ def validate_config(config: Dict[str, Any], strict: bool = False) -> Dict[str, A
         raise ValueError("Configuration validation failed:\n" + "\n".join(f"  - {e}" for e in errors))
 
     return validated
-
-
-def get_n_trials(config: Dict[str, Any]) -> int:
-    """
-    Get the number of trials based on tuning_mode.
-
-    Parameters:
-        config: Validated configuration dictionary
-
-    Returns:
-        Number of trials to use for optimization
-    """
-    if config.get("tuning_mode") == "full":
-        return config.get("n_trials_full", 50)
-    return config.get("n_trials_smoke", 5)
 
 
 def refresh_session_timestamp():
