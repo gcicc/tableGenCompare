@@ -54,7 +54,8 @@ def train_models_batch(
     n_samples: int = None,
     random_state: int = 42,
     verbose: bool = True,
-    continue_on_error: bool = True
+    continue_on_error: bool = True,
+    checkpoint=None
 ) -> Dict[str, Dict]:
     """
     Train multiple models and generate synthetic data in batch.
@@ -122,6 +123,14 @@ def train_models_batch(
         print(f"Dataset shape: {data.shape}")
         print(f"Target column: {target_column}")
         print(f"Samples to generate: {n_samples}")
+        # Show GPU status and per-model device assignments
+        if TORCH_AVAILABLE and torch.cuda.is_available():
+            print(f"GPU available: {torch.cuda.get_device_name(0)} ({torch.cuda.get_device_properties(0).total_memory / 1024**3:.1f} GB)")
+        else:
+            print("GPU available: No (using CPU)")
+        print(f"Device assignments:")
+        for m in resolved_models:
+            print(f"  - {get_model_display_name(m)}: {_get_device_for_model(m)}")
         print(f"{'='*60}\n")
 
     results = {}
@@ -130,6 +139,16 @@ def train_models_batch(
 
     for idx, model_name in enumerate(resolved_models, 1):
         display_name = get_model_display_name(model_name)
+
+        # Check checkpoint for this model
+        ckpt_id = f"section_3.1_model_{model_name}"
+        if checkpoint is not None and checkpoint.exists(ckpt_id):
+            saved = checkpoint.load(ckpt_id)
+            results[model_name] = saved
+            successful += 1
+            if verbose:
+                print(f"\n[{idx}/{len(resolved_models)}] [RESUME] {display_name} loaded from checkpoint ({saved['training_time']:.2f}s)")
+            continue
 
         if verbose:
             print(f"\n[{idx}/{len(resolved_models)}] Training {display_name}...")
@@ -140,6 +159,8 @@ def train_models_batch(
         try:
             # Determine appropriate device for this model
             device = _get_device_for_model(model_name)
+            if verbose:
+                print(f"  Device: {device}")
 
             # Create model instance via factory
             model = ModelFactory.create(
@@ -176,6 +197,15 @@ def train_models_batch(
                 "training_time": training_time,
                 "status": "success"
             }
+
+            # Save checkpoint for this model (without model object - not picklable)
+            if checkpoint is not None:
+                checkpoint.save(ckpt_id, {
+                    "synthetic_data": synthetic_data,
+                    "model": None,
+                    "training_time": training_time,
+                    "status": "success"
+                })
 
             successful += 1
 
@@ -390,7 +420,8 @@ def train_models_batch_with_best_params(
     dataset_identifier: str = None,
     scope: dict = None,
     verbose: bool = True,
-    continue_on_error: bool = True
+    continue_on_error: bool = True,
+    checkpoint=None
 ) -> Dict[str, Dict]:
     """
     Train models with best parameters from Section 4 HPO.
@@ -485,6 +516,14 @@ def train_models_batch_with_best_params(
         print(f"Target column: {target_column}")
         print(f"Samples to generate: {n_samples}")
         print(f"Loading parameters from: Section {section_number}")
+        # Show GPU status and per-model device assignments
+        if TORCH_AVAILABLE and torch.cuda.is_available():
+            print(f"GPU available: {torch.cuda.get_device_name(0)} ({torch.cuda.get_device_properties(0).total_memory / 1024**3:.1f} GB)")
+        else:
+            print("GPU available: No (using CPU)")
+        print(f"Device assignments:")
+        for m in resolved_models:
+            print(f"  - {get_model_display_name(m)}: {_get_device_for_model(m)}")
         print(f"{'='*60}\n")
 
     # Load best parameters from Section 4
@@ -521,6 +560,16 @@ def train_models_batch_with_best_params(
     for idx, model_name in enumerate(resolved_models, 1):
         display_name = get_model_display_name(model_name)
 
+        # Check checkpoint for this model
+        ckpt_id = f"section_5.1_model_{model_name}"
+        if checkpoint is not None and checkpoint.exists(ckpt_id):
+            saved = checkpoint.load(ckpt_id)
+            results[model_name] = saved
+            successful += 1
+            if verbose:
+                print(f"\n[{idx}/{len(resolved_models)}] [RESUME] {display_name} loaded from checkpoint ({saved['training_time']:.2f}s)")
+            continue
+
         if verbose:
             print(f"\n[{idx}/{len(resolved_models)}] Training {display_name}...")
             print(f"{'-'*50}")
@@ -539,6 +588,8 @@ def train_models_batch_with_best_params(
 
             # Determine appropriate device for this model
             device = _get_device_for_model(model_name)
+            if verbose:
+                print(f"  Device: {device}")
 
             # Create model instance via factory
             model = ModelFactory.create(
@@ -607,6 +658,20 @@ def train_models_batch_with_best_params(
                 "accuracy_score": accuracy_score,
                 "param_source": param_data['source']
             }
+
+            # Save checkpoint for this model (without model object)
+            if checkpoint is not None:
+                checkpoint.save(ckpt_id, {
+                    "synthetic_data": synthetic_data,
+                    "model": None,
+                    "params_used": best_params,
+                    "training_time": training_time,
+                    "status": "success",
+                    "objective_score": objective_score,
+                    "similarity_score": similarity_score,
+                    "accuracy_score": accuracy_score,
+                    "param_source": param_data['source']
+                })
 
             successful += 1
 

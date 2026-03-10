@@ -59,7 +59,9 @@ def save_best_parameters_to_csv(scope=None, section_number=4, dataset_identifier
         'CTAB-GAN+': 'ctabganplus_study',
         'GANerAid': 'ganeraid_study',
         'CopulaGAN': 'copulagan_study',
-        'TVAE': 'tvae_study'
+        'TVAE': 'tvae_study',
+        'PATE-GAN': 'pategan_study',
+        'MEDGAN': 'medgan_study',
     }
 
     parameter_rows = []
@@ -295,7 +297,9 @@ def load_best_parameters_from_csv(section_number=4, dataset_identifier=None, fal
             'CTAB-GAN+': ('ctabganplus_study', 'ctabganplus'),
             'GANerAid': ('ganeraid_study', 'ganeraid'),
             'CopulaGAN': ('copulagan_study', 'copulagan'),
-            'TVAE': ('tvae_study', 'tvae')
+            'TVAE': ('tvae_study', 'tvae'),
+            'PATE-GAN': ('pategan_study', 'pategan'),
+            'MEDGAN': ('medgan_study', 'medgan'),
         }
 
         memory_loaded = 0
@@ -397,7 +401,9 @@ def compare_parameters_sources(scope=None, section_number=4, dataset_identifier=
         'ctabganplus': 'ctabganplus_study',
         'ganeraid': 'ganeraid_study',
         'copulagan': 'copulagan_study',
-        'tvae': 'tvae_study'
+        'tvae': 'tvae_study',
+        'pategan': 'pategan_study',
+        'medgan': 'medgan_study',
     }
 
     for model_key, study_var in model_studies.items():

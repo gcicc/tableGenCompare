@@ -142,6 +142,11 @@ from src.models.batch_optimization import (
     extract_studies_to_globals,
 )
 
+from src.models.staged_optimization import flush_previous_runs
+
+# Import checkpoint system for notebook resume capability
+from src.utils.checkpoint import SectionCheckpoint
+
 # Import model registry and selection helpers (Phase 4)
 from src.models.registry import (
     AVAILABLE_MODELS,

@@ -692,6 +692,86 @@ results = evaluate_all_available_models(
 
 ---
 
+### Phase 8: Persistent Environment and GANerAid Device Fix — March 2026
+
+**Timeline:** March 10, 2026
+
+**Environment:** AWS SageMaker
+
+**Status:** Active 🟢
+
+#### Key Achievement
+
+**Eliminated per-session reinstallation by moving the conda environment to persistent EBS storage, and fixed the GANerAid CPU/CUDA device mismatch bug at its source.**
+
+---
+
+#### A. Persistent Conda Environment on EBS
+
+**The Problem:** Every time the SageMaker notebook instance was stopped and restarted, the conda environment (installed under `/home/ec2-user/anaconda3/envs/`) was lost because that directory lives on the ephemeral root volume. This forced a full reinstall of all packages (~10 min) at the start of every session.
+
+**The Solution:** Moved the conda environment to the persistent EBS volume at `/home/ec2-user/SageMaker/.envs/tablegen`. This volume survives instance stop/start cycles.
+
+**New Scripts:**
+| Script | Purpose | When to Run |
+|--------|---------|-------------|
+| `setup_env.sh` | Creates conda env on EBS, installs all deps, patches libraries, registers kernel | Once (first time only) |
+| `on-start.sh` | Re-registers Jupyter kernel, ensures submodules initialized | Each session start (or via Lifecycle Config) |
+
+**SageMaker Lifecycle Configuration:** `on-start.sh` can be installed as a Lifecycle Configuration "Start notebook" script for fully automatic startup — no manual steps needed.
+
+---
+
+#### B. GANerAid Device Bug Fix
+
+**The Problem:** GANerAid's upstream library code hardcodes `torch.cuda.is_available()` checks in `utils.py`, `gan_trainer.py`, and `model.py` instead of respecting the `device` parameter passed at initialization. On GPU instances, this caused some tensors to be placed on CUDA while others remained on CPU, resulting in: `Input and hidden tensors are not at the same device, found input tensor at cuda:0 and hidden tensor at cpu`
+
+**The Root Cause (3 files):**
+- `utils.py` — `noise()` function sends noise tensor to CUDA unconditionally
+- `gan_trainer.py` — `real_data_target()`, `fake_data_target()`, and `train_on_batch()` all use `torch.cuda.is_available()` instead of `gan.device`
+- `model.py` — `GANerAidGenerator.forward()` creates `output = torch.zeros(...)` without specifying device, then does `.to(self.device)` on some but not all tensors
+
+**The Fix:** Patched all 3 files to consistently use the `device` parameter:
+- `noise()` now accepts a `device` kwarg
+- `real_data_target()` / `fake_data_target()` accept a `device` parameter
+- `GANerAidGenerator.init_hidden()` uses `device=self.device` in `torch.randn()`
+- `GANerAidGenerator.forward()` creates output tensor with `device=self.device`
+- All `.cuda()` calls removed in favor of `.to(device)`
+
+Patched files are stored in `patches/` and applied by `setup_env.sh`.
+
+The `GANerAidModel` wrapper continues to force CPU as a safety net due to other potential CUDA issues in the library.
+
+---
+
+#### C. tab-gan-metrics / dython Compatibility Fix
+
+**The Problem:** GANerAid depends on `tab-gan-metrics`, which pins `dython==0.5.1`. Our project requires `dython>=0.7.12`. The newer dython renamed `compute_associations` to `_compute_associations`, breaking `tab-gan-metrics` imports.
+
+**The Fix:** Install `tab-gan-metrics` with `--no-deps` and patch its import statements to fall back to `_compute_associations`. This is handled automatically by `setup_env.sh`.
+
+---
+
+#### D. Claude CLI PATH Persistence
+
+Added `export PATH="$HOME/.local/bin:$PATH"` to `~/.bashrc` so the Claude Code CLI is available immediately on session start without reinstalling.
+
+---
+
+### Phase 8 Summary Statistics
+
+#### Environment Improvements
+- **Session startup time:** ~10 min (full reinstall) → ~2 sec (`on-start.sh`)
+- **Scripts added:** 2 (`setup_env.sh`, `on-start.sh`)
+- **Patches added:** 3 GANerAid library files + 2 tab-gan-metrics files
+
+#### Bug Fixes
+- GANerAid CPU/CUDA device mismatch: **fixed at source** (3 upstream files patched)
+- tab-gan-metrics dython import: **fixed** (2 files patched)
+- GANerAid intermittent availability: **fixed** (submodule init in `on-start.sh`)
+
+---
+
 ## Development Philosophy Evolution
 
 ### old-main → AWS_Round1: **"Make it work in the cloud"**
@@ -792,6 +872,9 @@ git checkout v1.0-old-main  # or v2.0-aws-round1, v3.0-legacy-main
 - [x] Add differential privacy mechanisms (PATE-GAN implementation)
 - [x] Adopt SDAC evaluation framework (5-dimension taxonomy)
 - [x] XGBoost as primary classifier throughout pipeline
+- [x] Persistent conda environment on EBS (eliminates per-session reinstall)
+- [x] Fix GANerAid CPU/CUDA device mismatch bug
+- [x] SageMaker Lifecycle Configuration for automatic session startup
 - [ ] Expand to additional healthcare datasets
 - [ ] Implement automated quality gates
 
@@ -862,9 +945,9 @@ For questions about this project evolution or technical details:
 
 ---
 
-**Document Version:** 3.0
-**Last Updated:** February 26, 2026
+**Document Version:** 4.0
+**Last Updated:** March 10, 2026
 **Current Active Branch:** main
 **Production Branch:** main
 **Archived Tags:** v1.0-old-main, v2.0-aws-round1, v3.0-legacy-main
-**Framework Version:** 7.0 (SDAC Evaluation Framework)
+**Framework Version:** 8.0 (Persistent Environment + GANerAid Device Fix)

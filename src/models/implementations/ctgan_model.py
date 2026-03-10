@@ -118,7 +118,8 @@ class CTGANModel(SyntheticDataModel):
                 discriminator_steps=self.model_config["discriminator_steps"],
                 log_frequency=self.model_config["log_frequency"],
                 verbose=verbose,
-                pac=self.model_config["pac"]
+                pac=self.model_config["pac"],
+                cuda=self.device if self.device != "cpu" else False
             )
             
             # Train the model
