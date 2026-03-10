@@ -13,6 +13,8 @@ Phase 5 - February 2026
 import os
 import time
 import pickle
+import hashlib
+import inspect
 import logging
 from dataclasses import dataclass, field
 from typing import Dict, List, Any, Optional, Callable
@@ -30,8 +32,29 @@ except ImportError:
 from .model_factory import ModelFactory
 from .registry import resolve_models, get_model_display_name
 from .search_spaces import get_search_space, get_pruner_config
+import src.models.search_spaces as _search_spaces_module
 
 logger = logging.getLogger(__name__)
+
+
+def _get_search_space_hash(model_name: str, run_mode: str) -> str:
+    """
+    Compute a hash of the search space function source for a model + run_mode.
+
+    If the search space code changes (different choices, ranges, etc.) the hash
+    changes, which lets us auto-invalidate stale pickled Optuna studies.
+    """
+    # Get the private helper function for this model (e.g. _get_ctgan_search_space)
+    func_name = f"_get_{model_name}_search_space"
+    func = getattr(_search_spaces_module, func_name, None)
+    if func is None:
+        # Fallback: hash the whole module source
+        source = inspect.getsource(_search_spaces_module)
+    else:
+        source = inspect.getsource(func)
+    # Include run_mode so debug vs full always gets a different hash
+    key = f"{run_mode}:{source}"
+    return hashlib.sha256(key.encode()).hexdigest()[:16]
 
 
 @dataclass
@@ -57,6 +80,8 @@ class ModelOptimizationState:
     score_history: List[float] = field(default_factory=list)
     status: str = "pending"  # "pending", "running", "completed", "error"
     error_message: Optional[str] = None
+    run_mode: Optional[str] = None  # "debug" or "full" — used to invalidate stale studies
+    search_space_hash: Optional[str] = None  # hash of search space source code
 
 
 class TrialTimeTracker:
@@ -280,6 +305,43 @@ class StudyPersistence:
             model_name = path.stem.replace(f"{dataset_identifier}_", "").replace("_study", "")
             studies.append(model_name)
         return studies
+
+    def flush_studies(self, dataset_identifier: str) -> int:
+        """Delete all saved study/state pickle files for a dataset.
+
+        Returns the number of files removed.
+        """
+        removed = 0
+        for pattern in (f"{dataset_identifier}_*_study.pkl", f"{dataset_identifier}_*_state.pkl"):
+            for path in self.persistence_dir.glob(pattern):
+                path.unlink()
+                removed += 1
+        return removed
+
+
+def flush_previous_runs(dataset_identifier: str, persistence_dir: str = None) -> None:
+    """Remove all saved Optuna study pickles for *dataset_identifier*.
+
+    Call this at the top of a notebook to guarantee a clean run that starts
+    from trial 0 instead of resuming a prior session.
+
+    Parameters
+    ----------
+    dataset_identifier : str
+        The dataset identifier (e.g. ``"breast-cancer-data"``).
+    persistence_dir : str, optional
+        Path to the optimization_studies directory.  When *None* the default
+        ``results/<dataset_identifier>/optimization_studies`` is used.
+    """
+    if persistence_dir is None:
+        persistence_dir = f"results/{dataset_identifier}/optimization_studies"
+
+    store = StudyPersistence(persistence_dir)
+    n = store.flush_studies(dataset_identifier)
+    if n:
+        print(f"[FLUSH] Removed {n} pickle file(s) from {persistence_dir}")
+    else:
+        print(f"[FLUSH] No previous studies found in {persistence_dir} — starting clean")
 
 
 class ConciseTrialCallback:
@@ -516,13 +578,37 @@ class StagedOptimizationManager:
             # Try to load existing study
             loaded = self.persistence.load_study(model_name, self.dataset_identifier)
 
+            # Compute current search space hash for compatibility check
+            current_hash = _get_search_space_hash(model_name, self.config.run_mode)
+
             if loaded is not None:
                 study, state = loaded
-                print(f"  Resuming from {state.total_trials} existing trials")
+                saved_hash = getattr(state, 'search_space_hash', None)
+                saved_mode = getattr(state, 'run_mode', None)
+
+                # Invalidate if run_mode or search space code changed
+                if saved_hash is not None and saved_hash != current_hash:
+                    reason = f"run_mode changed ({saved_mode} -> {self.config.run_mode})" \
+                        if saved_mode != self.config.run_mode \
+                        else "search space code changed"
+                    print(f"  [WARN] Incompatible study ({reason}). Starting fresh.")
+                    study = self._create_fresh_study(model_name)
+                    state = ModelOptimizationState(model_name=model_name)
+                elif saved_mode is not None and saved_mode != self.config.run_mode:
+                    # Fallback for old pickles without hash
+                    print(f"  [WARN] run_mode changed ({saved_mode} -> {self.config.run_mode}). Starting fresh.")
+                    study = self._create_fresh_study(model_name)
+                    state = ModelOptimizationState(model_name=model_name)
+                else:
+                    print(f"  Resuming from {state.total_trials} existing trials")
             else:
                 # Create new study
                 study = self._create_fresh_study(model_name)
                 state = ModelOptimizationState(model_name=model_name)
+
+            # Tag the state with current run_mode and hash for future checks
+            state.run_mode = self.config.run_mode
+            state.search_space_hash = current_hash
 
             # Create objective and callback
             objective = self._create_objective(model_name)
@@ -538,7 +624,6 @@ class StagedOptimizationManager:
             # Run optimization
             state.status = "running"
             start_time = time.time()
-            incompatible_study_reset = False
 
             for trial_idx in range(n_trials):
                 self.time_tracker.start_trial(model_name)
@@ -553,29 +638,20 @@ class StagedOptimizationManager:
                 except optuna.TrialPruned:
                     pass
                 except Exception as e:
-                    err_msg = str(e)
-                    # Detect incompatible study (e.g. run_mode changed debug->full)
-                    if "dynamic value space" in err_msg and not incompatible_study_reset:
-                        incompatible_study_reset = True
-                        print(f"  [WARN] Incompatible study detected (search space changed). Starting fresh.")
+                    if "dynamic value space" in str(e):
+                        # Search space changed mid-study — reset and retry
+                        print(f"  [WARN] Incompatible study detected. Starting fresh.")
                         study = self._create_fresh_study(model_name)
                         state = ModelOptimizationState(model_name=model_name)
+                        state.run_mode = self.config.run_mode
                         callback.cumulative_trial_count = 0
-                        # Retry this trial with the fresh study
                         try:
-                            study.optimize(
-                                objective,
-                                n_trials=1,
-                                callbacks=[callback],
-                                show_progress_bar=False
-                            )
-                        except Exception as retry_e:
-                            if not self.config.continue_on_error:
-                                raise
-                            logger.warning(f"Trial failed for {model_name}: {retry_e}")
+                            study.optimize(objective, n_trials=1, callbacks=[callback], show_progress_bar=False)
+                        except Exception:
+                            pass
+                    elif not self.config.continue_on_error:
+                        raise
                     else:
-                        if not self.config.continue_on_error:
-                            raise
                         logger.warning(f"Trial failed for {model_name}: {e}")
 
                 self.time_tracker.end_trial(model_name)

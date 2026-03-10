@@ -370,7 +370,10 @@ class CopulaGANModel(SyntheticDataModel):
             for param in ['pac', 'generator_decay', 'discriminator_decay']:
                 if param in self.model_config:
                     model_params[param] = self.model_config[param]
-            
+
+            # Enable GPU acceleration if device is CUDA
+            model_params['cuda'] = self.device if self.device != "cpu" else False
+
             # Create CopulaGAN model (like main branch)
             self._copulagan_model = CopulaGANSynthesizer(
                 metadata=self._metadata,

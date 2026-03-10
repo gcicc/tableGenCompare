@@ -87,51 +87,51 @@ See [AWS SageMaker Setup](#aws-sagemaker-setup) below.
 Open a terminal in JupyterLab and run:
 
 ```bash
-# Initialize conda
 source ~/anaconda3/bin/activate
 conda init bash
 exec bash
 
-# Create Python 3.10 environment (avoids wheel/build issues)
-conda create -n tablegen python=3.10 -y
-conda activate tablegen
-python -m pip install -U pip setuptools wheel
-
-# Navigate to repo and initialize submodules (CRITICAL!)
 cd ~/SageMaker/tableGenCompare
-git submodule update --init --recursive
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Register Jupyter kernel
-pip install ipykernel
-python -m ipykernel install --user --name tablegen --display-name "Python (tablegen)"
+bash setup_env.sh
 ```
+
+This installs the conda env to the **persistent EBS volume** (`~/SageMaker/.envs/tablegen`)
+so it survives instance stop/start cycles. It also initializes all git submodules and registers
+the Jupyter kernel.
 
 ### 4. Select Kernel in JupyterLab
 
 **Kernel > Change Kernel > Python (tablegen)**
 
-### 5. Returning Sessions
+### 5. Returning Sessions (Automatic)
 
-Each time you start a new session:
+The `on-start.sh` script re-registers the Jupyter kernel and ensures submodules
+are initialized. Install it as a **SageMaker Lifecycle Configuration** for fully
+automatic startup:
+
+1. Go to **SageMaker Console > Notebook instances > Your instance > Edit**
+2. Under **Lifecycle configuration**, create a new one
+3. Paste the contents of `on-start.sh` into the **Start notebook** script
+4. Save and restart the instance
+
+**Or**, if you haven't set up the lifecycle config yet, just run manually:
 
 ```bash
-source ~/anaconda3/bin/activate
-conda activate tablegen
-cd ~/SageMaker/tableGenCompare
+bash ~/SageMaker/tableGenCompare/on-start.sh
 ```
+
+No reinstalling, no `pip install`, no `conda create` — everything is already on the persistent volume.
 
 ---
 
 ## Important Notes & Gotchas
 
 - **Python version:** Use Python 3.10 on SageMaker classic Notebook Instances (avoids compatibility issues)
+- **Persistent environment:** The conda env is installed on the EBS volume (`~/SageMaker/.envs/tablegen`) so it survives instance stop/start. Only the kernel registration (root volume) needs refreshing — handled by `on-start.sh`.
 - **scikit-learn:** Version 1.7.2+ is required (updated from earlier 1.2.2 pinning)
-- **dython:** Version 0.7.12+ required for GANERAID compatibility fix
-- **Submodules:** CTAB-GAN, CTAB-GAN-Plus, and GANerAid are Git submodules - always run `git submodule update --init --recursive`
-- **GPU models:** For GANerAid with CUDA, instantiate with: `GANerAidModel(device="cuda")`
+- **dython:** Version 0.7.12+ required; `tab-gan-metrics` is patched at install time for compatibility (see `setup_env.sh`)
+- **Submodules:** CTAB-GAN, CTAB-GAN-Plus, and GANerAid are Git submodules — `setup_env.sh` and `on-start.sh` handle initialization automatically
+- **GANerAid device bug:** The upstream GANerAid library hardcodes `torch.cuda.is_available()` instead of respecting the `device` parameter, causing CPU/CUDA tensor mismatches on GPU instances. Patched files in `patches/` are applied by `setup_env.sh` to fix this. The `GANerAidModel` wrapper also forces CPU as a safety net.
 
 ---
 
@@ -176,8 +176,15 @@ The codebase uses a clean modular structure for maintainability:
 ```
 tableGenCompare/
 ├── setup.py              # Backward-compatible re-export layer
+├── setup_env.sh          # ONE-TIME env setup (persistent EBS)
+├── on-start.sh           # Per-boot kernel registration & submodule init
 ├── requirements.txt      # Python dependencies
 ├── STG-Driver-breast-cancer.ipynb  # Primary workflow notebook
+│
+├── patches/              # Upstream library bug fixes
+│   ├── ganeraid_model.py    # Device-aware GANerAidGAN/Generator
+│   ├── ganeraid_trainer.py  # Device-aware GanTrainer
+│   └── ganeraid_utils.py    # Device-aware noise()
 │
 ├── src/                  # Modular source code
 │   ├── config.py         # Session management
@@ -257,7 +264,16 @@ See `requirements.txt` for complete dependency list.
 - Start with `n_trials=5` for testing
 
 **Kernel not found in JupyterLab**
-- Re-run: `python -m ipykernel install --user --name tablegen --display-name "Python (tablegen)"`
+- Run: `bash ~/SageMaker/tableGenCompare/on-start.sh` to re-register the kernel
+- Or set up the SageMaker Lifecycle Configuration (see [Returning Sessions](#5-returning-sessions-automatic))
+
+**GANerAid device mismatch (CPU/CUDA error)**
+- The upstream GANerAid library ignores the `device` parameter. Re-run `setup_env.sh` to apply patches.
+- The `GANerAidModel` wrapper forces CPU as a safety net; this is intentional.
+
+**Environment lost after instance restart**
+- The conda env lives on persistent EBS (`~/SageMaker/.envs/tablegen`) — it should survive restarts.
+- Only the kernel registration needs refreshing: run `on-start.sh` or use a Lifecycle Configuration.
 
 ---
 

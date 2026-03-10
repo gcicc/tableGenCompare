@@ -321,43 +321,25 @@ class GANerAidModel(SyntheticDataModel):
             processed_data = self._preprocess_categorical_data(data)
             logger.info(f"Data preprocessing completed. Shape: {data.shape} -> {processed_data.shape}")
 
-            # WORKAROUND: GANerAid library has a bug where it ignores the device parameter
-            # and uses CUDA if available. We temporarily disable CUDA detection.
-            import os
-            original_cuda_visible = os.environ.get('CUDA_VISIBLE_DEVICES', None)
-            os.environ['CUDA_VISIBLE_DEVICES'] = ''
+            # Initialize GANerAid model with validated parameters
+            self._ganeraid_model = GANerAid(
+                device=self.device_obj,
+                lr_d=lr_d,
+                lr_g=lr_g,
+                hidden_feature_space=hidden_feature_space,
+                batch_size=batch_size,
+                nr_of_rows=nr_of_rows,
+                binary_noise=binary_noise
+            )
+            logger.info(f"GANerAid initialized with validated parameters (device={self.device_obj})")
 
-            # Also monkey-patch torch.cuda.is_available for this scope
-            original_cuda_available = torch.cuda.is_available
-            torch.cuda.is_available = lambda: False
-
-            try:
-                # Initialize GANerAid model with validated parameters
-                self._ganeraid_model = GANerAid(
-                    device=self.device_obj,
-                    lr_d=lr_d,
-                    lr_g=lr_g,
-                    hidden_feature_space=hidden_feature_space,
-                    batch_size=batch_size,
-                    nr_of_rows=nr_of_rows,
-                    binary_noise=binary_noise
-                )
-                logger.info(f"✅ GANerAid initialized with validated parameters (forced CPU)")
-
-                # Train the model on preprocessed data
-                self._training_history = self._ganeraid_model.fit(
-                    processed_data,
-                    epochs=epochs,
-                    verbose=verbose,
-                    aug_factor=aug_factor
-                )
-            finally:
-                # Restore CUDA availability
-                torch.cuda.is_available = original_cuda_available
-                if original_cuda_visible is not None:
-                    os.environ['CUDA_VISIBLE_DEVICES'] = original_cuda_visible
-                else:
-                    os.environ.pop('CUDA_VISIBLE_DEVICES', None)
+            # Train the model on preprocessed data
+            self._training_history = self._ganeraid_model.fit(
+                processed_data,
+                epochs=epochs,
+                verbose=verbose,
+                aug_factor=aug_factor
+            )
             
             training_end = datetime.now()
             training_duration = (training_end - training_start).total_seconds()
