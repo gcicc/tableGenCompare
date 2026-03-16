@@ -36,15 +36,14 @@ def create_correlation_comparison(real_corr, synth_corr, model_name, results_dir
     """
     n_cols = len(real_corr.columns)
 
-    # Dynamic settings (more conservative for dual display)
+    # Dynamic figure size (more conservative for dual display)
     if n_cols <= 8:
-        show_annot, font_size, fmt, figsize = True, 9, '.2f', (16, 6)
+        figsize = (16, 6)
     elif n_cols <= 12:
-        show_annot, font_size, fmt, figsize = True, 7, '.2f', (18, 8)
+        figsize = (18, 8)
     elif n_cols <= 18:
-        show_annot, font_size, fmt, figsize = True, 5, '.2f', (20, 10)
+        figsize = (20, 10)
     else:
-        show_annot, font_size, fmt = False, None, '.2f'
         figsize = (max(20, n_cols * 0.8), max(10, n_cols * 0.5))
 
     fig, axes = plt.subplots(1, 2, figsize=figsize)
@@ -52,16 +51,14 @@ def create_correlation_comparison(real_corr, synth_corr, model_name, results_dir
                  fontsize=16, fontweight='bold')
 
     # Real data
-    sns.heatmap(real_corr, annot=show_annot, cmap='RdBu_r', center=0,
-                square=True, ax=axes[0], fmt=fmt,
-                annot_kws={'size': font_size} if show_annot else {},
+    sns.heatmap(real_corr, annot=False, cmap='RdBu_r', center=0,
+                square=True, ax=axes[0],
                 cbar_kws={'shrink': 0.8})
     axes[0].set_title('Real Data', fontsize=12)
 
     # Synthetic data
-    sns.heatmap(synth_corr, annot=show_annot, cmap='RdBu_r', center=0,
-                square=True, ax=axes[1], fmt=fmt,
-                annot_kws={'size': font_size} if show_annot else {},
+    sns.heatmap(synth_corr, annot=False, cmap='RdBu_r', center=0,
+                square=True, ax=axes[1],
                 cbar_kws={'shrink': 0.8})
     axes[1].set_title('Synthetic Data', fontsize=12)
 
