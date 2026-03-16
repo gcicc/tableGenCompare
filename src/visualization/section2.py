@@ -34,29 +34,17 @@ def create_correlation_heatmap(correlation_matrix, results_path,
     """
     n_cols = len(correlation_matrix.columns)
 
-    # Dynamic annotation control based on column count
-    if n_cols <= 10:
-        show_annot, font_size, fmt = True, 10, '.3f'
-    elif n_cols <= 15:
-        show_annot, font_size, fmt = True, 8, '.2f'
-    elif n_cols <= 20:
-        show_annot, font_size, fmt = True, 6, '.2f'
-    else:
-        show_annot, font_size, fmt = False, None, '.2f'
-
     # Dynamic figure size
     figsize = (max(10, n_cols * 0.6), max(8, n_cols * 0.5))
 
     fig, ax = plt.subplots(figsize=figsize)
 
     sns.heatmap(correlation_matrix,
-                annot=show_annot,
+                annot=False,
                 cmap='RdBu_r',
                 center=0,
                 square=True,
                 linewidths=0.5,
-                fmt=fmt,
-                annot_kws={'size': font_size} if show_annot else {},
                 ax=ax)
 
     ax.set_title('Feature Correlation Matrix', fontsize=14, fontweight='bold')

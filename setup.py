@@ -179,7 +179,8 @@ from src.data.eda import (
 # BACKWARD COMPATIBILITY - Thin wrapper functions
 # ============================================================================
 
-def evaluate_all_available_models(section_number, scope=None, models_to_evaluate=None, real_data=None, target_col=None):
+def evaluate_all_available_models(section_number, scope=None, models_to_evaluate=None, real_data=None, target_col=None,
+                                  protected_col=None, compute_mia=False):
     """
     Wrapper for unified evaluate_trained_models function - Section 3 pattern.
 
@@ -189,6 +190,8 @@ def evaluate_all_available_models(section_number, scope=None, models_to_evaluate
     - models_to_evaluate: List of specific models to evaluate (optional, evaluates all if None)
     - real_data: Real dataset (uses 'data' from scope if not provided)
     - target_col: Target column name (uses 'target_column' from scope if not provided)
+    - protected_col: Protected attribute column for fairness metrics (None = skip fairness)
+    - compute_mia: Whether to run MIA evaluation (expensive, default False)
 
     Returns:
     - Dictionary with results for each evaluated model
@@ -200,11 +203,14 @@ def evaluate_all_available_models(section_number, scope=None, models_to_evaluate
         scope=scope,
         models_to_evaluate=models_to_evaluate,
         real_data=real_data,
-        target_col=target_col
+        target_col=target_col,
+        protected_col=protected_col,
+        compute_mia=compute_mia
     )
 
 
-def evaluate_section5_optimized_models(section_number=5, scope=None, target_column=None):
+def evaluate_section5_optimized_models(section_number=5, scope=None, target_column=None,
+                                       protected_col=None, compute_mia=False):
     """
     Wrapper for unified evaluate_trained_models function - Section 5 pattern.
 
@@ -212,6 +218,8 @@ def evaluate_section5_optimized_models(section_number=5, scope=None, target_colu
     - section_number: Section number for file organization (default 5)
     - scope: Notebook scope (globals()) to access synthetic data and results
     - target_column: Target column name for analysis
+    - protected_col: Protected attribute column for fairness metrics (None = skip fairness)
+    - compute_mia: Whether to run MIA evaluation (expensive, default False)
 
     Returns:
     - Dictionary with batch evaluation results including:
@@ -229,7 +237,9 @@ def evaluate_section5_optimized_models(section_number=5, scope=None, target_colu
         scope=scope,
         models_to_evaluate=None,
         real_data=None,
-        target_col=target_column
+        target_col=target_column,
+        protected_col=protected_col,
+        compute_mia=compute_mia
     )
 
     # Restructure for notebook compatibility
