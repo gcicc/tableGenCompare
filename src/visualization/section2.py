@@ -10,6 +10,8 @@ import seaborn as sns
 import numpy as np
 from pathlib import Path
 
+from src.visualization.colors import REAL_COLOR
+
 
 def create_correlation_heatmap(correlation_matrix, results_path,
                                filename='correlation_heatmap.png',
@@ -111,7 +113,7 @@ def create_feature_distributions(data, target_column, results_path,
         axes = axes.flatten()
 
         for i, col in enumerate(cols_subset):
-            axes[i].hist(data[col].dropna(), bins=20, edgecolor='black', alpha=0.7)
+            axes[i].hist(data[col].dropna(), bins=20, color=REAL_COLOR, edgecolor='black', alpha=0.7)
             axes[i].set_title(col, fontsize=10)
             axes[i].set_xlabel('Value', fontsize=8)
             axes[i].set_ylabel('Frequency', fontsize=8)

@@ -14,24 +14,11 @@ from sklearn.metrics import roc_curve, auc, precision_recall_curve, average_prec
 from sklearn.preprocessing import label_binarize
 from sklearn.calibration import calibration_curve
 
-# Model-specific color mapping for consistent visualization across all plots
-MODEL_COLORS = {
-    'CTGAN': '#1f77b4',       # Blue
-    'TVAE': '#ff7f0e',        # Orange
-    'CTABGAN': '#2ca02c',     # Green
-    'CTABGANPLUS': '#d62728', # Red
-    'CTABGAN+': '#d62728',    # Red (alias)
-    'COPULAGAN': '#9467bd',   # Purple
-    'GANERAID': '#8c564b',    # Brown
-    'PATEGAN': '#e377c2',     # Pink
-    'PATE-GAN': '#e377c2',    # Pink (alias)
-    'MEDGAN': '#17becf',      # Cyan
-}
-
-
-def _get_model_color(model_name):
-    """Get consistent color for a model name."""
-    return MODEL_COLORS.get(model_name.upper(), '#7f7f7f')  # Gray fallback
+from src.visualization.colors import (
+    MODEL_COLORS, get_model_color as _get_model_color,
+    SDAC_CATEGORY_COLORS, SDAC_CATEGORY_FALLBACK,
+    TRTS_SCENARIO_COLORS,
+)
 
 
 def create_trts_visualizations(trts_results_dict, model_names, results_dir,
@@ -204,7 +191,7 @@ def create_trts_visualizations(trts_results_dict, model_names, results_dir,
     width = 0.2
 
     scenarios = ['TRTR', 'TSTS', 'TRTS', 'TSTR']
-    colors_bar = ['#FFB6C1', '#90EE90', '#DEB887', '#87CEEB']
+    colors_bar = [TRTS_SCENARIO_COLORS[s] for s in scenarios]
 
     for i, scenario in enumerate(scenarios):
         values = model_df[scenario].values
@@ -1125,18 +1112,10 @@ def create_sdac_heatmap(sdac_df, results_dir, dataset_name="Dataset",
     heat_data = sdac_df.set_index('Model')[available_metrics]
 
     # Category color bar
-    category_colors = {
-        'Privacy': '#e74c3c',
-        'Fidelity': '#3498db',
-        'Utility': '#2ecc71',
-        'Fairness': '#f39c12',
-        'XAI': '#9b59b6'
-    }
-
     col_colors = []
     for m in available_metrics:
         prefix = m.split('_')[0]
-        col_colors.append(category_colors.get(prefix, '#95a5a6'))
+        col_colors.append(SDAC_CATEGORY_COLORS.get(prefix, SDAC_CATEGORY_FALLBACK))
 
     # Figure size scales with number of metrics
     fig_width = max(14, len(available_metrics) * 0.8)
@@ -1199,9 +1178,9 @@ def create_sdac_heatmap(sdac_df, results_dir, dataset_name="Dataset",
     # Category legend below the plot (horizontal, no overlap)
     from matplotlib.patches import Patch
     legend_elements = [Patch(facecolor=c, label=cat)
-                      for cat, c in category_colors.items()]
+                      for cat, c in SDAC_CATEGORY_COLORS.items()]
     ax.legend(handles=legend_elements, loc='upper center',
-             bbox_to_anchor=(0.5, -0.18), ncol=len(category_colors),
+             bbox_to_anchor=(0.5, -0.18), ncol=len(SDAC_CATEGORY_COLORS),
              title='SDAC Category', fontsize=9, frameon=True)
 
     # Colorbar: normalized scale [0, 1]

@@ -11,6 +11,8 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 
+from src.visualization.colors import REAL_COLOR, SYNTH_COLOR, get_model_color
+
 
 def create_correlation_comparison(real_corr, synth_corr, model_name, results_dir,
                                   verbose=True):
@@ -136,9 +138,9 @@ def create_distribution_comparison(real_data, synthetic_data, numeric_cols_no_ta
 
             # Plot overlaid histograms
             ax.hist(real_data[col].dropna(), bins=20, alpha=0.7, label='Real',
-                   density=True, color='blue', edgecolor='black')
+                   density=True, color=REAL_COLOR, edgecolor='black')
             ax.hist(synthetic_data[col].dropna(), bins=20, alpha=0.7, label='Synthetic',
-                   density=True, color='orange', edgecolor='black')
+                   density=True, color=SYNTH_COLOR, edgecolor='black')
             ax.set_title(f'{col}\nJS Sim: {js_similarity:.3f}', fontsize=9)
             ax.legend(fontsize=8)
             ax.grid(True, alpha=0.3)
@@ -267,8 +269,8 @@ def create_mi_comparison(mi_real, mi_synth, mi_features, mi_correlation, model_n
     x = np.arange(len(mi_features))
     width = 0.35
 
-    ax.bar(x - width/2, mi_real, width, label='Real Data', alpha=0.8, color='blue')
-    ax.bar(x + width/2, mi_synth, width, label='Synthetic Data', alpha=0.8, color='orange')
+    ax.bar(x - width/2, mi_real, width, label='Real Data', alpha=0.8, color=REAL_COLOR)
+    ax.bar(x + width/2, mi_synth, width, label='Synthetic Data', alpha=0.8, color=SYNTH_COLOR)
 
     ax.set_xlabel('Features', fontsize=12)
     ax.set_ylabel('Mutual Information with Target', fontsize=12)
@@ -334,7 +336,7 @@ def create_loss_plot(loss_history, model_name, results_dir, verbose=True):
     elif isinstance(loss_history, list):
         # Single loss sequence (e.g., TVAE)
         epochs = range(1, len(loss_history) + 1)
-        ax.plot(epochs, loss_history, label='Loss', alpha=0.8, linewidth=2, color='blue')
+        ax.plot(epochs, loss_history, label='Loss', alpha=0.8, linewidth=2, color=REAL_COLOR)
         ax.set_ylabel('Loss', fontsize=12)
         ax.legend(fontsize=10)
         title = f'{model_name.upper()} - Training Loss Over Epochs'
@@ -395,9 +397,8 @@ def create_multi_model_loss_comparison(loss_histories, results_path, verbose=Tru
 
     fig, ax = plt.subplots(figsize=(14, 7))
 
-    colors = plt.cm.tab10(np.linspace(0, 1, len(loss_histories)))
-
-    for (model_name, loss_history), color in zip(loss_histories.items(), colors):
+    for model_name, loss_history in loss_histories.items():
+        color = get_model_color(model_name)
         if loss_history is None:
             continue
 

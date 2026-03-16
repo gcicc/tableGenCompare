@@ -49,9 +49,24 @@ def _save_plotly_figure(fig, output_path, verbose=True):
             raise
 
 
+def _apply_plotly_theme(fig, model_name=None):
+    """Apply consistent Plotly theme matching the matplotlib style."""
+    from src.visualization.colors import get_model_color
+    model_color = get_model_color(model_name) if model_name else '#1f77b4'
+
+    fig.update_layout(
+        template='plotly_white',
+        font=dict(family='Helvetica Neue, Helvetica, Arial, sans-serif', size=12),
+        title_font=dict(size=14),
+        colorway=[model_color],
+    )
+    return fig
+
+
 def create_optuna_visualizations(study, model_name, results_path, verbose=True):
     """
     Create standardized Optuna visualization exports for a completed study.
+    Outputs are saved as PNG (requires kaleido); falls back to HTML if unavailable.
 
     Parameters:
     -----------
@@ -84,6 +99,7 @@ def create_optuna_visualizations(study, model_name, results_path, verbose=True):
         # 1. Optimization History Plot
         try:
             fig1 = vis.plot_optimization_history(study)
+            _apply_plotly_theme(fig1, model_name)
             history_path = results_path / f'optim_history_{model_name}.png'
             saved_path = _save_plotly_figure(fig1, history_path, verbose)
             if saved_path:
@@ -97,6 +113,7 @@ def create_optuna_visualizations(study, model_name, results_path, verbose=True):
         # 2. Parameter Importance Plot
         try:
             fig2 = vis.plot_param_importances(study)
+            _apply_plotly_theme(fig2, model_name)
             importance_path = results_path / f'param_importance_{model_name}.png'
             saved_path = _save_plotly_figure(fig2, importance_path, verbose)
             if saved_path:
@@ -114,6 +131,7 @@ def create_optuna_visualizations(study, model_name, results_path, verbose=True):
             params_to_plot = params[:min(5, len(params))]
             if params_to_plot:
                 fig3 = vis.plot_parallel_coordinate(study, params=params_to_plot)
+                _apply_plotly_theme(fig3, model_name)
                 parallel_path = results_path / f'parallel_coord_{model_name}.png'
                 saved_path = _save_plotly_figure(fig3, parallel_path, verbose)
                 if saved_path:
@@ -182,13 +200,15 @@ def create_all_models_optuna_summary(studies_dict, results_path, verbose=True):
             print("[INFO] No valid studies to summarize")
         return None
 
+    from src.visualization.colors import get_model_colors_for_list
+
     # Create summary plot
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
     fig.suptitle('Hyperparameter Optimization Summary - All Models',
                  fontsize=16, fontweight='bold')
 
     # Left: Best objective values
-    colors = plt.cm.viridis(np.linspace(0, 1, len(model_names)))
+    colors = get_model_colors_for_list(model_names)
     ax1.barh(model_names, best_values, color=colors)
     ax1.set_xlabel('Best Objective Value (higher is better)', fontsize=11)
     ax1.set_title('Best Performance by Model', fontsize=12)
