@@ -1024,8 +1024,32 @@ def create_sdac_radar_chart(sdac_df, results_dir, dataset_name="Dataset",
             print("[VIZ] Not enough categories with data for radar chart (need >= 3)")
         return None
 
-    # Radar chart
+    # Compute polygon area for each model
+    # For a radar chart with N equally-spaced axes and values v_1..v_N:
+    #   A = (1/2) * sin(2*pi/N) * sum(v_i * v_{i+1})  where v_{N+1} = v_1
+    # Maximum possible area (all axes = 1) = (N/2) * sin(2*pi/N)
     N = len(active_cats)
+    theta_step = 2 * np.pi / N
+    max_area = (N / 2) * np.sin(theta_step)
+
+    area_rows = []
+    for _, row in comp_df.iterrows():
+        values = [row[c] if not np.isnan(row[c]) else 0 for c in active_cats]
+        # Shoelace formula for radar polygon
+        area = 0.5 * np.sin(theta_step) * sum(
+            values[i] * values[(i + 1) % N] for i in range(N)
+        )
+        pct = (area / max_area * 100) if max_area > 0 else 0
+        area_row = {'Model': row['Model']}
+        for cat in active_cats:
+            area_row[cat] = row[cat] if not np.isnan(row[cat]) else 0
+        area_row['Polygon_Area'] = round(area, 4)
+        area_row['Pct_of_Max'] = round(pct, 1)
+        area_rows.append(area_row)
+
+    area_df = pd.DataFrame(area_rows).sort_values('Polygon_Area', ascending=False)
+
+    # Radar chart
     angles = np.linspace(0, 2 * np.pi, N, endpoint=False).tolist()
     angles += angles[:1]  # close the polygon
 
@@ -1056,6 +1080,16 @@ def create_sdac_radar_chart(sdac_df, results_dir, dataset_name="Dataset",
         plt.savefig(output_path, dpi=300, bbox_inches='tight')
         if verbose:
             print(f"[VIZ] Saved: sdac_radar_chart.png")
+
+        # Save polygon area table
+        area_csv_path = results_path / 'sdac_composite_scores.csv'
+        area_df.to_csv(area_csv_path, index=False)
+        if verbose:
+            print(f"[VIZ] Saved: sdac_composite_scores.csv")
+            print(f"\n{'Model':<16} {'Polygon Area':>13} {'% of Max':>9}")
+            print("-" * 40)
+            for _, r in area_df.iterrows():
+                print(f"{r['Model']:<16} {r['Polygon_Area']:>13.4f} {r['Pct_of_Max']:>8.1f}%")
 
     if display_plots:
         plt.show()
