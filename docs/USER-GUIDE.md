@@ -178,6 +178,7 @@ Section 3 trains all 8 generative models using their **default (library-provided
 | `privacy_summary.csv` | Per-model privacy detail: NNDR mean/std, memorization score/count, re-identification risk, DCR mean | Drill into privacy concerns. NNDR_Std reveals how variable the nearest-neighbor distances are — a low std with a high mean is the ideal (consistently private). Memorized_Count = 0 for all models means no synthetic record is a near-exact copy of a real one. |
 | `privacy_dashboard.png` | Multi-panel privacy visualization across all models | See graphic interpretation below. |
 | `sdac_radar_chart.png` | Radar (spider) plot with one polygon per model, axes = SDAC dimension composite scores | See graphic interpretation below. |
+| `sdac_composite_scores.csv` | Per-model SDAC composite scores, polygon area, and % of maximum | Rank models by `Polygon_Area` for a single overall quality number. `Pct_of_Max` normalizes to [0-100%] so you can compare across datasets with different numbers of active SDAC dimensions. A model at 50% is not "half as good" — area scales quadratically, so 50% of max area represents a balanced model with scores around 0.7 on each axis. |
 | `sdac_heatmap.png` | Color-coded grid: rows = models, columns = individual metrics, grouped by SDAC category | See graphic interpretation below. |
 
 #### Per-Model Files (one folder per model, e.g., `CTGAN/`, `TVAE/`)
@@ -219,14 +220,19 @@ Two PCA scatter plots (real on left, synthetic on right), each point colored by 
 - **Look for:** If the synthetic plot shows class clusters merging (losing separation), the model has degraded discriminative structure. If the spread is noticeably tighter, the model is under-generating variance (mode collapse).
 - This is a holistic, visual check — it complements the numerical metrics by showing multi-dimensional structure in two dimensions.
 
-#### `sdac_radar_chart.png`
+#### `sdac_radar_chart.png` and `sdac_composite_scores.csv`
 
-A radar (spider) chart with 5 axes corresponding to the SDAC dimensions (Privacy, Fidelity, Utility, Fairness, XAI). Each model is drawn as a polygon.
+A radar (spider) chart with 5 axes corresponding to the SDAC dimensions (Privacy, Fidelity, Utility, Fairness, XAI). Each model is drawn as a polygon. The companion CSV contains the numerical composite scores and polygon area.
 
 **How to read it:**
 - A larger polygon means better overall performance. A balanced polygon (similar extent on all axes) is preferable to one with extreme spikes and dips.
 - **Look for:** Models that dominate on most axes. If a model has a deep indentation on one axis (e.g., Privacy), it flags a weakness that may be disqualifying for clinical use.
 - Each axis is a composite score normalized to [0, 1] so that dimensions with different native scales are comparable.
+
+**Polygon area as a ranking metric:**
+- The `Polygon_Area` column in `sdac_composite_scores.csv` quantifies the overall area enclosed by each model's radar polygon, computed as: $A = \frac{1}{2} \sin\!\left(\frac{2\pi}{N}\right) \sum_{i=1}^{N} v_i \cdot v_{i+1 \bmod N}$, where $N$ is the number of active SDAC dimensions and $v_i$ are the composite scores.
+- `Pct_of_Max` expresses the area as a percentage of the theoretical maximum (all axes = 1.0). This normalizes across datasets with different numbers of active dimensions.
+- Because area scales quadratically with the axis values, a model with all scores at 0.5 achieves only 25% of max area — not 50%. This rewards balanced excellence and penalizes models with one strong axis but several weak ones.
 
 #### `sdac_heatmap.png`
 
@@ -397,6 +403,7 @@ Section 5 produces the same file types as Section 3. Refer to the [Section 3 out
 | `privacy_summary.csv` | Detailed privacy metrics with optimized parameters | Check whether tuning degraded privacy. If DCR dropped or NNDR decreased relative to Section 3, the optimizer may have pushed models toward memorization in pursuit of higher fidelity. |
 | `privacy_dashboard.png` | Multi-panel privacy visualization (same format as Section 3) | Compare side-by-side with the Section 3 dashboard to visualize privacy impact of tuning. |
 | `sdac_radar_chart.png` | Radar chart of SDAC composite scores | Polygons should generally be larger than in Section 3. Any dimension that shrank after optimization warrants investigation. |
+| `sdac_composite_scores.csv` | Composite scores and polygon area per model | Compare `Polygon_Area` between Section 3 and Section 5 to quantify the net impact of hyperparameter tuning across all SDAC dimensions simultaneously. |
 | `sdac_heatmap.png` | Full metrics heatmap | Look for shifts from red to green (improvement) or green to red (regression) compared to Section 3. |
 
 #### Per-Model Files (same structure as Section 3)
@@ -854,6 +861,7 @@ results/{dataset-name}/{date}/
 │   ├── sdac_evaluation_summary.csv   # Cross-model SDAC metrics (baseline)
 │   ├── privacy_summary.csv           # Detailed privacy breakdown
 │   ├── sdac_radar_chart.png          # SDAC dimension radar chart
+│   ├── sdac_composite_scores.csv     # Polygon area and composite scores
 │   ├── sdac_heatmap.png              # Full metrics heatmap
 │   ├── privacy_dashboard.png         # Multi-panel privacy visualization
 │   └── {MODEL}/                      # Per-model folder (×7-8 models)
