@@ -1,0 +1,29 @@
+1. Section 2, 3, and 5 correlation matrices, replaced with mixed-association matrix: whereby:
+
+Plan: Mixed-Association Matrix — Correlation Upgrade
+Replace the current numeric-only Pearson correlation matrices with a mixed-association matrix that selects the appropriate metric per column-pair type. This affects three touch points: EDA heatmap (Sec 2), real-vs-synth comparison (Sec 3/5 viz), the SDAC fidelity scalar (Sec 5 eval), and the Optuna objective bivariate component (Sec 4).
+
+Steps
+Create src/evaluation/association.py — new module with compute_mixed_association_matrix(df) that classifies each column as numeric/categorical/binary, then fills the n×n matrix using Pearson/Spearman (num–num), Cramér's V (cat–cat), η correlation ratio (num–cat), and point-biserial (binary–num). Return a labeled pd.DataFrame with values in [–1, 1] or [0, 1] depending on pair type, plus a pair_type_matrix metadata frame.
+
+Update src/visualization/section2.py → create_correlation_heatmap() — replace df.corr() call with compute_mixed_association_matrix(df) before plotting; update colorbar label and title to reflect "Association Matrix".
+
+Update src/visualization/section3.py → create_correlation_comparison() — replace the two real_corr/synth_corr Pearson matrices passed in (and their callers in the data pipeline) with mixed-association matrices; the side-by-side heatmap function itself needs no other changes.
+
+Update src/evaluation/sdac_metrics.py → _compute_correlation_similarity() — swap df[common].corr() for compute_mixed_association_matrix(df[common]), then continue with the existing Pearson-of-flattened-matrices comparison scalar. This propagates automatically into Sec 5 SDAC scores.
+
+Update src/objective/functions.py → enhanced_objective_function_v2() — in the "Correlation similarity" block (~line 125–155), replace real_data[valid_numeric_cols].corr() / synthetic_data[valid_numeric_cols].corr() with compute_mixed_association_matrix() on the full feature set (not restricted to numeric), then flatten upper triangle for the MAE similarity score as before.
+
+Update src/data/eda.py (or wherever Sec 2 calls correlation_matrix = df.corr() and saves correlation_matrix.csv) — switch to compute_mixed_association_matrix(df) so the CSV output also reflects mixed associations; also regenerate target_correlations.csv using per-column association with the target.
+
+Further Considerations
+Colormap symmetry — Pearson/Spearman/point-biserial live in [–1, 1]; Cramér's V and η live in [0, 1]. Should mixed-matrix cells be normalised to a common [0, 1] scale (lose sign information) or kept raw with a diverging colormap centered at 0 (misleading for V/η)? Recommend a signed convention: treat V/η as magnitude-only and render on a [0, 1] sequential panel, or keep all values signed by convention. Worth agreeing before implementation.
+Scipy/statsmodels dependency — η (correlation ratio) isn't in scipy by default; it's a one-liner formula (np.sqrt(SS_between / SS_total)). Cramér's V and point-biserial are in scipy.stats. No new package installs needed.
+Objective function score range shift — replacing numeric-only Pearson with full mixed-association will change the magnitude of the bivariate similarity term, potentially shifting all historical Optuna scores. Existing pickled studies may compare poorly with new trials; consider bumping the search-space hash or clearing studies on first run after the upgrade.
+
+
+is used to populate matrix.  Then in section 4: correlation preservation is replaced with 'mixed-association preservation'
+2. update requirements to install shap library
+3. for parallel_coord plots, a common heatmap pallete is needed.  Different pngs should have same legend and pallete.
+4.  log(NNDR) replaces NNDR on privacy dashboard
+
