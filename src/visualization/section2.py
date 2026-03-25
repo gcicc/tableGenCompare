@@ -35,6 +35,7 @@ def create_correlation_heatmap(correlation_matrix, results_path,
     str : Path to saved file
     """
     n_cols = len(correlation_matrix.columns)
+    show_annot = n_cols <= 6
 
     # Dynamic figure size
     figsize = (max(10, n_cols * 0.6), max(8, n_cols * 0.5))
@@ -42,7 +43,8 @@ def create_correlation_heatmap(correlation_matrix, results_path,
     fig, ax = plt.subplots(figsize=figsize)
 
     sns.heatmap(correlation_matrix,
-                annot=False,
+                annot=show_annot,
+                fmt='.2f',
                 cmap='RdBu_r',
                 center=0,
                 square=True,
@@ -57,7 +59,7 @@ def create_correlation_heatmap(correlation_matrix, results_path,
     plt.close()
 
     if verbose:
-        print(f"[VIZ] Saved: {filename}")
+        print(f"[VIZ] Saved: {filename} (annotations {'on' if show_annot else 'off'})")
 
     return str(output_path)
 

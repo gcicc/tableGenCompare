@@ -37,8 +37,9 @@ def create_correlation_comparison(real_corr, synth_corr, model_name, results_dir
     str : Path to saved file
     """
     n_cols = len(real_corr.columns)
+    show_annot = n_cols <= 6
 
-    # Dynamic figure size (more conservative for dual display)
+    # Dynamic figure size
     if n_cols <= 8:
         figsize = (16, 6)
     elif n_cols <= 12:
@@ -53,15 +54,29 @@ def create_correlation_comparison(real_corr, synth_corr, model_name, results_dir
                  fontsize=16, fontweight='bold')
 
     # Real data
-    sns.heatmap(real_corr, annot=False, cmap='RdBu_r', center=0,
-                square=True, ax=axes[0],
-                cbar_kws={'shrink': 0.8})
+    sns.heatmap(
+        real_corr,
+        annot=show_annot,
+        fmt='.2f',
+        cmap='RdBu_r',
+        center=0,
+        square=True,
+        ax=axes[0],
+        cbar_kws={'shrink': 0.8}
+    )
     axes[0].set_title('Real Data', fontsize=12)
 
     # Synthetic data
-    sns.heatmap(synth_corr, annot=False, cmap='RdBu_r', center=0,
-                square=True, ax=axes[1],
-                cbar_kws={'shrink': 0.8})
+    sns.heatmap(
+        synth_corr,
+        annot=show_annot,
+        fmt='.2f',
+        cmap='RdBu_r',
+        center=0,
+        square=True,
+        ax=axes[1],
+        cbar_kws={'shrink': 0.8}
+    )
     axes[1].set_title('Synthetic Data', fontsize=12)
 
     plt.tight_layout()
@@ -71,7 +86,7 @@ def create_correlation_comparison(real_corr, synth_corr, model_name, results_dir
     plt.close()
 
     if verbose:
-        print(f"[VIZ] Saved: correlation_comparison.png")
+        print(f"[VIZ] Saved: correlation_comparison.png (annotations {'on' if show_annot else 'off'})")
 
     return str(output_file)
 

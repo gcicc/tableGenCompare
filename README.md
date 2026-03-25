@@ -293,3 +293,10 @@ This allows SageMaker notebook instances to run AWS CLI commands without manual 
 This framework follows a systematic approach to synthetic data generation research, emphasizing reproducibility, comprehensive evaluation, and practical applicability to healthcare data challenges.
 
 For project evolution and development history, see `docs/Project-Evolution-Timeline.md`.
+
+
+
+```bash
+curl -fsSL https://claude.ai/install.sh | bash
+
+```

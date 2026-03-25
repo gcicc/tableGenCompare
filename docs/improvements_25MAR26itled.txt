@@ -1,0 +1,13 @@
+1. Section 2, 3, and 5 correlation matrices, replaced with mixed-association matrix: whereby:
+
+| Pair type | Metric |
+| --- | --- |
+| numeric–numeric | Pearson or Spearman |
+| categorical–categorical | Cramér’s V |
+| numeric–categorical | Correlation ratio (η) |
+| binary–numeric | Point-biserial |
+
+is used to populate matrix.  Then in section 4: correlation preservation is replaced with 'mixed-association preservation'
+2. install shap library
+3. for parallel_coord plots, a common heatmap pallete is needed.  Different pngs should have same legend and pallete.
+4.  log(NNDR) replaces NNDR on privacy dashboard

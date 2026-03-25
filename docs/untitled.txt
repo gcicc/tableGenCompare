@@ -1,0 +1,15 @@
+Improvements:
+
+1. We need to replace the correlation matrix with a mixed-association matrix.  In this way, we'll use 
+| Pair type | Metric |
+| --- | --- |
+| numeric–numeric | Pearson or Spearman |
+| categorical–categorical | Cramér’s V |
+| numeric–categorical | Correlation ratio (η) |
+| binary–numeric | Point-biserial |
+
+This matrix will now be displayed in Section 2, Section 3, Section 5.
+The optuna objective function will now uses a norm based on this matrix.
+
+2. NNDR - plot log(NNDR) on the y-axis
+3. Requires the shap library. Returns NaN if SHAP is not installed.

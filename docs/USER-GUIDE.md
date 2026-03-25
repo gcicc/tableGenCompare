@@ -108,6 +108,7 @@ Section 2 loads the clinical dataset, runs `run_comprehensive_eda()`, and prepar
 A color-coded matrix of pairwise Pearson correlations across all numeric features. Each cell shows the correlation coefficient between two columns.
 
 **How to read it:**
+
 - **Color scale:** Dark red = strong positive correlation (+1), dark blue = strong negative correlation (-1), white = near zero.
 - **Diagonal:** Always +1 (each feature correlated with itself).
 - **Look for:** Clusters of warm colors indicating groups of co-varying features. Strong off-diagonal correlations represent relationships that the generative models must preserve. Compare this heatmap to the per-model correlation comparison plots in Sections 3 and 5 to assess how well each model captured these relationships.
@@ -117,6 +118,7 @@ A color-coded matrix of pairwise Pearson correlations across all numeric feature
 Histograms (with KDE overlays) for each numeric feature, split across two pages when the feature count exceeds one page.
 
 **How to read them:**
+
 - Each subplot shows the empirical distribution of one numeric column.
 - **Look for:** Skewness, multimodality, outlier tails. Heavily skewed features (e.g., bilirubin, liver enzymes) are harder for generators to replicate. Note features with long right tails — these are common in clinical lab values and are often compressed by GANs.
 - These serve as the "ground truth" against which Section 3/5 distribution comparison plots are judged.
@@ -126,6 +128,7 @@ Histograms (with KDE overlays) for each numeric feature, split across two pages 
 Bar charts showing the frequency of each category within categorical columns (e.g., gender).
 
 **How to read it:**
+
 - Bars represent the count or proportion in each category.
 - **Look for:** Category imbalance. If one category dominates (e.g., 75% male), generators may amplify or reduce this skew. Compare against the contingency similarity metric in Sections 3/5.
 
@@ -198,6 +201,7 @@ Section 3 trains all 8 generative models using their **default (library-provided
 Two side-by-side Pearson correlation heatmaps (real on left, synthetic on right) for a single model.
 
 **How to read it:**
+
 - Compare the two matrices cell-by-cell. Identical color patterns mean the model perfectly preserved inter-feature relationships.
 - **Look for:** Color shifts in specific cells — these indicate relationships the generator distorted. For example, if "bilirubin vs. albumin" is dark red in the real heatmap but orange in the synthetic one, the model weakened that correlation.
 - The overall similarity is quantified by the `Fidelity_Corr_Sim` metric in the SDAC summary (1.0 = perfect match).
@@ -207,6 +211,7 @@ Two side-by-side Pearson correlation heatmaps (real on left, synthetic on right)
 Overlaid histograms for each numeric column, showing real data (typically blue) and synthetic data (typically orange) on the same axes.
 
 **How to read it:**
+
 - When the two histograms overlap almost entirely, the model faithfully reproduced that feature's distribution.
 - **Look for:** Gaps where one distribution extends beyond the other (tail truncation), peaks that are shifted (mode displacement), or bimodal features that became unimodal (mode collapse).
 - Quantified by `Fidelity_JSD` (Jensen-Shannon Divergence) and `Fidelity_KS` (Kolmogorov-Smirnov statistic) — both should be close to 0.
@@ -216,6 +221,7 @@ Overlaid histograms for each numeric column, showing real data (typically blue) 
 Two PCA scatter plots (real on left, synthetic on right), each point colored by the target class label. The first two principal components are on the x/y axes.
 
 **How to read it:**
+
 - The cloud shape, spread, and class separation should look similar between the two panels.
 - **Look for:** If the synthetic plot shows class clusters merging (losing separation), the model has degraded discriminative structure. If the spread is noticeably tighter, the model is under-generating variance (mode collapse).
 - This is a holistic, visual check — it complements the numerical metrics by showing multi-dimensional structure in two dimensions.
@@ -225,11 +231,13 @@ Two PCA scatter plots (real on left, synthetic on right), each point colored by 
 A radar (spider) chart with 5 axes corresponding to the SDAC dimensions (Privacy, Fidelity, Utility, Fairness, XAI). Each model is drawn as a polygon. The companion CSV contains the numerical composite scores and polygon area.
 
 **How to read it:**
+
 - A larger polygon means better overall performance. A balanced polygon (similar extent on all axes) is preferable to one with extreme spikes and dips.
 - **Look for:** Models that dominate on most axes. If a model has a deep indentation on one axis (e.g., Privacy), it flags a weakness that may be disqualifying for clinical use.
 - Each axis is a composite score normalized to [0, 1] so that dimensions with different native scales are comparable.
 
 **Polygon area as a ranking metric:**
+
 - The `Polygon_Area` column in `sdac_composite_scores.csv` quantifies the overall area enclosed by each model's radar polygon, computed as: $A = \frac{1}{2} \sin\!\left(\frac{2\pi}{N}\right) \sum_{i=1}^{N} v_i \cdot v_{i+1 \bmod N}$, where $N$ is the number of active SDAC dimensions and $v_i$ are the composite scores.
 - `Pct_of_Max` expresses the area as a percentage of the theoretical maximum (all axes = 1.0). This normalizes across datasets with different numbers of active dimensions.
 - Because area scales quadratically with the axis values, a model with all scores at 0.5 achieves only 25% of max area — not 50%. This rewards balanced excellence and penalizes models with one strong axis but several weak ones.
@@ -239,6 +247,7 @@ A radar (spider) chart with 5 axes corresponding to the SDAC dimensions (Privacy
 A color-coded grid with models as rows and individual SDAC metrics as columns, grouped by dimension.
 
 **How to read it:**
+
 - **Color scale:** Green = better, red = worse (for each metric, the direction is normalized so green is always desirable).
 - **Look for:** Full rows of green (a model excelling everywhere) or red columns (a metric where all models struggle). Clustered red in the Privacy columns may indicate a dataset-level issue (e.g., too-small dataset) rather than a model failure.
 - This is the most information-dense single output — use it to quickly identify where each model sits relative to the field on every individual metric.
@@ -246,11 +255,13 @@ A color-coded grid with models as rows and individual SDAC metrics as columns, g
 #### `privacy_dashboard.png`
 
 A multi-panel visualization summarizing privacy across all models, typically including:
+
 - Bar charts of DCR and NNDR per model
 - Memorization score comparison
 - Re-identification risk comparison
 
 **How to read it:**
+
 - Taller bars for DCR and NNDR are better (greater distance from real records).
 - Memorization and re-identification bars should be at or near zero.
 - **Look for:** Models with unusually low DCR (synthetic records too close to real ones) or any non-zero memorization score (near-exact copies detected). PATE-GAN and MEDGAN typically show the highest DCR due to their noise-injection and encoding-based architectures, respectively.
@@ -338,6 +349,7 @@ Section 4 produces three interactive HTML charts per model. Open them in a brows
 A line/scatter plot showing the objective value for each trial, with a running-best line.
 
 **How to read it:**
+
 - **X-axis:** Trial number. **Y-axis:** Combined_Score.
 - Each point is one trial. The step-line traces the best score found so far.
 - **Look for:** A curve that plateaus early suggests the search space is well-explored (or too small). A curve still climbing at the final trial suggests more trials would help. Large jumps indicate the optimizer found a promising region.
@@ -347,6 +359,7 @@ A line/scatter plot showing the objective value for each trial, with a running-b
 A horizontal bar chart ranking each hyperparameter by its influence on the objective.
 
 **How to read it:**
+
 - Longer bars = more important parameters (higher fANOVA importance).
 - **Look for:** Parameters with near-zero importance can be fixed at any reasonable value in future runs, reducing the search space. The top 2-3 parameters are where tuning budget should be concentrated.
 - Importance is computed via functional ANOVA (fANOVA), which decomposes variance in the objective attributable to each parameter.
@@ -356,6 +369,7 @@ A horizontal bar chart ranking each hyperparameter by its influence on the objec
 A parallel coordinates plot where each vertical axis represents a hyperparameter and each line represents a trial, colored by objective value.
 
 **How to read it:**
+
 - Lines are colored from blue (low score) to red (high score).
 - **Look for:** Regions where red lines converge on a narrow band — these are the optimal ranges for that parameter. If red lines span the full range of a parameter, that parameter has little effect. Crossing patterns between adjacent axes reveal interactions.
 
@@ -364,6 +378,7 @@ A parallel coordinates plot where each vertical axis represents a hyperparameter
 A static bar chart comparing the best Combined_Score across all models.
 
 **How to read it:**
+
 - Taller bars = better optimized models.
 - **Look for:** The gap between the top model and the rest. A tight cluster at the top means several models are competitive after tuning. A single dominant bar means one model clearly benefits most from hyperparameter optimization.
 
@@ -744,6 +759,11 @@ XAI metrics measure whether the synthetic data preserves the explainability prop
 | **Source** | `src/evaluation/xai_metrics.py` |
 
 #### SHAP Distance
+
+SHAP values give, for each row and feature:
+
+- how much that feature contributed to the prediction
+- direction and magnitude of contribution
 
 | | |
 |---|---|
