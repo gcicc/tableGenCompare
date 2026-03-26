@@ -140,18 +140,21 @@ def compute_shap_distance(real_df, synth_df, target_col, verbose=True):
         shap_real = explainer_real.shap_values(X_real_sample)
         shap_synth = explainer_synth.shap_values(X_synth_sample)
 
-        # Handle multi-class SHAP output (list of arrays)
-        if isinstance(shap_real, list):
-            shap_real = np.mean([np.abs(s) for s in shap_real], axis=0)
-        else:
-            shap_real = np.abs(shap_real)
+        # Normalize SHAP output to 2D (n_samples, n_features).
+        # Older SHAP: list of 2D arrays (one per class).
+        # Newer SHAP (>=0.50): single 3D array (n_samples, n_features, n_classes).
+        def _collapse_shap(sv):
+            if isinstance(sv, list):
+                return np.mean([np.abs(s) for s in sv], axis=0)
+            sv = np.abs(sv)
+            if sv.ndim == 3:
+                return np.mean(sv, axis=2)  # average across classes
+            return sv
 
-        if isinstance(shap_synth, list):
-            shap_synth = np.mean([np.abs(s) for s in shap_synth], axis=0)
-        else:
-            shap_synth = np.abs(shap_synth)
+        shap_real = _collapse_shap(shap_real)
+        shap_synth = _collapse_shap(shap_synth)
 
-        # Mean absolute SHAP per feature
+        # Mean absolute SHAP per feature → 1-D vector
         mean_shap_real = np.mean(shap_real, axis=0)
         mean_shap_synth = np.mean(shap_synth, axis=0)
 
