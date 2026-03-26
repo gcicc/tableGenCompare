@@ -674,13 +674,15 @@ class CopulaGANModel(SyntheticDataModel):
                 metrics['mean_wasserstein_distance'] = np.mean(wasserstein_distances) if wasserstein_distances else 0.0
                 metrics['statistical_similarity'] = 1.0 - metrics['mean_ks_statistic']  # Higher is better
             
-            # Correlation preservation
+            # Association preservation (mixed-association matrix)
             if len(numerical_cols) > 1:
                 try:
-                    orig_corr = test_data[numerical_cols].corr()
-                    synth_corr = synthetic_data[numerical_cols].corr()
-                    
-                    # Correlation matrix similarity
+                    from src.evaluation.association import compute_mixed_association_matrix
+                    common_cols = [c for c in test_data.columns if c in synthetic_data.columns]
+                    orig_corr = compute_mixed_association_matrix(test_data[common_cols])
+                    synth_corr = compute_mixed_association_matrix(synthetic_data[common_cols])
+
+                    # Association matrix similarity
                     corr_diff = np.abs(orig_corr - synth_corr).mean().mean()
                     metrics['correlation_preservation'] = 1.0 / (1.0 + corr_diff)
                 except Exception:

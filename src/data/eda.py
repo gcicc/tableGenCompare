@@ -16,7 +16,7 @@ import seaborn as sns
 
 from src.utils.paths import get_results_path
 from src.visualization.section2 import (
-    create_correlation_heatmap,
+    create_mixed_association_heatmap,
     create_feature_distributions
 )
 
@@ -37,7 +37,7 @@ def run_comprehensive_eda(
     - CHUNK_2_1_4_B: Column analysis -> column_analysis.csv
     - CHUNK_2_1_4_C: Target variable analysis -> target_analysis.csv, target_balance_metrics.csv
     - CHUNK_2_1_4_D: Feature distributions -> feature_distributions.png
-    - CHUNK_2_1_4_E: Correlation analysis -> correlation_heatmap.png, correlation_matrix.csv
+    - CHUNK_2_1_4_E: Association analysis -> mixed_association_heatmap.png, association_matrix.csv
     - CHUNK_2_1_4_F: Global config validation
 
     Parameters:
@@ -251,32 +251,36 @@ def run_comprehensive_eda(
     target_correlations = None
 
     if len(numeric_cols_no_target) > 1:
-        # Include target in correlation if numeric
-        cols_for_corr = numeric_cols_no_target.copy()
-        if target_column in data.columns and data[target_column].dtype in ['int64', 'float64']:
+        # Mixed-association matrix: Pearson (num-num), Cramér's V (cat-cat),
+        # correlation ratio η (num-cat) — replaces numeric-only Pearson
+        from src.evaluation.association import compute_mixed_association_matrix
+
+        # Include all feature columns + target for association analysis
+        cols_for_corr = [c for c in data.columns if c != target_column]
+        if target_column in data.columns:
             cols_for_corr.append(target_column)
 
-        correlation_matrix = data[cols_for_corr].corr()
+        correlation_matrix = compute_mixed_association_matrix(data[cols_for_corr])
 
-        # Save correlation heatmap using existing function
-        heatmap_path = create_correlation_heatmap(
-            correlation_matrix=correlation_matrix,
+        # Save mixed-association heatmap
+        heatmap_path = create_mixed_association_heatmap(
+            association_matrix=correlation_matrix,
             results_path=results_path,
-            filename='correlation_heatmap.png',
+            filename='mixed_association_heatmap.png',
             verbose=False
         )
         files_generated.append(heatmap_path)
 
-        # Save correlation matrix to CSV
-        corr_matrix_file = os.path.join(results_path, 'correlation_matrix.csv')
+        # Save association matrix to CSV
+        corr_matrix_file = os.path.join(results_path, 'association_matrix.csv')
         correlation_matrix.to_csv(corr_matrix_file)
         files_generated.append(corr_matrix_file)
 
         results['correlation_matrix'] = correlation_matrix
 
         if verbose:
-            print(f"   Saved: correlation_heatmap.png")
-            print(f"   Saved: correlation_matrix.csv")
+            print(f"   Saved: mixed_association_heatmap.png")
+            print(f"   Saved: association_matrix.csv")
 
         # Target correlation analysis
         if target_column in correlation_matrix.columns:

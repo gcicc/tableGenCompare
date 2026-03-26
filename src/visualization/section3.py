@@ -50,7 +50,7 @@ def create_correlation_comparison(real_corr, synth_corr, model_name, results_dir
         figsize = (max(20, n_cols * 0.8), max(10, n_cols * 0.5))
 
     fig, axes = plt.subplots(1, 2, figsize=figsize)
-    fig.suptitle(f'{model_name.upper()} - Correlation Structure Comparison',
+    fig.suptitle(f'{model_name.upper()} - Association Structure Comparison',
                  fontsize=16, fontweight='bold')
 
     # Real data
@@ -60,6 +60,8 @@ def create_correlation_comparison(real_corr, synth_corr, model_name, results_dir
         fmt='.2f',
         cmap='RdBu_r',
         center=0,
+        vmin=-1,
+        vmax=1,
         square=True,
         ax=axes[0],
         cbar_kws={'shrink': 0.8}
@@ -73,11 +75,19 @@ def create_correlation_comparison(real_corr, synth_corr, model_name, results_dir
         fmt='.2f',
         cmap='RdBu_r',
         center=0,
+        vmin=-1,
+        vmax=1,
         square=True,
         ax=axes[1],
         cbar_kws={'shrink': 0.8}
     )
     axes[1].set_title('Synthetic Data', fontsize=12)
+
+    # Footnote explaining metric types and ranges
+    fig.text(0.5, -0.02,
+             'Pearson (num\u2013num): [\u22121, 1]  |  Cram\u00e9r\u2019s V (cat\u2013cat): [0, 1]  |  '
+             'Correlation ratio \u03b7 (num\u2013cat): [0, 1]',
+             ha='center', va='top', fontsize=9, style='italic', color='0.4')
 
     plt.tight_layout()
 

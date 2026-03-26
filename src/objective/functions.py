@@ -121,21 +121,17 @@ def enhanced_objective_function_v2(real_data, synthetic_data, target_column,
                 print(f"[ERROR] Error calculating EMD for {col}: {e}")
                 continue
 
-    # Correlation similarity
+    # Mixed-association similarity (replaces numeric-only Pearson correlation)
     try:
-        valid_numeric_cols = []
-        for col in numeric_columns:
-            if col in synthetic_data.columns and col != target_column:
-                col_is_numeric = (
-                    pd.api.types.is_numeric_dtype(synthetic_data[col]) and
-                    not synthetic_data[col].apply(lambda x: isinstance(x, str)).any()
-                )
-                if col_is_numeric:
-                    valid_numeric_cols.append(col)
+        from src.evaluation.association import compute_mixed_association_matrix
 
-        if len(valid_numeric_cols) > 1:
-            real_corr = real_data[valid_numeric_cols].corr()
-            synth_corr = synthetic_data[valid_numeric_cols].corr()
+        # Use all common feature columns (not just numeric) for association
+        valid_cols = [col for col in real_data.columns
+                      if col in synthetic_data.columns and col != target_column]
+
+        if len(valid_cols) > 1:
+            real_corr = compute_mixed_association_matrix(real_data[valid_cols])
+            synth_corr = compute_mixed_association_matrix(synthetic_data[valid_cols])
 
             # Flatten correlation matrices and compute distance
             real_corr_flat = real_corr.values[np.triu_indices_from(real_corr, k=1)]

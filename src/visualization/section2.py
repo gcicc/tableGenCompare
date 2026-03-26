@@ -2,7 +2,7 @@
 Section 2 Visualization Functions
 
 This module contains visualization functions for Exploratory Data Analysis (Section 2),
-including correlation heatmaps and feature distribution plots.
+including mixed-association heatmaps and feature distribution plots.
 """
 
 import matplotlib.pyplot as plt
@@ -13,20 +13,25 @@ from pathlib import Path
 from src.visualization.colors import REAL_COLOR
 
 
-def create_correlation_heatmap(correlation_matrix, results_path,
-                               filename='correlation_heatmap.png',
-                               verbose=True):
+# Backward-compatible alias
+def create_correlation_heatmap(*args, **kwargs):
+    return create_mixed_association_heatmap(*args, **kwargs)
+
+
+def create_mixed_association_heatmap(association_matrix, results_path,
+                                     filename='mixed_association_heatmap.png',
+                                     verbose=True):
     """
-    Create correlation heatmap with dynamic font sizing.
+    Create mixed-association heatmap with dynamic font sizing.
 
     Parameters:
     -----------
-    correlation_matrix : pd.DataFrame
-        Correlation matrix to visualize
+    association_matrix : pd.DataFrame
+        Mixed-association matrix to visualize (Pearson, Cramer's V, eta)
     results_path : str or Path
         Directory to save output
     filename : str
-        Output filename (default: 'correlation_heatmap.png')
+        Output filename (default: 'mixed_association_heatmap.png')
     verbose : bool
         Print progress messages
 
@@ -34,7 +39,7 @@ def create_correlation_heatmap(correlation_matrix, results_path,
     --------
     str : Path to saved file
     """
-    n_cols = len(correlation_matrix.columns)
+    n_cols = len(association_matrix.columns)
     show_annot = n_cols <= 6
 
     # Dynamic figure size
@@ -42,16 +47,25 @@ def create_correlation_heatmap(correlation_matrix, results_path,
 
     fig, ax = plt.subplots(figsize=figsize)
 
-    sns.heatmap(correlation_matrix,
+    sns.heatmap(association_matrix,
                 annot=show_annot,
                 fmt='.2f',
                 cmap='RdBu_r',
                 center=0,
+                vmin=-1,
+                vmax=1,
                 square=True,
                 linewidths=0.5,
                 ax=ax)
 
-    ax.set_title('Feature Correlation Matrix', fontsize=14, fontweight='bold')
+    ax.set_title('Feature Mixed-Association Matrix', fontsize=14, fontweight='bold')
+
+    # Footnote explaining metric types and ranges
+    fig.text(0.5, -0.02,
+             'Pearson (num\u2013num): [\u22121, 1]  |  Cram\u00e9r\u2019s V (cat\u2013cat): [0, 1]  |  '
+             'Correlation ratio \u03b7 (num\u2013cat): [0, 1]',
+             ha='center', va='top', fontsize=9, style='italic', color='0.4')
+
     plt.tight_layout()
 
     output_path = Path(results_path) / filename

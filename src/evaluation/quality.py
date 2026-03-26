@@ -441,30 +441,44 @@ def evaluate_synthetic_data_quality(real_data, synthetic_data, model_name, targe
         print("-" * 30)
     
     try:
-        real_corr = real_data[numeric_cols].corr()
-        synth_corr = synthetic_data[numeric_cols].corr()
-        
-        # Calculate correlation preservation
-        corr_preservation = stats.pearsonr(
-            real_corr.values.flatten(),
-            synth_corr.values.flatten()
-        )[0]
+        from src.evaluation.association import compute_mixed_association_matrix
+
+        # Use all common columns (not just numeric) for mixed-association
+        common_cols = [c for c in real_data.columns if c in synthetic_data.columns]
+        real_corr = compute_mixed_association_matrix(real_data[common_cols])
+        synth_corr = compute_mixed_association_matrix(synthetic_data[common_cols])
+
+        # Calculate association preservation
+        real_flat = real_corr.values.flatten()
+        synth_flat = synth_corr.values.flatten()
+        mask = ~(np.isnan(real_flat) | np.isnan(synth_flat))
+        if mask.sum() > 1:
+            corr_preservation = stats.pearsonr(real_flat[mask], synth_flat[mask])[0]
+        else:
+            corr_preservation = 0
         corr_preservation = max(0, corr_preservation)
         results['correlation_preservation'] = corr_preservation
-        
-        # Create correlation heatmap comparison
+
+        # Create association heatmap comparison
         if save_files or display_plots:
             fig, axes = plt.subplots(1, 2, figsize=(16, 6))
-            
-            # Real data correlation
-            sns.heatmap(real_corr, annot=True, cmap='RdBu_r', center=0, 
-                       square=True, ax=axes[0], fmt='.2f')
-            axes[0].set_title('Real Data - Correlation Matrix')
-            
-            # Synthetic data correlation
-            sns.heatmap(synth_corr, annot=True, cmap='RdBu_r', center=0,
-                       square=True, ax=axes[1], fmt='.2f')
-            axes[1].set_title(f'Synthetic Data - Correlation Matrix\nPreservation Score: {corr_preservation:.3f}')
+            show_annot = len(real_corr.columns) <= 6
+
+            # Real data association matrix
+            sns.heatmap(real_corr, annot=show_annot, cmap='RdBu_r', center=0,
+                       vmin=-1, vmax=1, square=True, ax=axes[0], fmt='.2f')
+            axes[0].set_title('Real Data - Association Matrix')
+
+            # Synthetic data association matrix
+            sns.heatmap(synth_corr, annot=show_annot, cmap='RdBu_r', center=0,
+                       vmin=-1, vmax=1, square=True, ax=axes[1], fmt='.2f')
+            axes[1].set_title(f'Synthetic Data - Association Matrix\nPreservation Score: {corr_preservation:.3f}')
+
+            # Footnote explaining metric types and ranges
+            fig.text(0.5, -0.02,
+                     'Pearson (num\u2013num): [\u22121, 1]  |  Cram\u00e9r\u2019s V (cat\u2013cat): [0, 1]  |  '
+                     'Correlation ratio \u03b7 (num\u2013cat): [0, 1]',
+                     ha='center', va='top', fontsize=9, style='italic', color='0.4')
             
             plt.tight_layout()
             
