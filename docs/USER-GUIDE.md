@@ -89,7 +89,7 @@ Section 2 loads the clinical dataset, runs `run_comprehensive_eda()`, and prepar
 - Missing value analysis and MICE imputation
 - Categorical encoding (one-hot or label)
 - Target variable distribution and class balance assessment
-- Correlation heatmaps and feature distribution plots
+- Mixed-association heatmaps (Pearson, Cramer's V, correlation ratio) and feature distribution plots
 
 ### Output Files
 
@@ -98,20 +98,21 @@ Section 2 loads the clinical dataset, runs `run_comprehensive_eda()`, and prepar
 | `column_analysis.csv` | Per-column profile: data type, unique values, missing count/percent, min/max | Use this to verify that the preprocessing pipeline handled each column correctly. Check that missing percentages dropped to 0% after imputation, and that min/max ranges are clinically plausible. |
 | `target_analysis.csv` | Class label counts and percentages | Reveals class imbalance. A minority class below 30% may cause generators to underrepresent that class. Record the ratio for later comparison against synthetic target distributions. |
 | `target_balance_metrics.csv` | Class balance ratio and imbalance category | A `Class_Balance_Ratio` below 0.5 flags the dataset as "Highly Imbalanced." This warns you that GAN-based generators may struggle with the minority class and that evaluation metrics sensitive to imbalance (F1, balanced accuracy) should be preferred over raw accuracy. |
-| `target_correlations.csv` | Pearson correlation of each feature with the target | Identifies the features most predictive of the outcome. Features with high absolute correlation should remain strongly correlated in synthetic data; check this against the Section 3/5 correlation comparison plots. |
-| `correlation_matrix.csv` | Full pairwise Pearson correlation matrix | Numerical companion to the heatmap below. Use it for precise values when the heatmap color scale is ambiguous. |
+| `target_correlations.csv` | Association strength of each feature with the target (Pearson for numeric, correlation ratio for categorical) | Identifies the features most predictive of the outcome. Features with high association should remain strongly associated in synthetic data; check this against the Section 3/5 association comparison plots. |
+| `correlation_matrix.csv` | Full pairwise mixed-association matrix (Pearson for num-num, Cramer's V for cat-cat, correlation ratio for num-cat) | Numerical companion to the heatmap below. Use it for precise values when the heatmap color scale is ambiguous. |
 
 ### Graphics
 
-#### `correlation_heatmap.png`
+#### `mixed_association_heatmap.png`
 
-A color-coded matrix of pairwise Pearson correlations across all numeric features. Each cell shows the correlation coefficient between two columns.
+A color-coded matrix of pairwise mixed associations across all features (numeric and categorical). The metric used per cell depends on the column-pair type: Pearson for numeric-numeric, Cramer's V for categorical-categorical, and correlation ratio (eta) for numeric-categorical pairs.
 
 **How to read it:**
 
-- **Color scale:** Dark red = strong positive correlation (+1), dark blue = strong negative correlation (-1), white = near zero.
-- **Diagonal:** Always +1 (each feature correlated with itself).
-- **Look for:** Clusters of warm colors indicating groups of co-varying features. Strong off-diagonal correlations represent relationships that the generative models must preserve. Compare this heatmap to the per-model correlation comparison plots in Sections 3 and 5 to assess how well each model captured these relationships.
+- **Color scale:** Fixed range [-1, +1]. Dark red = strong positive association (+1), dark blue = strong negative association (-1), white = near zero. A footnote on the figure indicates which metrics live in [0, 1] (Cramer's V, eta) vs. [-1, 1] (Pearson).
+- **Diagonal:** Always +1 (each feature associated with itself).
+- **Annotations:** Cell values are shown only when there are 6 or fewer features; for larger matrices annotations are suppressed for readability.
+- **Look for:** Clusters of warm colors indicating groups of co-varying features. Strong off-diagonal associations represent relationships that the generative models must preserve. Compare this heatmap to the per-model association comparison plots in Sections 3 and 5 to assess how well each model captured these relationships.
 
 #### `feature_distributions_part1.png` / `feature_distributions_part2.png`
 
@@ -190,7 +191,7 @@ Section 3 trains all 8 generative models using their **default (library-provided
 |---|---|---|
 | `evaluation_summary.csv` | Overall quality score, quality label (Excellent/Good/Fair/Poor), plus sub-scores for statistical similarity, distribution similarity, correlation preservation, PCA similarity, and ML utility | The `Overall_Quality_Score` is a weighted composite. `Quality_Assessment` translates it to a human-readable label. Use the sub-scores to diagnose *where* a model is weak — e.g., high correlation preservation but low distribution similarity means the model captures relationships but distorts marginals. |
 | `statistical_similarity.csv` | Per-column comparison: real mean, synthetic mean, mean similarity, std similarity, overall similarity | One row per numeric feature. `mean_similarity` close to 1.0 means the synthetic mean is close to the real mean. Look for columns with low `overall_similarity` — these are the features the model struggled to replicate. Often, features with heavy skew or extreme outliers (e.g., liver enzymes) show the lowest similarity. |
-| `correlation_comparison.png` | Side-by-side correlation heatmaps: real (left) vs. synthetic (right) | See graphic interpretation below. |
+| `correlation_comparison.png` | Side-by-side mixed-association heatmaps: real (left) vs. synthetic (right) | See graphic interpretation below. |
 | `distribution_comparison.png` | Overlaid histograms: real (blue) vs. synthetic (orange) for each numeric feature | See graphic interpretation below. |
 | `pca_comparison_with_outcome.png` | PCA scatter plots: real vs. synthetic, colored by target class | See graphic interpretation below. |
 
@@ -198,12 +199,12 @@ Section 3 trains all 8 generative models using their **default (library-provided
 
 #### `correlation_comparison.png`
 
-Two side-by-side Pearson correlation heatmaps (real on left, synthetic on right) for a single model.
+Two side-by-side mixed-association heatmaps (real on left, synthetic on right) for a single model. Cells use Pearson for numeric-numeric pairs, Cramer's V for categorical-categorical, and correlation ratio (eta) for numeric-categorical.
 
 **How to read it:**
 
-- Compare the two matrices cell-by-cell. Identical color patterns mean the model perfectly preserved inter-feature relationships.
-- **Look for:** Color shifts in specific cells — these indicate relationships the generator distorted. For example, if "bilirubin vs. albumin" is dark red in the real heatmap but orange in the synthetic one, the model weakened that correlation.
+- Compare the two matrices cell-by-cell. Identical color patterns mean the model perfectly preserved inter-feature relationships (including categorical associations).
+- **Look for:** Color shifts in specific cells — these indicate relationships the generator distorted. For example, if "bilirubin vs. albumin" is dark red in the real heatmap but orange in the synthetic one, the model weakened that association.
 - The overall similarity is quantified by the `Fidelity_Corr_Sim` metric in the SDAC summary (1.0 = perfect match).
 
 #### `distribution_comparison.png`
@@ -256,13 +257,15 @@ A color-coded grid with models as rows and individual SDAC metrics as columns, g
 
 A multi-panel visualization summarizing privacy across all models, typically including:
 
-- Bar charts of DCR and NNDR per model
+- Bar charts of DCR per model
+- log(NNDR) box-plot distribution per model (threshold at 0, i.e. log(1))
 - Memorization score comparison
 - Re-identification risk comparison
 
 **How to read it:**
 
-- Taller bars for DCR and NNDR are better (greater distance from real records).
+- Taller bars for DCR are better (greater distance from real records).
+- log(NNDR) values above 0 are good (synthetic records cluster with each other, not with real data). The log transform compresses the right-skewed raw NNDR distribution for easier visual comparison.
 - Memorization and re-identification bars should be at or near zero.
 - **Look for:** Models with unusually low DCR (synthetic records too close to real ones) or any non-zero memorization score (near-exact copies detected). PATE-GAN and MEDGAN typically show the highest DCR due to their noise-injection and encoding-based architectures, respectively.
 
@@ -287,14 +290,14 @@ Section 4 uses **Optuna Bayesian optimization** to search for hyperparameters th
 Combined_Score = 0.6 * Similarity + 0.4 * Accuracy
 ```
 
-- **Similarity** = Earth Mover's Distance + correlation preservation
+- **Similarity** = Earth Mover's Distance + mixed-association preservation
 - **Accuracy** = TSTR framework with XGBoost classifier
 
 Formally:
 
 $$\text{Combined\_Score} = 0.6 \times \bigl(1 - \overline{W}_d + r_{\text{corr}}\bigr)/2 \;+\; 0.4 \times \text{Acc}_{\text{TSTR}}$$
 
-where $\overline{W}_d$ is the mean Wasserstein distance across columns (lower = better, so it is inverted), $r_{\text{corr}}$ is the Pearson correlation similarity between the real and synthetic correlation matrices, and $\text{Acc}_{\text{TSTR}}$ is the XGBoost accuracy under the Train-Synthetic-Test-Real scenario.
+where $\overline{W}_d$ is the mean Wasserstein distance across columns (lower = better, so it is inverted), $r_{\text{corr}}$ is the mixed-association similarity between the real and synthetic association matrices (Pearson for num-num, Cramer's V for cat-cat, correlation ratio for num-cat), and $\text{Acc}_{\text{TSTR}}$ is the XGBoost accuracy under the Train-Synthetic-Test-Real scenario.
 
 Source: `src/objective/functions.py`
 
@@ -507,8 +510,8 @@ Privacy metrics measure how well synthetic data protects the confidentiality of 
 | **What it measures** | Ratio of each synthetic record's distance to the nearest real record vs. its distance to the nearest other synthetic record |
 | **Plain language** | Is each fake record closer to a real patient or to other fake records? |
 | **Mathematical definition** | For each synthetic record $\mathbf{s}_i$: $\text{NNDR}_i = \frac{\min_j \lVert \mathbf{s}_i - \mathbf{r}_j \rVert_2}{\min_{k \neq i} \lVert \mathbf{s}_i - \mathbf{s}_k \rVert_2}$. The reported value is the mean across all synthetic records. |
-| **Range** | 0 to +inf (values > 1.0 are better) |
-| **Interpretation** | NNDR < 1.0 means synthetic records are closer to real data than to other synthetic data — a sign of memorization. NNDR > 1.0 means synthetic records cluster with each other, not with real data. |
+| **Range** | 0 to +inf (values > 1.0 are better). On the privacy dashboard the distribution is displayed as log(NNDR), shifting the threshold to 0. |
+| **Interpretation** | NNDR < 1.0 (log < 0) means synthetic records are closer to real data than to other synthetic data — a sign of memorization. NNDR > 1.0 (log > 0) means synthetic records cluster with each other, not with real data. The log transform is used for visualization because raw NNDR distributions are heavily right-skewed. |
 | **Source** | `src/evaluation/privacy.py` |
 
 #### IMS (Individual Memorization Score)
@@ -619,16 +622,16 @@ Fidelity metrics measure how closely the synthetic data matches the statistical 
 | **Interpretation** | AUC = 0.5 means the classifier cannot distinguish real from synthetic (excellent fidelity). AUC > 0.8 means synthetic data is easily distinguishable (poor fidelity). |
 | **Source** | `src/evaluation/fidelity.py` |
 
-#### Correlation Similarity
+#### Correlation Similarity (Mixed-Association)
 
 | | |
 |---|---|
-| **What it measures** | How well the synthetic data preserves the pairwise correlation structure between columns |
-| **Plain language** | If column A and column B are correlated in the real data, are they still correlated the same way in the synthetic data? |
-| **Mathematical definition** | Let $C_{\text{real}}$ and $C_{\text{synth}}$ be the Pearson correlation matrices. The similarity is: $\text{Corr\_Sim} = 1 - \frac{\lVert C_{\text{real}} - C_{\text{synth}} \rVert_F}{\lVert C_{\text{real}} \rVert_F + \lVert C_{\text{synth}} \rVert_F}$, where $\lVert \cdot \rVert_F$ is the Frobenius norm. |
+| **What it measures** | How well the synthetic data preserves the pairwise association structure between all columns (numeric and categorical) |
+| **Plain language** | If column A and column B are associated in the real data, are they still associated the same way in the synthetic data? |
+| **Mathematical definition** | Let $A_{\text{real}}$ and $A_{\text{synth}}$ be the mixed-association matrices (Pearson for num-num, Cramer's V for cat-cat, correlation ratio for num-cat). The similarity is the Pearson correlation between the flattened matrices: $\text{Corr\_Sim} = \rho(\text{vec}(A_{\text{real}}), \text{vec}(A_{\text{synth}}))$, clipped to $[0, 1]$. |
 | **Range** | 0 to 1 (higher = better) |
-| **Interpretation** | 1.0 = perfect correlation preservation. < 0.7 = some relationships between variables are being distorted. |
-| **Source** | `src/evaluation/sdac_metrics.py` |
+| **Interpretation** | 1.0 = perfect association preservation. < 0.7 = some relationships between variables are being distorted. |
+| **Source** | `src/evaluation/sdac_metrics.py`, `src/evaluation/association.py` |
 
 #### Contingency Similarity
 
@@ -772,7 +775,7 @@ SHAP values give, for each row and feature:
 | **Mathematical definition** | Let $\boldsymbol{\phi}_{\text{real}}$ and $\boldsymbol{\phi}_{\text{synth}}$ be the mean absolute SHAP value vectors. The SHAP distance is the cosine distance: $\text{SHAP\_Dist} = 1 - \frac{\boldsymbol{\phi}_{\text{real}} \cdot \boldsymbol{\phi}_{\text{synth}}}{\lVert\boldsymbol{\phi}_{\text{real}}\rVert \cdot \lVert\boldsymbol{\phi}_{\text{synth}}\rVert}$. |
 | **Range** | 0 to 1 (lower = better) |
 | **Interpretation** | 0 = identical explanations. < 0.2 = good preservation. High values mean the model's reasoning changes when trained on synthetic data. |
-| **Note** | Requires the `shap` library. Returns NaN if SHAP is not installed. |
+| **Note** | Requires the `shap` library (included in `requirements.txt`). |
 | **Reference** | Lundberg & Lee, "A Unified Approach to Interpreting Model Predictions" (NeurIPS 2017) |
 | **Source** | `src/evaluation/xai_metrics.py` |
 
@@ -836,7 +839,8 @@ tableGenCompare/
 │   │   └── summary.py          # Data summaries
 │   ├── evaluation/
 │   │   ├── sdac_metrics.py     # Unified SDAC orchestrator
-│   │   ├── quality.py          # JSD, correlation, ML utility
+│   │   ├── association.py      # Mixed-association matrix (Pearson/Cramer's V/eta)
+│   │   ├── quality.py          # JSD, association, ML utility
 │   │   ├── fidelity.py         # KS, KL, WD, Detection AUC
 │   │   ├── trts.py             # 4-scenario TRTS (XGBoost primary)
 │   │   ├── privacy.py          # DCR, NNDR, MIA, memorization
@@ -846,7 +850,7 @@ tableGenCompare/
 │   ├── objective/
 │   │   └── functions.py        # Optuna objective function
 │   ├── visualization/
-│   │   ├── section2.py         # Correlation heatmap, feature distributions
+│   │   ├── section2.py         # Association heatmap, feature distributions
 │   │   ├── section3.py         # Per-model comparison plots
 │   │   ├── section4.py         # Optuna visualizations
 │   │   └── section5.py         # TRTS, privacy, SDAC charts
@@ -871,9 +875,9 @@ results/{dataset-name}/{date}/
 │   ├── column_analysis.csv           # Per-column data profile
 │   ├── target_analysis.csv           # Target class distribution
 │   ├── target_balance_metrics.csv    # Class balance ratio
-│   ├── target_correlations.csv       # Feature-target correlations
-│   ├── correlation_matrix.csv        # Full pairwise correlations
-│   ├── correlation_heatmap.png       # Visual correlation matrix
+│   ├── target_correlations.csv       # Feature-target associations
+│   ├── association_matrix.csv        # Full pairwise mixed-association matrix
+│   ├── mixed_association_heatmap.png # Visual mixed-association matrix
 │   ├── feature_distributions_part1.png  # Numeric feature histograms
 │   ├── feature_distributions_part2.png  # (continued)
 │   └── feature_distributions_categorical.png  # Categorical bar charts

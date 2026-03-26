@@ -772,6 +772,93 @@ Added `export PATH="$HOME/.local/bin:$PATH"` to `~/.bashrc` so the Claude Code C
 
 ---
 
+### Phase 9: Mixed-Association Matrix and Evaluation Refinements — March 2026
+
+**Timeline:** March 26, 2026
+
+**Environment:** AWS SageMaker
+
+**Status:** Active 🟢
+
+#### Key Achievement
+
+**Replaced Pearson-only correlation with a mixed-association matrix across the entire pipeline, added SHAP as an explicit dependency, unified parallel coordinate plot colormaps, and switched the privacy dashboard to log(NNDR).**
+
+---
+
+#### A. Mixed-Association Matrix
+
+**The Problem:** All correlation computations used Pearson correlation on numeric columns only, completely ignoring categorical-categorical and numeric-categorical relationships.
+
+**The Solution:** Created `src/evaluation/association.py` with `compute_mixed_association_matrix()` that selects the appropriate metric per column-pair type:
+
+| Pair type | Metric | Range |
+|---|---|---|
+| Numeric–Numeric | Pearson correlation | [-1, 1] |
+| Categorical–Categorical | Cramér's V | [0, 1] |
+| Numeric–Categorical | Correlation ratio (η) | [0, 1] |
+
+Leverages `dython.nominal.associations()` (already a project dependency).
+
+**Files changed:**
+- **NEW:** `src/evaluation/association.py` — `compute_mixed_association_matrix(df)` with auto-detection of nominal columns
+- `src/data/eda.py` — EDA now computes mixed-association matrix on all columns (not just numeric)
+- `src/evaluation/sdac_metrics.py` — `_compute_correlation_similarity()` uses mixed-association matrices
+- `src/evaluation/quality.py` — correlation preservation block uses mixed-association
+- `src/objective/functions.py` — Optuna objective "correlation similarity" component now uses mixed-association on all feature columns
+- `src/models/implementations/copulagan_model.py` — model-specific evaluation uses mixed-association
+- `src/visualization/section2.py` — heatmap title updated to "Association Matrix"
+- `src/visualization/section3.py` — comparison title updated to "Association Structure Comparison"
+
+**Impact on Optuna:** Existing pickled studies may produce different scores. Recommend clearing studies on first run after upgrade.
+
+---
+
+#### B. SHAP Library as Explicit Dependency
+
+**The Problem:** SHAP was imported optionally in `src/evaluation/xai_metrics.py` with try/except fallback, but not listed in `requirements.txt`.
+
+**The Fix:** Added `shap>=0.43.0` to `requirements.txt` under the Metrics/helpers section.
+
+---
+
+#### C. Unified Parallel Coordinate Colorscale
+
+**The Problem:** Each model's parallel coordinate plot used Optuna's auto-scaled colorscale, making cross-model visual comparison inconsistent.
+
+**The Fix:** After generating each figure, the colorscale is overridden to `Viridis` in `src/visualization/section4.py`, ensuring all models use the same color mapping for objective values.
+
+---
+
+#### D. log(NNDR) on Privacy Dashboard
+
+**The Problem:** Raw NNDR values are heavily right-skewed, making box plots hard to read and outliers dominant.
+
+**The Fix:** Applied `np.log()` transform at the visualization layer in `src/visualization/section5.py`:
+- Box plots now show log(NNDR) distributions
+- Threshold line moved from y=1.0 to y=0.0 (since log(1)=0)
+- Raw NNDR values preserved in metrics CSVs for backward compatibility
+
+---
+
+### Phase 9 Summary Statistics
+
+#### Evaluation Improvements
+- **Association metrics:** Pearson-only → mixed-association (Pearson + Cramér's V + η)
+- **New module:** `src/evaluation/association.py`
+- **Files modified:** 8 source files + 3 documentation files
+- **Privacy visualization:** NNDR → log(NNDR) for better distributional readability
+
+#### Dependency Changes
+- **Added:** `shap>=0.43.0` to `requirements.txt`
+
+#### Visualization Changes
+- Parallel coordinate plots: per-model auto-scale → unified Viridis colorscale
+- Association heatmaps: "Correlation" → "Association" in titles
+- Privacy dashboard: log(NNDR) with threshold at 0
+
+---
+
 ## Development Philosophy Evolution
 
 ### old-main → AWS_Round1: **"Make it work in the cloud"**

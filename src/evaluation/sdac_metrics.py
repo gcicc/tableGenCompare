@@ -54,17 +54,21 @@ def _compute_jsd_mean(real_df, synth_df, target_col=None):
 
 
 def _compute_correlation_similarity(real_df, synth_df, target_col=None):
-    """Pearson correlation between flattened correlation matrices."""
+    """Pearson correlation between flattened mixed-association matrices."""
     from scipy.stats import pearsonr
+    from src.evaluation.association import compute_mixed_association_matrix
 
-    numeric_cols = real_df.select_dtypes(include=[np.number]).columns.tolist()
-    common = [c for c in numeric_cols if c in synth_df.columns]
+    common = [c for c in real_df.columns if c in synth_df.columns]
     if len(common) < 2:
         return np.nan
     try:
-        real_corr = real_df[common].corr().values.flatten()
-        synth_corr = synth_df[common].corr().values.flatten()
-        r, _ = pearsonr(real_corr, synth_corr)
+        real_corr = compute_mixed_association_matrix(real_df[common]).values.flatten()
+        synth_corr = compute_mixed_association_matrix(synth_df[common]).values.flatten()
+        # Remove NaN pairs before computing correlation
+        mask = ~(np.isnan(real_corr) | np.isnan(synth_corr))
+        if mask.sum() < 2:
+            return np.nan
+        r, _ = pearsonr(real_corr[mask], synth_corr[mask])
         return max(0.0, r)
     except Exception:
         return np.nan

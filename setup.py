@@ -60,7 +60,8 @@ from src.utils.parameters import (
 
 # Import visualization functions
 from src.visualization.section2 import (
-    create_correlation_heatmap,
+    create_correlation_heatmap,  # backward-compatible alias
+    create_mixed_association_heatmap,
     create_feature_distributions
 )
 from src.visualization.section3 import (

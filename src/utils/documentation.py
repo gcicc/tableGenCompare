@@ -26,15 +26,15 @@ This folder contains EDA results performed before model training.
 
 ## Visualizations
 
-- **correlation_heatmap.png**: Pairwise correlations between numeric features. Identifies multicollinearity and relationships. Font size adjusts dynamically based on number of features.
+- **mixed_association_heatmap.png**: Pairwise mixed-association matrix across all features (Pearson for num-num, Cramer's V for cat-cat, correlation ratio for num-cat). Legend fixed at [-1, 1]. Annotations shown only for datasets with 6 or fewer features.
 
 - **feature_distributions.png** (or **feature_distributions_part1.png**, **part2.png**, ...): Histograms of each numeric feature. Multiple files generated for datasets with many features (6 features per file in 3x2 grid for readability).
 
 ## Data Analysis CSV Files
 
-- **correlation_matrix.csv**: Raw correlation coefficients between all numeric features (-1 to +1 scale).
+- **association_matrix.csv**: Mixed-association coefficients between all features (Pearson, Cramer's V, correlation ratio). Values in [-1, 1] or [0, 1] depending on pair type.
 
-- **target_correlations.csv**: Correlations between each feature and target variable, sorted by absolute strength. Identifies most predictive features.
+- **target_correlations.csv**: Associations between each feature and target variable, sorted by absolute strength. Identifies most predictive features.
 
 - **column_analysis.csv**: Comprehensive statistics per column including data type, missing values, unique values, and descriptive statistics (mean, std, min, max).
 

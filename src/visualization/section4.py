@@ -132,6 +132,9 @@ def create_optuna_visualizations(study, model_name, results_path, verbose=True):
             if params_to_plot:
                 fig3 = vis.plot_parallel_coordinate(study, params=params_to_plot)
                 _apply_plotly_theme(fig3, model_name)
+                # Unify colorscale across all models for visual comparability
+                if fig3.data and hasattr(fig3.data[0], 'line'):
+                    fig3.data[0].line.colorscale = 'Viridis'
                 parallel_path = results_path / f'parallel_coord_{model_name}.png'
                 saved_path = _save_plotly_figure(fig3, parallel_path, verbose)
                 if saved_path:

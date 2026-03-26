@@ -339,28 +339,32 @@ def create_privacy_dashboard(trts_results_dict, model_names, results_dir,
             ax1.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.02,
                     f'{score:.3f}', ha='center', va='bottom', fontweight='bold')
 
-    # Panel 2 (Top Right): NNDR Distribution (Box Plot)
+    # Panel 2 (Top Right): log(NNDR) Distribution (Box Plot)
     ax2 = axes[0, 1]
-    nndr_data = [row['NNDR_Distribution'] for _, row in privacy_df.iterrows()
-                 if len(row['NNDR_Distribution']) > 0]
+    nndr_raw = [row['NNDR_Distribution'] for _, row in privacy_df.iterrows()
+                if len(row['NNDR_Distribution']) > 0]
     nndr_labels = [row['Model'] for _, row in privacy_df.iterrows()
                    if len(row['NNDR_Distribution']) > 0]
 
-    if nndr_data:
+    if nndr_raw:
+        # Apply log transform — compresses right-skewed distribution;
+        # threshold shifts from 1.0 to 0.0 since log(1) = 0
+        nndr_data = [np.log(np.array(d, dtype=float)[np.array(d, dtype=float) > 0])
+                     for d in nndr_raw]
         bp = ax2.boxplot(nndr_data, labels=nndr_labels, patch_artist=True)
         for patch in bp['boxes']:
             patch.set_facecolor('lightblue')
             patch.set_alpha(0.6)
-        ax2.axhline(y=1.0, color='red', linestyle='--', linewidth=2,
-                   label='NNDR=1.0 (Threshold)')
-        ax2.set_title('NNDR Distribution (>1.0 = Good)', fontweight='bold')
-        ax2.set_ylabel('NNDR Value')
+        ax2.axhline(y=0.0, color='red', linestyle='--', linewidth=2,
+                   label='log(NNDR)=0 (Threshold)')
+        ax2.set_title('log(NNDR) Distribution (>0 = Good)', fontweight='bold')
+        ax2.set_ylabel('log(NNDR)')
         ax2.legend()
         ax2.grid(True, alpha=0.3, axis='y')
     else:
         ax2.text(0.5, 0.5, 'NNDR data not available', ha='center', va='center',
                 transform=ax2.transAxes, fontsize=12)
-        ax2.set_title('NNDR Distribution', fontweight='bold')
+        ax2.set_title('log(NNDR) Distribution', fontweight='bold')
 
     # Panel 3 (Bottom Left): Memorization Risk (Stacked Bar)
     ax3 = axes[1, 0]

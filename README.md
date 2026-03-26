@@ -161,7 +161,7 @@ The STG-Driver notebook follows a standardized 5-section pipeline:
 - Synthetic data generation using best parameters
 - **SDAC-aligned evaluation** across 5 dimensions: Privacy, Fidelity, Utility, Fairness, XAI
 - Privacy risk assessment (DCR, NNDR, MIA, memorization, re-identification)
-- Fidelity analysis (JSD, KS, KL, Wasserstein, Detection AUC)
+- Fidelity analysis (JSD, KS, KL, Wasserstein, Detection AUC, Mixed-Association Similarity)
 - Utility preservation (TSTR with XGBoost/RF/LR, ML Efficacy, SRA)
 - Fairness metrics (Demographic Parity, Equalized Odds, Disparate Impact)
 - XAI metrics (Feature Importance Correlation, SHAP Distance)
@@ -192,6 +192,7 @@ tableGenCompare/
 │   ├── data/             # Data preprocessing
 │   ├── evaluation/       # SDAC evaluation framework
 │   │   ├── sdac_metrics.py  # Unified SDAC orchestrator
+│   │   ├── association.py   # Mixed-association matrix
 │   │   ├── quality.py       # Statistical fidelity
 │   │   ├── fidelity.py      # KS, KL, WD, Detection AUC
 │   │   ├── trts.py          # TRTS framework (XGBoost primary)
@@ -298,5 +299,6 @@ For project evolution and development history, see `docs/Project-Evolution-Timel
 
 ```bash
 curl -fsSL https://claude.ai/install.sh | bash
-
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
 ```
