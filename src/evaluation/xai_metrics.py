@@ -95,8 +95,7 @@ def compute_shap_distance(real_df, synth_df, target_col, verbose=True):
     try:
         import shap
     except ImportError:
-        if verbose:
-            print("   [XAI] SHAP library not installed; skipping SHAP distance")
+        print("   [XAI] SHAP library not installed; skipping SHAP distance")
         return {'SHAP_Distance': np.nan}
 
     try:
@@ -106,6 +105,7 @@ def compute_shap_distance(real_df, synth_df, target_col, verbose=True):
         feature_cols = [c for c in numeric_cols if c != target_col and c in synth_df.columns]
 
         if len(feature_cols) < 2:
+            print(f"   [XAI] SHAP skipped: only {len(feature_cols)} numeric feature(s)")
             return {'SHAP_Distance': np.nan}
 
         X_real = real_df[feature_cols].fillna(0)
@@ -114,12 +114,16 @@ def compute_shap_distance(real_df, synth_df, target_col, verbose=True):
         y_real = real_df[target_col]
         y_synth = synth_df[target_col]
 
-        if y_real.dtype == 'object':
+        # Encode non-numeric targets for RandomForest
+        if y_real.dtype == 'object' or y_real.dtype.name == 'category':
             le = LabelEncoder()
             combined = pd.concat([y_real.astype(str), y_synth.astype(str)])
             le.fit(combined)
             y_real = le.transform(y_real.astype(str))
             y_synth = le.transform(y_synth.astype(str))
+        else:
+            y_real = y_real.values
+            y_synth = y_synth.values
 
         # Train models
         rf_real = RandomForestClassifier(n_estimators=50, random_state=42, max_depth=8)
@@ -158,8 +162,19 @@ def compute_shap_distance(real_df, synth_df, target_col, verbose=True):
         mean_shap_real = np.mean(shap_real, axis=0)
         mean_shap_synth = np.mean(shap_synth, axis=0)
 
+        # Guard against zero vectors (cosine is undefined)
+        if np.allclose(mean_shap_real, 0) or np.allclose(mean_shap_synth, 0):
+            if verbose:
+                print("   [XAI] SHAP vectors are zero — cosine distance undefined, returning 1.0")
+            return {'SHAP_Distance': 1.0}
+
         # Cosine distance
         dist = cosine(mean_shap_real, mean_shap_synth)
+
+        if np.isnan(dist):
+            print(f"   [XAI] SHAP cosine returned NaN (real norm={np.linalg.norm(mean_shap_real):.6f}, "
+                  f"synth norm={np.linalg.norm(mean_shap_synth):.6f})")
+            return {'SHAP_Distance': np.nan}
 
         if verbose:
             print(f"   [XAI] SHAP Distance (cosine): {dist:.4f}")
@@ -167,6 +182,6 @@ def compute_shap_distance(real_df, synth_df, target_col, verbose=True):
         return {'SHAP_Distance': float(dist)}
 
     except Exception as e:
-        if verbose:
-            print(f"   [XAI] SHAP distance failed: {e}")
+        # Always print so the user can see why SHAP failed
+        print(f"   [XAI] SHAP distance failed: {type(e).__name__}: {e}")
         return {'SHAP_Distance': np.nan}
