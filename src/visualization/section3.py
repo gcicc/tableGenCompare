@@ -14,7 +14,12 @@ from pathlib import Path
 from src.visualization.colors import REAL_COLOR, SYNTH_COLOR, get_model_color
 
 
-def create_correlation_comparison(real_corr, synth_corr, model_name, results_dir,
+# Backward-compatible alias
+def create_correlation_comparison(*args, **kwargs):
+    return create_association_comparison(*args, **kwargs)
+
+
+def create_association_comparison(real_corr, synth_corr, model_name, results_dir,
                                   verbose=True):
     """
     Create side-by-side correlation heatmap comparison with dynamic font sizing.
@@ -91,12 +96,12 @@ def create_correlation_comparison(real_corr, synth_corr, model_name, results_dir
 
     plt.tight_layout()
 
-    output_file = Path(results_dir) / 'correlation_comparison.png'
+    output_file = Path(results_dir) / 'association_comparison.png'
     plt.savefig(output_file, dpi=300, bbox_inches='tight')
     plt.close()
 
     if verbose:
-        print(f"[VIZ] Saved: correlation_comparison.png (annotations {'on' if show_annot else 'off'})")
+        print(f"[VIZ] Saved: association_comparison.png (annotations {'on' if show_annot else 'off'})")
 
     return str(output_file)
 
