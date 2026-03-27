@@ -483,7 +483,7 @@ def evaluate_synthetic_data_quality(real_data, synthetic_data, model_name, targe
             plt.tight_layout()
             
             if save_files and results_dir:
-                corr_plot_file = results_dir / 'correlation_comparison.png'
+                corr_plot_file = results_dir / 'association_comparison.png'
                 plt.savefig(corr_plot_file, dpi=300, bbox_inches='tight')
                 results['files_generated'].append(str(corr_plot_file))
             

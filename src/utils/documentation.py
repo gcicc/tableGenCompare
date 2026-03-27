@@ -34,7 +34,7 @@ This folder contains EDA results performed before model training.
 
 - **association_matrix.csv**: Mixed-association coefficients between all features (Pearson, Cramer's V, correlation ratio). Values in [-1, 1] or [0, 1] depending on pair type.
 
-- **target_correlations.csv**: Associations between each feature and target variable, sorted by absolute strength. Identifies most predictive features.
+- **target_associations.csv**: Associations between each feature and target variable, sorted by absolute strength. Identifies most predictive features.
 
 - **column_analysis.csv**: Comprehensive statistics per column including data type, missing values, unique values, and descriptive statistics (mean, std, min, max).
 
@@ -91,7 +91,7 @@ Each model has its own subfolder:
 - **mode_collapse_analysis.csv** - Categorical variable diversity check (if applicable)
 
 ### Visualizations
-- **correlation_comparison.png** - Side-by-side heatmaps (real vs synthetic)
+- **association_comparison.png** - Side-by-side mixed-association heatmaps (real vs synthetic)
 - **distribution_comparison_partN.png** - Overlaid histograms per feature
 - **pca_comparison_with_outcome.png** - Principal component analysis
 - **training_loss.png** - Training loss over epochs (per model folder, if available)
@@ -188,7 +188,7 @@ def create_section3_model_readme(results_dir, model_name, quality_score, quality
 
 - **evaluation_summary.csv**: Overall quality metrics
 - **statistical_similarity.csv**: Per-feature similarity analysis
-- **correlation_comparison.png**: Correlation matrix comparison
+- **association_comparison.png**: Mixed-association matrix comparison
 - **distribution_comparison_partN.png**: Feature distribution comparisons
 - **pca_comparison_with_outcome.png**: Principal component analysis
 

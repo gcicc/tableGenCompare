@@ -65,7 +65,8 @@ from src.visualization.section2 import (
     create_feature_distributions
 )
 from src.visualization.section3 import (
-    create_correlation_comparison,
+    create_correlation_comparison,  # backward-compatible alias
+    create_association_comparison,
     create_distribution_comparison,
     create_mode_collapse_visualization,
     create_mi_comparison,

@@ -295,13 +295,13 @@ def run_comprehensive_eda(
                             for corr in target_corrs.values]
             })
 
-            target_corr_file = os.path.join(results_path, 'target_correlations.csv')
+            target_corr_file = os.path.join(results_path, 'target_associations.csv')
             target_correlations.to_csv(target_corr_file, index=False)
             files_generated.append(target_corr_file)
             results['target_correlations'] = target_correlations
 
             if verbose:
-                print(f"   Saved: target_correlations.csv ({len(target_corrs)} features)")
+                print(f"   Saved: target_associations.csv ({len(target_corrs)} features)")
     else:
         if verbose:
             print("   WARNING: Insufficient numeric features for correlation analysis")

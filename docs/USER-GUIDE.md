@@ -98,8 +98,8 @@ Section 2 loads the clinical dataset, runs `run_comprehensive_eda()`, and prepar
 | `column_analysis.csv` | Per-column profile: data type, unique values, missing count/percent, min/max | Use this to verify that the preprocessing pipeline handled each column correctly. Check that missing percentages dropped to 0% after imputation, and that min/max ranges are clinically plausible. |
 | `target_analysis.csv` | Class label counts and percentages | Reveals class imbalance. A minority class below 30% may cause generators to underrepresent that class. Record the ratio for later comparison against synthetic target distributions. |
 | `target_balance_metrics.csv` | Class balance ratio and imbalance category | A `Class_Balance_Ratio` below 0.5 flags the dataset as "Highly Imbalanced." This warns you that GAN-based generators may struggle with the minority class and that evaluation metrics sensitive to imbalance (F1, balanced accuracy) should be preferred over raw accuracy. |
-| `target_correlations.csv` | Association strength of each feature with the target (Pearson for numeric, correlation ratio for categorical) | Identifies the features most predictive of the outcome. Features with high association should remain strongly associated in synthetic data; check this against the Section 3/5 association comparison plots. |
-| `correlation_matrix.csv` | Full pairwise mixed-association matrix (Pearson for num-num, Cramer's V for cat-cat, correlation ratio for num-cat) | Numerical companion to the heatmap below. Use it for precise values when the heatmap color scale is ambiguous. |
+| `target_associations.csv` | Association strength of each feature with the target (Pearson for numeric, correlation ratio for categorical) | Identifies the features most predictive of the outcome. Features with high association should remain strongly associated in synthetic data; check this against the Section 3/5 association comparison plots. |
+| `association_matrix.csv` | Full pairwise mixed-association matrix (Pearson for num-num, Cramer's V for cat-cat, correlation ratio for num-cat) | Numerical companion to the heatmap below. Use it for precise values when the heatmap color scale is ambiguous. |
 
 ### Graphics
 
@@ -159,7 +159,7 @@ Section 3 trains all 8 generative models using their **default (library-provided
 | **CTAB-GAN** | GAN | Datasets needing enhanced preprocessing |
 | **CTAB-GAN+** | GAN | Stable training on complex datasets (WGAN-GP) |
 | **GANerAid** | GAN | Clinical/healthcare-specific data |
-| **CopulaGAN** | Statistical | Preserving column correlations |
+| **CopulaGAN** | Statistical | Preserving column associations |
 | **TVAE** | VAE | Stable training without adversarial dynamics |
 | **PATE-GAN** | GAN | Privacy-sensitive data (differential privacy) |
 | **MEDGAN** | GAN | Discrete medical features |
@@ -167,7 +167,7 @@ Section 3 trains all 8 generative models using their **default (library-provided
 ### A Priori Expectations
 
 - **CTAB-GAN+** expected to outperform CTAB-GAN due to WGAN-GP stability
-- **CopulaGAN** strong at correlation preservation (copula-based architecture)
+- **CopulaGAN** strong at association preservation (copula-based architecture)
 - **TVAE** more stable training than GANs (no adversarial dynamics)
 - **GANerAid** may show domain-specific advantages on clinical data
 - **PATE-GAN** strongest privacy but lower fidelity (differential privacy noise)
@@ -191,13 +191,13 @@ Section 3 trains all 8 generative models using their **default (library-provided
 |---|---|---|
 | `evaluation_summary.csv` | Overall quality score, quality label (Excellent/Good/Fair/Poor), plus sub-scores for statistical similarity, distribution similarity, correlation preservation, PCA similarity, and ML utility | The `Overall_Quality_Score` is a weighted composite. `Quality_Assessment` translates it to a human-readable label. Use the sub-scores to diagnose *where* a model is weak — e.g., high correlation preservation but low distribution similarity means the model captures relationships but distorts marginals. |
 | `statistical_similarity.csv` | Per-column comparison: real mean, synthetic mean, mean similarity, std similarity, overall similarity | One row per numeric feature. `mean_similarity` close to 1.0 means the synthetic mean is close to the real mean. Look for columns with low `overall_similarity` — these are the features the model struggled to replicate. Often, features with heavy skew or extreme outliers (e.g., liver enzymes) show the lowest similarity. |
-| `correlation_comparison.png` | Side-by-side mixed-association heatmaps: real (left) vs. synthetic (right) | See graphic interpretation below. |
+| `association_comparison.png` | Side-by-side mixed-association heatmaps: real (left) vs. synthetic (right) | See graphic interpretation below. |
 | `distribution_comparison.png` | Overlaid histograms: real (blue) vs. synthetic (orange) for each numeric feature | See graphic interpretation below. |
 | `pca_comparison_with_outcome.png` | PCA scatter plots: real vs. synthetic, colored by target class | See graphic interpretation below. |
 
 ### Graphics Interpretation Guide
 
-#### `correlation_comparison.png`
+#### `association_comparison.png`
 
 Two side-by-side mixed-association heatmaps (real on left, synthetic on right) for a single model. Cells use Pearson for numeric-numeric pairs, Cramer's V for categorical-categorical, and correlation ratio (eta) for numeric-categorical.
 
@@ -430,7 +430,7 @@ Section 5 produces the same file types as Section 3. Refer to the [Section 3 out
 |---|---|
 | `{Model}/evaluation_summary.csv` | Overall quality score and sub-scores for the optimized model |
 | `{Model}/statistical_similarity.csv` | Per-column real vs. synthetic mean/std comparison |
-| `{Model}/correlation_comparison.png` | Side-by-side correlation heatmaps |
+| `{Model}/association_comparison.png` | Side-by-side mixed-association heatmaps |
 | `{Model}/distribution_comparison.png` | Overlaid real vs. synthetic histograms |
 | `{Model}/pca_comparison_with_outcome.png` | PCA scatter by target class |
 
@@ -875,7 +875,7 @@ results/{dataset-name}/{date}/
 │   ├── column_analysis.csv           # Per-column data profile
 │   ├── target_analysis.csv           # Target class distribution
 │   ├── target_balance_metrics.csv    # Class balance ratio
-│   ├── target_correlations.csv       # Feature-target associations
+│   ├── target_associations.csv       # Feature-target associations
 │   ├── association_matrix.csv        # Full pairwise mixed-association matrix
 │   ├── mixed_association_heatmap.png # Visual mixed-association matrix
 │   ├── feature_distributions_part1.png  # Numeric feature histograms
@@ -891,7 +891,7 @@ results/{dataset-name}/{date}/
 │   └── {MODEL}/                      # Per-model folder (×7-8 models)
 │       ├── evaluation_summary.csv    # Quality score and sub-scores
 │       ├── statistical_similarity.csv # Per-column real vs. synthetic
-│       ├── correlation_comparison.png # Side-by-side correlation heatmaps
+│       ├── association_comparison.png # Side-by-side mixed-association heatmaps
 │       ├── distribution_comparison.png # Overlaid histograms
 │       └── pca_comparison_with_outcome.png # PCA scatter by class
 ├── Section-4/
@@ -910,7 +910,7 @@ results/{dataset-name}/{date}/
     └── {MODEL}/                      # Per-model folder (×7-8 models)
         ├── evaluation_summary.csv
         ├── statistical_similarity.csv
-        ├── correlation_comparison.png
+        ├── association_comparison.png
         ├── distribution_comparison.png
         └── pca_comparison_with_outcome.png
 ```
