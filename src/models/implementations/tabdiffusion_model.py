@@ -183,6 +183,9 @@ class TabDiffusionModel(SyntheticDataModel):
             ).to(self.device)
 
             self._scheduler = DDPMScheduler(num_train_timesteps=num_diffusion_steps)
+            # Move scheduler tensors to device (critical for CUDA support)
+            self._scheduler.alphas_cumprod = self._scheduler.alphas_cumprod.to(self.device)
+            self._scheduler.alphas = self._scheduler.alphas.to(self.device)
             optimizer = Adam(self._model.parameters(), lr=learning_rate)
 
             # Training loop
@@ -287,12 +290,12 @@ class TabDiffusionModel(SyntheticDataModel):
                     noise_pred = self._model(x, t_normalized)
 
                     # Update x
-                    alpha = self._scheduler.alphas[t_idx]
-                    alpha_prod = self._scheduler.alphas_cumprod[t_idx]
+                    alpha = self._scheduler.alphas[t_idx].to(self.device)
+                    alpha_prod = self._scheduler.alphas_cumprod[t_idx].to(self.device)
                     alpha_prod_prev = (
-                        self._scheduler.alphas_cumprod[t_idx - 1]
+                        self._scheduler.alphas_cumprod[t_idx - 1].to(self.device)
                         if t_idx > 0
-                        else torch.tensor(1.0)
+                        else torch.tensor(1.0, device=self.device)
                     )
 
                     beta = 1 - alpha
