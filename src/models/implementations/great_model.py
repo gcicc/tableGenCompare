@@ -80,8 +80,13 @@ class GReaTModel(SyntheticDataModel):
 
         Args:
             data: Training dataset as pandas DataFrame
-            **kwargs: Training parameters (llm, batch_size, epochs, lr, warmup_steps, etc.)
-                     target_column: Target column name (optional, not used for training but recorded)
+            **kwargs: Training parameters (all optional, have defaults):
+                     - llm: HuggingFace model name (default: distilgpt2)
+                     - batch_size: Training batch size (default: 32)
+                     - epochs: Number of training epochs (default: 25)
+                     - lr: Learning rate (default: 5e-4)
+                     - warmup_steps: Warmup steps (default: 100)
+                     - target_column: Target column name (optional, for metadata only)
 
         Returns:
             Dictionary containing training metadata
@@ -106,14 +111,13 @@ class GReaTModel(SyntheticDataModel):
 
         try:
             # Initialize GReaT model
+            # GReaT accepts training parameters as **kwargs in __init__
             self._model = GReaT(
                 llm=llm,
                 batch_size=batch_size,
                 epochs=epochs,
-                lr=lr,
+                learning_rate=lr,
                 warmup_steps=warmup_steps,
-                device=self.actual_device,
-                verbose=verbose,
             )
 
             # Train on the data
