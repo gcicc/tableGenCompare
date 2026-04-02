@@ -289,19 +289,13 @@ def _get_ctabgan_search_space(
     if run_mode == "debug":
         epochs = trial.suggest_int("epochs", bounds["min_epochs"], min(300, bounds["max_epochs"]), step=50)
         batch_size = trial.suggest_categorical("batch_size", bounds["batch_choices"])
-        class_dim = trial.suggest_categorical("class_dim", [64, 128])
-        random_dim = trial.suggest_int("random_dim", 50, 100, step=25)
     else:  # full mode
         epochs = trial.suggest_int("epochs", bounds["min_epochs"], bounds["max_epochs"], step=50)
         batch_size = trial.suggest_categorical("batch_size", bounds["batch_choices"])
-        class_dim = trial.suggest_categorical("class_dim", [64, 128, 256])
-        random_dim = trial.suggest_int("random_dim", 50, 150, step=25)
 
     return {
         "epochs": epochs,
         "batch_size": batch_size,
-        "class_dim": class_dim,
-        "random_dim": random_dim,
         "test_ratio": 0.2  # Fixed, not tuned
     }
 
@@ -321,22 +315,13 @@ def _get_ctabganplus_search_space(
     if run_mode == "debug":
         epochs = trial.suggest_int("epochs", bounds["min_epochs"], min(300, bounds["max_epochs"]), step=50)
         batch_size = trial.suggest_categorical("batch_size", bounds["batch_choices"])
-        class_dim = trial.suggest_categorical("class_dim", [64, 128])
-        random_dim = trial.suggest_int("random_dim", 50, 100, step=25)
-        num_channels = trial.suggest_int("num_channels", 32, min(64, bounds["dim_floor"]), step=16)
     else:  # full mode
         epochs = trial.suggest_int("epochs", bounds["min_epochs"], bounds["max_epochs"], step=50)
         batch_size = trial.suggest_categorical("batch_size", bounds["batch_choices"])
-        class_dim = trial.suggest_categorical("class_dim", [64, 128, 256])
-        random_dim = trial.suggest_int("random_dim", 50, 150, step=25)
-        num_channels = trial.suggest_int("num_channels", 32, min(128, bounds["dim_floor"] * 2), step=16)
 
     return {
         "epochs": epochs,
         "batch_size": batch_size,
-        "class_dim": class_dim,
-        "random_dim": random_dim,
-        "num_channels": num_channels,
         "test_ratio": 0.2  # Fixed, not tuned
     }
 

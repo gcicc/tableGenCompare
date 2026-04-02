@@ -376,12 +376,7 @@ def _get_train_kwargs(
             "categorical_columns": categorical_columns,
             "target_col": target_column,
             "test_ratio": params.get("test_ratio", 0.2),
-            "class_dim": params.get("class_dim"),
-            "random_dim": params.get("random_dim"),
         })
-        if model_name == "ctabganplus":
-            kwargs["num_channels"] = params.get("num_channels")
-        kwargs = {k: v for k, v in kwargs.items() if v is not None}
 
     elif model_name == "ganeraid":
         kwargs.update({
