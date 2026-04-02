@@ -445,20 +445,31 @@ def _get_copulagan_search_space(
     n_cols = n_cols or 10
     bounds = _compute_data_aware_bounds(data_size, n_cols)
 
+    # Data-aware learning rate bounds: smaller datasets need tighter LR to prevent GAN instability
+    if data_size < 1000:
+        lr_low, lr_high = 1e-5, 1e-3  # Conservative for small data
+        decay_high = 1e-4
+    elif data_size < 3000:
+        lr_low, lr_high = 5e-6, 1e-3  # Moderate for medium data
+        decay_high = 5e-4
+    else:
+        lr_low, lr_high = 5e-6, 5e-3  # Full range for large data
+        decay_high = 1e-3
+
     if run_mode == "debug":
         epochs = trial.suggest_int("epochs", bounds["min_epochs"], min(300, bounds["max_epochs"]), step=50)
         batch_size = trial.suggest_categorical("batch_size", bounds["batch_choices"])
-        generator_lr = trial.suggest_float("generator_lr", 1e-5, 1e-3, log=True)
-        discriminator_lr = trial.suggest_float("discriminator_lr", 1e-5, 1e-3, log=True)
-        generator_decay = trial.suggest_float("generator_decay", 1e-8, 1e-4, log=True)
-        discriminator_decay = trial.suggest_float("discriminator_decay", 1e-8, 1e-4, log=True)
+        generator_lr = trial.suggest_float("generator_lr", lr_low, min(lr_high, 1e-3), log=True)
+        discriminator_lr = trial.suggest_float("discriminator_lr", lr_low, min(lr_high, 1e-3), log=True)
+        generator_decay = trial.suggest_float("generator_decay", 1e-8, min(decay_high, 1e-4), log=True)
+        discriminator_decay = trial.suggest_float("discriminator_decay", 1e-8, min(decay_high, 1e-4), log=True)
     else:  # full mode
         epochs = trial.suggest_int("epochs", bounds["min_epochs"], bounds["max_epochs"], step=50)
         batch_size = trial.suggest_categorical("batch_size", bounds["batch_choices"])
-        generator_lr = trial.suggest_float("generator_lr", 5e-6, 5e-3, log=True)
-        discriminator_lr = trial.suggest_float("discriminator_lr", 5e-6, 5e-3, log=True)
-        generator_decay = trial.suggest_float("generator_decay", 1e-8, 1e-3, log=True)
-        discriminator_decay = trial.suggest_float("discriminator_decay", 1e-8, 1e-3, log=True)
+        generator_lr = trial.suggest_float("generator_lr", lr_low, lr_high, log=True)
+        discriminator_lr = trial.suggest_float("discriminator_lr", lr_low, lr_high, log=True)
+        generator_decay = trial.suggest_float("generator_decay", 1e-8, decay_high, log=True)
+        discriminator_decay = trial.suggest_float("discriminator_decay", 1e-8, decay_high, log=True)
 
     return {
         "epochs": epochs,
