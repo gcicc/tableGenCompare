@@ -77,6 +77,21 @@ AVAILABLE_MODELS: Dict[str, Dict[str, Any]] = {
         "class_name": "MEDGANModel",
         "requires": ["torch"],
     },
+    # New generators (Phase 5 - April 2026)
+    "tabddpm": {
+        "display_name": "TabDDPM",
+        "description": "Diffusion model for tabular data via Synthcity",
+        "module": "src.models.implementations.tabddpm_model",
+        "class_name": "TabDDPMModel",
+        "requires": ["synthcity"],
+    },
+    "great": {
+        "display_name": "GReaT",
+        "description": "LLM-based tabular generator via be_great",
+        "module": "src.models.implementations.great_model",
+        "class_name": "GReaTModel",
+        "requires": ["be_great"],
+    },
 }
 
 # Aliases for common variations
@@ -96,6 +111,11 @@ MODEL_ALIASES: Dict[str, str] = {
     "pate_gan": "pategan",
     "med-gan": "medgan",
     "med_gan": "medgan",
+    # Phase 5 - April 2026
+    "tab-ddpm": "tabddpm",
+    "tab_ddpm": "tabddpm",
+    "gr-eat": "great",
+    "be_great": "great",
 }
 
 

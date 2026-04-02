@@ -68,6 +68,21 @@ except ImportError:
     MEDGAN_AVAILABLE = False
     MEDGANModel = None
 
+# New generators (Phase 5 - April 2026)
+try:
+    from .implementations.tabddpm_model import TabDDPMModel
+    from .implementations.tabddpm_model import TABDDPM_AVAILABLE
+except ImportError:
+    TABDDPM_AVAILABLE = False
+    TabDDPMModel = None
+
+try:
+    from .implementations.great_model import GReaTModel
+    from .implementations.great_model import GREAT_AVAILABLE
+except ImportError:
+    GREAT_AVAILABLE = False
+    GReaTModel = None
+
 # TableGAN removed
 TABLEGAN_AVAILABLE = False
 
@@ -138,6 +153,19 @@ class ModelFactory:
             cls._model_availability["medgan"] = True
         else:
             cls._model_availability["medgan"] = False
+
+        # New generators (Phase 5 - April 2026)
+        if TABDDPM_AVAILABLE:
+            cls._model_registry["tabddpm"] = TabDDPMModel
+            cls._model_availability["tabddpm"] = True
+        else:
+            cls._model_availability["tabddpm"] = False
+
+        if GREAT_AVAILABLE:
+            cls._model_registry["great"] = GReaTModel
+            cls._model_availability["great"] = True
+        else:
+            cls._model_availability["great"] = False
 
         # TableGAN removed
         cls._model_availability["tablegan"] = False

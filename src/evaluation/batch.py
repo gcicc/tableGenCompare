@@ -78,7 +78,9 @@ def evaluate_trained_models(section_number, variable_pattern, scope=None, models
             'CopulaGAN': 'synthetic_data_copulagan',
             'TVAE': 'synthetic_data_tvae',
             'MEDGAN': 'synthetic_data_medgan',
-            'PATEGAN': 'synthetic_data_pategan'
+            'PATEGAN': 'synthetic_data_pategan',
+            'TabDDPM': 'synthetic_data_tabddpm',        # Phase 5 - April 2026
+            'GReaT': 'synthetic_data_great'             # Phase 5 - April 2026
         }
     elif variable_pattern == 'final':
         # Section 5 pattern: synthetic_*_final
@@ -90,7 +92,9 @@ def evaluate_trained_models(section_number, variable_pattern, scope=None, models
             'CopulaGAN': 'synthetic_copulagan_final',
             'TVAE': 'synthetic_tvae_final',
             'MEDGAN': 'synthetic_medgan_final',
-            'PATEGAN': 'synthetic_pategan_final'
+            'PATEGAN': 'synthetic_pategan_final',
+            'TabDDPM': 'synthetic_tabddpm_final',        # Phase 5 - April 2026
+            'GReaT': 'synthetic_great_final'             # Phase 5 - April 2026
         }
     else:
         print(f"[ERROR] ERROR: Unknown variable_pattern '{variable_pattern}'. Use 'standard' or 'final'")

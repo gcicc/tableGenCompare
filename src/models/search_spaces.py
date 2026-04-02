@@ -80,6 +80,10 @@ def get_search_space(
         return _get_pategan_search_space(trial, run_mode)
     elif model_name == "medgan":
         return _get_medgan_search_space(trial, run_mode)
+    elif model_name == "tabddpm":
+        return _get_tabddpm_search_space(trial, run_mode)
+    elif model_name == "great":
+        return _get_great_search_space(trial, run_mode)
     else:
         raise ValueError(f"No search space defined for model: {model_name}")
 
@@ -458,6 +462,73 @@ def _get_medgan_search_space(trial: 'optuna.Trial', run_mode: str) -> Dict[str, 
     }
 
 
+def _get_tabddpm_search_space(trial: 'optuna.Trial', run_mode: str) -> Dict[str, Any]:
+    """
+    TabDDPM search space.
+
+    Diffusion model search space with focus on training iterations,
+    learning rates, and model architecture dimensions.
+    """
+    if run_mode == "debug":
+        n_iter = trial.suggest_int("n_iter", 50, 100, step=10)
+        batch_size = trial.suggest_categorical("batch_size", [32, 64])
+        lr = trial.suggest_float("lr", 1e-4, 1e-3, log=True)
+        weight_decay = trial.suggest_float("weight_decay", 1e-6, 1e-5, log=True)
+        num_timesteps = trial.suggest_categorical("num_timesteps", [500, 1000])
+        dim_embed = trial.suggest_categorical("dim_embed", [64, 128])
+        n_layers_hidden = trial.suggest_int("n_layers_hidden", 1, 2)
+        n_units_hidden = trial.suggest_categorical("n_units_hidden", [64, 128])
+    else:  # full mode
+        n_iter = trial.suggest_int("n_iter", 50, 200, step=10)
+        batch_size = trial.suggest_categorical("batch_size", [32, 64, 128, 256])
+        lr = trial.suggest_float("lr", 1e-4, 1e-2, log=True)
+        weight_decay = trial.suggest_float("weight_decay", 1e-6, 1e-4, log=True)
+        num_timesteps = trial.suggest_categorical("num_timesteps", [500, 1000, 1500])
+        dim_embed = trial.suggest_categorical("dim_embed", [64, 128, 256])
+        n_layers_hidden = trial.suggest_int("n_layers_hidden", 1, 4, step=1)
+        n_units_hidden = trial.suggest_categorical("n_units_hidden", [64, 128, 256, 512])
+
+    return {
+        "n_iter": n_iter,
+        "batch_size": batch_size,
+        "lr": lr,
+        "weight_decay": weight_decay,
+        "num_timesteps": num_timesteps,
+        "dim_embed": dim_embed,
+        "n_layers_hidden": n_layers_hidden,
+        "n_units_hidden": n_units_hidden,
+    }
+
+
+def _get_great_search_space(trial: 'optuna.Trial', run_mode: str) -> Dict[str, Any]:
+    """
+    GReaT search space.
+
+    LLM-based tabular generator with tunable LLM choice, batch size, epochs,
+    learning rate, and warmup steps.
+    """
+    if run_mode == "debug":
+        llm = trial.suggest_categorical("llm", ["distilgpt2"])
+        batch_size = trial.suggest_categorical("batch_size", [16, 32])
+        epochs = trial.suggest_int("epochs", 10, 20, step=5)
+        lr = trial.suggest_float("lr", 1e-4, 1e-3, log=True)
+        warmup_steps = trial.suggest_categorical("warmup_steps", [0, 50])
+    else:  # full mode
+        llm = trial.suggest_categorical("llm", ["distilgpt2", "gpt2"])
+        batch_size = trial.suggest_categorical("batch_size", [16, 32, 64, 128])
+        epochs = trial.suggest_int("epochs", 10, 50, step=5)
+        lr = trial.suggest_float("lr", 1e-5, 1e-3, log=True)
+        warmup_steps = trial.suggest_int("warmup_steps", 0, 500, step=50)
+
+    return {
+        "llm": llm,
+        "batch_size": batch_size,
+        "epochs": epochs,
+        "lr": lr,
+        "warmup_steps": warmup_steps,
+    }
+
+
 # Registry of supported models
 SUPPORTED_MODELS = [
     "ctgan",
@@ -467,7 +538,9 @@ SUPPORTED_MODELS = [
     "copulagan",
     "tvae",
     "pategan",
-    "medgan"
+    "medgan",
+    "tabddpm",     # Phase 5 - April 2026
+    "great"        # Phase 5 - April 2026
 ]
 
 
