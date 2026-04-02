@@ -325,8 +325,8 @@ def _get_model_train_kwargs(
         # MEDGAN uses discrete_columns
         kwargs["discrete_columns"] = categorical_columns
 
-    elif model_name == "tabddpm":
-        # TabDDPM uses discrete_columns and target_column
+    elif model_name == "tabdiffusion":
+        # TabDiffusion uses discrete_columns and target_column
         kwargs["discrete_columns"] = categorical_columns
         kwargs["target_column"] = target_column
 

@@ -80,8 +80,8 @@ def get_search_space(
         return _get_pategan_search_space(trial, run_mode)
     elif model_name == "medgan":
         return _get_medgan_search_space(trial, run_mode)
-    elif model_name == "tabddpm":
-        return _get_tabddpm_search_space(trial, run_mode)
+    elif model_name == "tabdiffusion":
+        return _get_tabdiffusion_search_space(trial, run_mode)
     elif model_name == "great":
         return _get_great_search_space(trial, run_mode)
     else:
@@ -462,41 +462,35 @@ def _get_medgan_search_space(trial: 'optuna.Trial', run_mode: str) -> Dict[str, 
     }
 
 
-def _get_tabddpm_search_space(trial: 'optuna.Trial', run_mode: str) -> Dict[str, Any]:
+def _get_tabdiffusion_search_space(trial: 'optuna.Trial', run_mode: str) -> Dict[str, Any]:
     """
-    TabDDPM search space.
+    TabDiffusion search space.
 
-    Diffusion model search space with focus on training iterations,
-    learning rates, and model architecture dimensions.
+    Diffusion model search space with focus on training epochs, learning rates,
+    diffusion steps, and denoising network architecture.
     """
     if run_mode == "debug":
-        n_iter = trial.suggest_int("n_iter", 50, 100, step=10)
+        epochs = trial.suggest_int("epochs", 50, 100, step=10)
         batch_size = trial.suggest_categorical("batch_size", [32, 64])
-        lr = trial.suggest_float("lr", 1e-4, 1e-3, log=True)
-        weight_decay = trial.suggest_float("weight_decay", 1e-6, 1e-5, log=True)
-        num_timesteps = trial.suggest_categorical("num_timesteps", [500, 1000])
-        dim_embed = trial.suggest_categorical("dim_embed", [64, 128])
-        n_layers_hidden = trial.suggest_int("n_layers_hidden", 1, 2)
-        n_units_hidden = trial.suggest_categorical("n_units_hidden", [64, 128])
+        learning_rate = trial.suggest_float("learning_rate", 1e-4, 1e-3, log=True)
+        num_diffusion_steps = trial.suggest_categorical("num_diffusion_steps", [500, 1000])
+        hidden_dim = trial.suggest_categorical("hidden_dim", [64, 128])
+        num_layers = trial.suggest_int("num_layers", 2, 3)
     else:  # full mode
-        n_iter = trial.suggest_int("n_iter", 50, 200, step=10)
+        epochs = trial.suggest_int("epochs", 50, 200, step=10)
         batch_size = trial.suggest_categorical("batch_size", [32, 64, 128, 256])
-        lr = trial.suggest_float("lr", 1e-4, 1e-2, log=True)
-        weight_decay = trial.suggest_float("weight_decay", 1e-6, 1e-4, log=True)
-        num_timesteps = trial.suggest_categorical("num_timesteps", [500, 1000, 1500])
-        dim_embed = trial.suggest_categorical("dim_embed", [64, 128, 256])
-        n_layers_hidden = trial.suggest_int("n_layers_hidden", 1, 4, step=1)
-        n_units_hidden = trial.suggest_categorical("n_units_hidden", [64, 128, 256, 512])
+        learning_rate = trial.suggest_float("learning_rate", 1e-4, 1e-2, log=True)
+        num_diffusion_steps = trial.suggest_categorical("num_diffusion_steps", [500, 1000, 1500])
+        hidden_dim = trial.suggest_categorical("hidden_dim", [64, 128, 256])
+        num_layers = trial.suggest_int("num_layers", 2, 5, step=1)
 
     return {
-        "n_iter": n_iter,
+        "epochs": epochs,
         "batch_size": batch_size,
-        "lr": lr,
-        "weight_decay": weight_decay,
-        "num_timesteps": num_timesteps,
-        "dim_embed": dim_embed,
-        "n_layers_hidden": n_layers_hidden,
-        "n_units_hidden": n_units_hidden,
+        "learning_rate": learning_rate,
+        "num_diffusion_steps": num_diffusion_steps,
+        "hidden_dim": hidden_dim,
+        "num_layers": num_layers,
     }
 
 
@@ -539,8 +533,8 @@ SUPPORTED_MODELS = [
     "tvae",
     "pategan",
     "medgan",
-    "tabddpm",     # Phase 5 - April 2026
-    "great"        # Phase 5 - April 2026
+    "tabdiffusion", # Phase 5 - April 2026
+    "great"         # Phase 5 - April 2026
 ]
 
 

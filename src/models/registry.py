@@ -78,12 +78,12 @@ AVAILABLE_MODELS: Dict[str, Dict[str, Any]] = {
         "requires": ["torch"],
     },
     # New generators (Phase 5 - April 2026)
-    "tabddpm": {
-        "display_name": "TabDDPM",
-        "description": "Diffusion model for tabular data via Synthcity",
-        "module": "src.models.implementations.tabddpm_model",
-        "class_name": "TabDDPMModel",
-        "requires": ["synthcity"],
+    "tabdiffusion": {
+        "display_name": "TabDiffusion",
+        "description": "Diffusion model for tabular data via Hugging Face diffusers",
+        "module": "src.models.implementations.tabdiffusion_model",
+        "class_name": "TabDiffusionModel",
+        "requires": ["diffusers", "torch"],
     },
     "great": {
         "display_name": "GReaT",
@@ -112,8 +112,9 @@ MODEL_ALIASES: Dict[str, str] = {
     "med-gan": "medgan",
     "med_gan": "medgan",
     # Phase 5 - April 2026
-    "tab-ddpm": "tabddpm",
-    "tab_ddpm": "tabddpm",
+    "tab-diffusion": "tabdiffusion",
+    "tab_diffusion": "tabdiffusion",
+    "tabddpm": "tabdiffusion",     # Backward compat alias
     "gr-eat": "great",
     "be_great": "great",
 }

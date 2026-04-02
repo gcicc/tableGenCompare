@@ -20,8 +20,8 @@ MODEL_COLORS = {
     'PATEGAN': '#e377c2',     # Pink
     'PATE-GAN': '#e377c2',    # Pink (alias)
     'MEDGAN': '#17becf',      # Cyan
-    'TABDDPM': '#bcbd22',     # Olive/yellow-green (Phase 5 - April 2026)
-    'GREAT': '#f0027f',       # Magenta (Phase 5 - April 2026)
+    'TABDIFFUSION': '#bcbd22', # Olive/yellow-green (Phase 5 - April 2026)
+    'GREAT': '#f0027f',        # Magenta (Phase 5 - April 2026)
 }
 
 DEFAULT_MODEL_COLOR = '#7f7f7f'  # Gray fallback for unknown models

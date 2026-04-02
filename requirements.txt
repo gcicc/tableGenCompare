@@ -58,11 +58,7 @@ graphviz>=0.21
 GANerAid==1.8
 
 # New synthetic data generators (Phase 5 - April 2026)
-# NOTE: synthcity has strict torch constraints (torch<2.3) incompatible with current env.
-# Install separately if torch version can be downgraded:
-#   pip install synthcity==0.2.12 --force-reinstall
-# If unavailable, TabDDPM will be marked as unavailable but framework continues.
-# synthcity>=0.5.0          # TabDDPM: diffusion model via Synthcity plugins (optional)
+diffusers>=0.30.0         # TabDiffusion: diffusion models for tabular data
 be_great>=0.0.13          # GReaT: LLM-based tabular generation (downloads HF model on first run)
 
 # Other

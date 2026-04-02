@@ -70,11 +70,11 @@ except ImportError:
 
 # New generators (Phase 5 - April 2026)
 try:
-    from .implementations.tabddpm_model import TabDDPMModel
-    from .implementations.tabddpm_model import TABDDPM_AVAILABLE
+    from .implementations.tabdiffusion_model import TabDiffusionModel
+    from .implementations.tabdiffusion_model import TABDIFFUSION_AVAILABLE
 except ImportError:
-    TABDDPM_AVAILABLE = False
-    TabDDPMModel = None
+    TABDIFFUSION_AVAILABLE = False
+    TabDiffusionModel = None
 
 try:
     from .implementations.great_model import GReaTModel
@@ -155,11 +155,11 @@ class ModelFactory:
             cls._model_availability["medgan"] = False
 
         # New generators (Phase 5 - April 2026)
-        if TABDDPM_AVAILABLE:
-            cls._model_registry["tabddpm"] = TabDDPMModel
-            cls._model_availability["tabddpm"] = True
+        if TABDIFFUSION_AVAILABLE:
+            cls._model_registry["tabdiffusion"] = TabDiffusionModel
+            cls._model_availability["tabdiffusion"] = True
         else:
-            cls._model_availability["tabddpm"] = False
+            cls._model_availability["tabdiffusion"] = False
 
         if GREAT_AVAILABLE:
             cls._model_registry["great"] = GReaTModel
