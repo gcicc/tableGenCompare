@@ -360,11 +360,10 @@ class CopulaGANModel(SyntheticDataModel):
             model_params['epochs'] = kwargs.get('epochs', self.model_config.get('epochs', epochs))
             model_params['batch_size'] = kwargs.get('batch_size', self.model_config.get('batch_size', batch_size))
 
-            # Learning rates (SDV CopulaGAN parameters)
-            if 'generator_lr' in kwargs or 'generator_lr' in self.model_config:
-                model_params['generator_lr'] = kwargs.get('generator_lr', self.model_config.get('generator_lr'))
-            if 'discriminator_lr' in kwargs or 'discriminator_lr' in self.model_config:
-                model_params['discriminator_lr'] = kwargs.get('discriminator_lr', self.model_config.get('discriminator_lr'))
+            # Learning rates and decay parameters (SDV CopulaGAN parameters)
+            for param in ['generator_lr', 'discriminator_lr', 'generator_decay', 'discriminator_decay']:
+                if param in kwargs or param in self.model_config:
+                    model_params[param] = kwargs.get(param, self.model_config.get(param))
 
             # Enable GPU acceleration if device is CUDA
             model_params['cuda'] = self.device if self.device != "cpu" else False

@@ -398,6 +398,8 @@ def _get_train_kwargs(
             "discrete_columns": categorical_columns,
             "generator_lr": params.get("generator_lr"),
             "discriminator_lr": params.get("discriminator_lr"),
+            "generator_decay": params.get("generator_decay"),
+            "discriminator_decay": params.get("discriminator_decay"),
         })
         kwargs = {k: v for k, v in kwargs.items() if v is not None}
 
