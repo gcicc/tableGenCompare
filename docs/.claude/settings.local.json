@@ -27,7 +27,11 @@
       "Bash(bash /home/ec2-user/SageMaker/tableGenCompare/on-start.sh)",
       "Bash(/home/ec2-user/SageMaker/.envs/tablegen/bin/python -c \"\nfrom src.visualization.colors import MODEL_COLORS, get_model_color, get_model_colors_for_list, REAL_COLOR, SYNTH_COLOR, SDAC_CATEGORY_COLORS, TRTS_SCENARIO_COLORS\nprint\\('colors.py: OK'\\)\n\nfrom src.visualization.section2 import create_correlation_heatmap, create_feature_distributions\nprint\\('section2.py: OK'\\)\n\nfrom src.visualization.section3 import create_correlation_comparison, create_distribution_comparison, create_multi_model_loss_comparison\nprint\\('section3.py: OK'\\)\n\nfrom src.visualization.section4 import create_optuna_visualizations, create_all_models_optuna_summary\nprint\\('section4.py: OK'\\)\n\nfrom src.visualization.section5 import create_sdac_radar_chart, create_sdac_heatmap, create_trts_visualizations\nprint\\('section5.py: OK'\\)\n\nprint\\(\\)\nprint\\('All imports successful!'\\)\n\")",
       "Bash(/home/ec2-user/SageMaker/.envs/tablegen/bin/pip install:*)",
-      "Bash(/home/ec2-user/SageMaker/.envs/tablegen/bin/python -c \"\nimport plotly.graph_objects as go\nfig = go.Figure\\(data=go.Bar\\(x=['A','B','C'], y=[1,2,3]\\)\\)\nfig.write_image\\('/tmp/test_kaleido.png'\\)\nprint\\('Kaleido PNG export: OK'\\)\nimport os; os.remove\\('/tmp/test_kaleido.png'\\)\n\")"
+      "Bash(/home/ec2-user/SageMaker/.envs/tablegen/bin/python -c \"\nimport plotly.graph_objects as go\nfig = go.Figure\\(data=go.Bar\\(x=['A','B','C'], y=[1,2,3]\\)\\)\nfig.write_image\\('/tmp/test_kaleido.png'\\)\nprint\\('Kaleido PNG export: OK'\\)\nimport os; os.remove\\('/tmp/test_kaleido.png'\\)\n\")",
+      "Bash(find /home/ec2-user/SageMaker/tableGenCompare/results -name sdac* -o -name SDAC*)",
+      "Bash(find /home/ec2-user/SageMaker/tableGenCompare -type f \\\\\\(-name *.py -o -name *.md -o -name *.txt \\\\\\))",
+      "Bash(grep -r relative.*score /home/ec2-user/SageMaker/tableGenCompare/docs --include=*.md --include=*.txt)",
+      "Bash(grep -r \"score.*normalized\\\\|normalize.*score\" /home/ec2-user/SageMaker/tableGenCompare/docs --include=*.md --include=*.txt)"
     ]
   }
 }

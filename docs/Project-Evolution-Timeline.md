@@ -664,7 +664,7 @@ results = evaluate_all_available_models(
 #### D. New Visualizations
 
 - **SDAC Radar Chart** — composite score per SDAC dimension, one trace per model
-- **SDAC Heatmap** — models × metrics grid with per-column normalization, color-coded by SDAC category
+- **SDAC Heatmap** — models × metrics grid with direction-aware 3-color scheme (green/yellow/red for favorable/between/unfavorable based on absolute quality thresholds per metric), color-coded by SDAC category
 
 ---
 
@@ -859,6 +859,58 @@ Leverages `dython.nominal.associations()` (already a project dependency).
 
 ---
 
+## Phase 10: SDAC Heatmap Overhaul — Direction-Aware 3-Color Scheme (March 30, 2026)
+
+### Motivation
+
+The original SDAC heatmap used a continuous `RdYlGn` gradient with per-column min-max normalization. This caused two problems:
+
+1. **Misleading colors for constant values:** When all models scored identically on a metric (e.g., IMS = 0, ReID Risk = 0), the normalization mapped them to 0.5 (yellow) — suggesting mediocrity when the values were actually optimal.
+2. **No absolute quality signal:** Colors reflected relative ranking among models, not whether a value was objectively good or bad. A metric could appear green simply for being the least-bad.
+
+### Changes
+
+#### A. Discrete 3-Color Scheme
+
+Replaced the continuous `RdYlGn` colormap with three discrete colors based on absolute quality thresholds:
+
+- **Green** (`#5cb85c`) = Favorable — metric value meets or exceeds the "good" threshold
+- **Yellow** (`#f0ad4e`) = Between — metric value falls between good and bad thresholds
+- **Red** (`#d9534f`) = Unfavorable — metric value meets or exceeds the "bad" threshold
+
+#### B. METRIC_DIRECTION Dictionary
+
+Added a per-metric configuration in `src/visualization/section5.py` defining:
+
+- **`higher_is_better`**: Whether higher raw values are favorable (True) or lower values are favorable (False)
+- **`good` / `bad`**: Absolute thresholds calibrated against observed value ranges across 4 clinical datasets
+
+Each entry includes inline documentation of what the metric computes, its directionality, and observed range.
+
+#### C. JSD Correction
+
+Identified that `Fidelity_JSD` is computed as `1 - jensenshannon()` — a **similarity** score (higher = better), not a divergence (lower = better). Corrected the direction and updated all documentation references.
+
+#### D. Threshold Calibration
+
+All thresholds were set after auditing:
+- Source code for each metric's computation and semantics
+- Observed value ranges across all 4 datasets (Alzheimer's, Breast Cancer, Liver, Pakistani Diabetes)
+
+Key recalibrations:
+- `Privacy_MIA_AUC`: ideal is 0.5 (random), observed 0.74–1.00 → good=0.60, bad=0.80
+- `Fidelity_KL`: unbounded, observed 0.05–3.41 → good=0.20, bad=1.00
+- `Utility_SRA`: can be negative (-0.87–1.00) → good=0.50, bad=0.0
+- `Fairness_Dem_Parity/Eq_Odds`: observed up to 0.60/1.00 → good=0.10, bad=0.30
+
+### Files Modified
+
+- `src/visualization/section5.py` — `create_sdac_heatmap()` rewritten with METRIC_DIRECTION and discrete coloring
+- `docs/USER-GUIDE.md` — Updated heatmap interpretation, corrected JSD description
+- `docs/Project-Evolution-Timeline.md` — This entry
+
+---
+
 ## Development Philosophy Evolution
 
 ### old-main → AWS_Round1: **"Make it work in the cloud"**
@@ -1032,8 +1084,8 @@ For questions about this project evolution or technical details:
 
 ---
 
-**Document Version:** 4.0
-**Last Updated:** March 10, 2026
+**Document Version:** 5.0
+**Last Updated:** March 30, 2026
 **Current Active Branch:** main
 **Production Branch:** main
 **Archived Tags:** v1.0-old-main, v2.0-aws-round1, v3.0-legacy-main

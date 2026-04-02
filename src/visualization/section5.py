@@ -1161,24 +1161,129 @@ def create_sdac_heatmap(sdac_df, results_dir, dataset_name="Dataset",
 
     fig, ax = plt.subplots(figsize=(fig_width, fig_height))
 
-    # Normalize each column to [0, 1] for consistent color mapping.
-    # Raw values are shown as annotations; colors reflect relative standing.
-    display_data = heat_data.copy()
-    normalized_data = heat_data.copy()
-    for col in normalized_data.columns:
-        col_vals = normalized_data[col].dropna()
-        if len(col_vals) > 0:
-            cmin, cmax = col_vals.min(), col_vals.max()
-            if cmax > cmin:
-                normalized_data[col] = (normalized_data[col] - cmin) / (cmax - cmin)
-            else:
-                normalized_data[col] = 0.5  # all same value
-        else:
-            normalized_data[col] = np.nan
+    # Direction-aware scoring: map each metric to a quality score in [0, 1]
+    # where 1 = favorable and 0 = unfavorable, then discretize to 3 colors.
+    #
+    # higher_is_better=True:  higher raw values are favorable
+    # higher_is_better=False: lower raw values are favorable
+    # ideal: the ideal raw value (used when all models have the same value)
+    # good_threshold / bad_threshold: absolute boundaries for favorable / unfavorable
+    # Metric direction and absolute quality thresholds.
+    # Derived from source code in src/evaluation/ — see each metric's docstring
+    # for semantics.  Observed ranges across 4 datasets used to calibrate.
+    #
+    # higher_is_better: True  → raw value >= good is green, <= bad is red
+    #                   False → raw value <= good is green, >= bad is red
+    METRIC_DIRECTION = {
+        # --- Privacy ---
+        # DCR: Euclidean distance (z-scored), unbounded.  Higher = farther from real.
+        #      Observed 0.45–5.13.
+        'Privacy_DCR':       {'higher_is_better': True,  'good': 1.0,  'bad': 0.30},
+        # NNDR: ratio DCR / avg-synth-dist.  >1 = not memorized.
+        #       Observed 0.81–46462.
+        'Privacy_NNDR':      {'higher_is_better': True,  'good': 1.0,  'bad': 0.5},
+        # IMS: fraction of records with DCR<0.01.  0 = no memorization.
+        'Privacy_IMS':       {'higher_is_better': False, 'good': 0.01, 'bad': 0.10},
+        # ReID Risk: fraction of records with DCR<0.05.  0 = no risk.
+        'Privacy_ReID_Risk': {'higher_is_better': False, 'good': 0.01, 'bad': 0.10},
+        # MIA AUC: classifier AUC distinguishing members.  0.5 = can't tell.
+        #          Observed 0.74–1.00.
+        'Privacy_MIA_AUC':   {'higher_is_better': False, 'good': 0.60, 'bad': 0.80},
 
-    # Create heatmap using normalized values for color
-    im = ax.imshow(normalized_data.values, aspect='auto', cmap='RdYlGn',
-                   vmin=0, vmax=1)
+        # --- Fidelity ---
+        # JSD: computed as 1 - jensenshannon() → SIMILARITY, higher = better.
+        #      Observed 0.19–0.90.
+        'Fidelity_JSD':          {'higher_is_better': True,  'good': 0.70, 'bad': 0.40},
+        # KS: Kolmogorov-Smirnov statistic [0,1].  Lower = closer distributions.
+        #     Observed 0.07–0.98.
+        'Fidelity_KS':           {'higher_is_better': False, 'good': 0.15, 'bad': 0.40},
+        # KL: KL divergence, unbounded ≥0.  Lower = closer.
+        #     Observed 0.05–3.41.
+        'Fidelity_KL':           {'higher_is_better': False, 'good': 0.20, 'bad': 1.00},
+        # Corr_Sim: Pearson of association matrices, clipped ≥0.  Higher = better.
+        #           Observed 0.16–0.98.
+        'Fidelity_Corr_Sim':     {'higher_is_better': True,  'good': 0.80, 'bad': 0.50},
+        # WD: Wasserstein distance, per-col normalized to [0,1].  Lower = better.
+        #     Observed 0.01–0.58.
+        'Fidelity_WD':           {'higher_is_better': False, 'good': 0.10, 'bad': 0.30},
+        # Detection AUC: classifier real-vs-synth.  0.5 = indistinguishable.
+        #                Observed 0.53–1.00.
+        'Fidelity_Detection_AUC': {'higher_is_better': False, 'good': 0.60, 'bad': 0.80},
+
+        # --- Utility ---
+        # TSTR Accuracy (RF): train-on-synth, test-on-real.  Higher = better.
+        #                     Observed 0.37–1.00.
+        'Utility_TSTR_Acc_RF': {'higher_is_better': True, 'good': 0.75, 'bad': 0.55},
+        # TSTR F1 (RF): macro F1.  Higher = better.
+        #               Observed 0.27–1.00.
+        'Utility_TSTR_F1_RF':  {'higher_is_better': True, 'good': 0.70, 'bad': 0.45},
+        # ML Efficacy: mean of TSTR accuracies across classifiers.  Higher = better.
+        #              Observed 0.37–0.99.
+        'Utility_ML_Efficacy': {'higher_is_better': True, 'good': 0.75, 'bad': 0.55},
+        # SRA: Spearman rank agreement of model rankings.  Higher = better.
+        #      Observed -0.87–1.00.  Can be negative.
+        'Utility_SRA':         {'higher_is_better': True, 'good': 0.50, 'bad': 0.0},
+
+        # --- Fairness ---
+        # Dem Parity: |P(Y=1|A=0) - P(Y=1|A=1)|.  Lower = fairer.
+        #             Observed 0.00–0.60.
+        'Fairness_Dem_Parity':  {'higher_is_better': False, 'good': 0.10, 'bad': 0.30},
+        # Eq Odds: max(|TPR_diff|, |FPR_diff|).  Lower = fairer.
+        #          Observed 0.00–1.00.
+        'Fairness_Eq_Odds':     {'higher_is_better': False, 'good': 0.10, 'bad': 0.30},
+        # Disparate Impact: min(rate)/max(rate).  1.0 = equal groups.  Higher = better.
+        #                   Observed 0.00–0.96.
+        'Fairness_Disp_Impact': {'higher_is_better': True,  'good': 0.80, 'bad': 0.50},
+
+        # --- XAI ---
+        # Feature Importance Corr: Pearson of RF importances, clipped ≥0.  Higher = better.
+        #                          Observed 0.00–1.00.
+        'XAI_Feat_Imp_Corr': {'higher_is_better': True,  'good': 0.70, 'bad': 0.35},
+        # SHAP Distance: cosine distance of SHAP vectors.  Lower = better.
+        #                Observed 0.005–1.00.
+        'XAI_SHAP_Dist':     {'higher_is_better': False, 'good': 0.15, 'bad': 0.50},
+    }
+
+    display_data = heat_data.copy()
+
+    # Map each cell to a quality tier: 2 = favorable, 1 = between, 0 = unfavorable
+    tier_data = heat_data.copy() * np.nan
+    for col in heat_data.columns:
+        info = METRIC_DIRECTION.get(col, {'higher_is_better': True,
+                                          'good': 0.75, 'bad': 0.40})
+        col_vals = heat_data[col].dropna()
+        if len(col_vals) == 0:
+            continue
+
+        hib = info['higher_is_better']
+        good_thresh = info['good']
+        bad_thresh = info['bad']
+
+        for idx in col_vals.index:
+            v = col_vals[idx]
+            if hib:
+                # higher is better: >= good → green, <= bad → red
+                if v >= good_thresh:
+                    tier_data.loc[idx, col] = 2
+                elif v <= bad_thresh:
+                    tier_data.loc[idx, col] = 0
+                else:
+                    tier_data.loc[idx, col] = 1
+            else:
+                # lower is better: <= good → green, >= bad → red
+                if v <= good_thresh:
+                    tier_data.loc[idx, col] = 2
+                elif v >= bad_thresh:
+                    tier_data.loc[idx, col] = 0
+                else:
+                    tier_data.loc[idx, col] = 1
+
+    # 3-color discrete colormap: red (0), yellow (1), green (2)
+    from matplotlib.colors import ListedColormap, BoundaryNorm
+    three_cmap = ListedColormap(['#d9534f', '#f0ad4e', '#5cb85c'])  # red, yellow, green
+    three_norm = BoundaryNorm([-0.5, 0.5, 1.5, 2.5], three_cmap.N)
+
+    im = ax.imshow(tier_data.values, aspect='auto', cmap=three_cmap, norm=three_norm)
 
     # Move x-axis labels to bottom (default) so category bar can go on top
     ax.tick_params(top=False, bottom=True, labeltop=False, labelbottom=True)
@@ -1196,10 +1301,10 @@ def create_sdac_heatmap(sdac_df, results_dir, dataset_name="Dataset",
     for i in range(len(models)):
         for j in range(len(available_metrics)):
             val = display_data.iloc[i, j]
-            norm_val = normalized_data.iloc[i, j]
+            tier = tier_data.iloc[i, j]
             if not np.isnan(val):
-                # Contrast text against the normalized color
-                text_color = 'white' if (not np.isnan(norm_val) and (norm_val < 0.3 or norm_val > 0.8)) else 'black'
+                # White text on red/green, black on yellow
+                text_color = 'white' if (not np.isnan(tier) and tier != 1) else 'black'
                 ax.text(j, i, f'{val:.3f}', ha='center', va='center',
                        fontsize=7, color=text_color)
             else:
@@ -1213,20 +1318,31 @@ def create_sdac_heatmap(sdac_df, results_dir, dataset_name="Dataset",
         ax.add_patch(plt.Rectangle((j - 0.5, strip_y - strip_h), 1, strip_h,
                                    color=color, clip_on=False))
 
-    # Category legend below the plot (horizontal, no overlap)
+    # Discrete legend for the 3-color scheme (must be added first, then preserved)
     from matplotlib.patches import Patch
+    qual_legend = [Patch(facecolor='#5cb85c', label='Favorable'),
+                   Patch(facecolor='#f0ad4e', label='Between'),
+                   Patch(facecolor='#d9534f', label='Unfavorable')]
+    qual_leg = ax.legend(handles=qual_legend, loc='upper left',
+                         bbox_to_anchor=(1.02, 1.0), fontsize=9,
+                         title='Quality', frameon=True)
+    ax.add_artist(qual_leg)  # preserve when second legend is added
+
+    # Category legend below the plot (horizontal, no overlap)
     legend_elements = [Patch(facecolor=c, label=cat)
                       for cat, c in SDAC_CATEGORY_COLORS.items()]
     ax.legend(handles=legend_elements, loc='upper center',
              bbox_to_anchor=(0.5, -0.18), ncol=len(SDAC_CATEGORY_COLORS),
              title='SDAC Category', fontsize=9, frameon=True)
 
-    # Colorbar: normalized scale [0, 1]
-    cbar = plt.colorbar(im, ax=ax, shrink=0.8)
-    cbar.set_label('Relative Score (per-column normalized)', fontsize=9)
-
     ax.set_title(f'{dataset_name} - SDAC Metrics Heatmap', fontsize=14,
                 fontweight='bold', pad=20)
+
+    # Clarifying footnote
+    fig.text(0.01, 0.01,
+             'Cell values are raw metric scores (may exceed 1.0 for distance/ratio metrics like DCR and NNDR).\n'
+             'Colors reflect absolute quality thresholds per metric: green = favorable, yellow = between, red = unfavorable.',
+             fontsize=7, style='italic', color='#555555', va='bottom')
     plt.tight_layout(rect=[0, 0.06, 1, 1])  # leave room at bottom for legend
 
     output_path = None

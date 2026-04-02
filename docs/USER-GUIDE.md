@@ -178,7 +178,7 @@ Section 3 trains all 8 generative models using their **default (library-provided
 
 | File | Description | How to Interpret |
 |---|---|---|
-| `sdac_evaluation_summary.csv` | One row per model, all SDAC metrics as columns (Privacy, Fidelity, Utility, Fairness, XAI) | The primary comparison table. Sort by any column to rank models on that dimension. Compare Privacy_Score (higher = safer) vs. Fidelity metrics (lower JSD/KS/KL = better). A model with high privacy but poor fidelity is safe but not useful; the reverse is useful but risky. |
+| `sdac_evaluation_summary.csv` | One row per model, all SDAC metrics as columns (Privacy, Fidelity, Utility, Fairness, XAI) | The primary comparison table. Sort by any column to rank models on that dimension. Compare Privacy_Score (higher = safer) vs. Fidelity metrics (higher JSD similarity = better; lower KS/KL = better). A model with high privacy but poor fidelity is safe but not useful; the reverse is useful but risky. |
 | `privacy_summary.csv` | Per-model privacy detail: NNDR mean/std, memorization score/count, re-identification risk, DCR mean | Drill into privacy concerns. NNDR_Std reveals how variable the nearest-neighbor distances are — a low std with a high mean is the ideal (consistently private). Memorized_Count = 0 for all models means no synthetic record is a near-exact copy of a real one. |
 | `privacy_dashboard.png` | Multi-panel privacy visualization across all models | See graphic interpretation below. |
 | `sdac_radar_chart.png` | Radar (spider) plot with one polygon per model, axes = SDAC dimension composite scores | See graphic interpretation below. |
@@ -215,7 +215,7 @@ Overlaid histograms for each numeric column, showing real data (typically blue) 
 
 - When the two histograms overlap almost entirely, the model faithfully reproduced that feature's distribution.
 - **Look for:** Gaps where one distribution extends beyond the other (tail truncation), peaks that are shifted (mode displacement), or bimodal features that became unimodal (mode collapse).
-- Quantified by `Fidelity_JSD` (Jensen-Shannon Divergence) and `Fidelity_KS` (Kolmogorov-Smirnov statistic) — both should be close to 0.
+- Quantified by `Fidelity_JSD` (Jensen-Shannon Similarity, computed as 1 − JS divergence; closer to 1.0 = better) and `Fidelity_KS` (Kolmogorov-Smirnov statistic; closer to 0 = better).
 
 #### `pca_comparison_with_outcome.png`
 
@@ -249,9 +249,38 @@ A color-coded grid with models as rows and individual SDAC metrics as columns, g
 
 **How to read it:**
 
-- **Color scale:** Green = better, red = worse (for each metric, the direction is normalized so green is always desirable).
+- **Three-color scheme:** Each cell is colored by absolute quality thresholds defined per metric: **green** = favorable, **yellow** = between, **red** = unfavorable. Colors reflect whether a metric value is objectively good or bad, not relative ranking among models — so if every model achieves zero memorization (IMS = 0), they all appear green.
+- **Cell values** are the raw metric scores (may exceed 1.0 for unbounded metrics like DCR and NNDR). The color indicates quality; the number gives the precise value.
+- **Metric direction** varies: some metrics are "higher is better" (e.g., JSD similarity, Corr_Sim, TSTR accuracy) while others are "lower is better" (e.g., KS, KL, SHAP distance, re-identification risk). The color mapping accounts for this automatically.
 - **Look for:** Full rows of green (a model excelling everywhere) or red columns (a metric where all models struggle). Clustered red in the Privacy columns may indicate a dataset-level issue (e.g., too-small dataset) rather than a model failure.
-- This is the most information-dense single output — use it to quickly identify where each model sits relative to the field on every individual metric.
+- This is the most information-dense single output — use it to quickly identify where each model sits on every individual metric.
+
+**Metric thresholds and directions:**
+
+| Metric | What It Measures | Direction | Green (Favorable) | Red (Unfavorable) |
+|---|---|---|---|---|
+| **P:DCR** | Mean distance to closest real record (z-scored) | Higher = better | ≥ 1.0 | ≤ 0.30 |
+| **P:NNDR** | Ratio: DCR / avg synthetic-neighbor distance | Higher = better | ≥ 1.0 | ≤ 0.50 |
+| **P:IMS** | Fraction of records with DCR < 0.01 | Lower = better | ≤ 0.01 | ≥ 0.10 |
+| **P:ReID_Risk** | Fraction of records with DCR < 0.05 | Lower = better | ≤ 0.01 | ≥ 0.10 |
+| **P:MIA_AUC** | Membership inference attack AUC (0.5 = no leakage) | Lower = better | ≤ 0.60 | ≥ 0.80 |
+| **F:JSD** | Jensen-Shannon similarity (1 − JS divergence) | Higher = better | ≥ 0.70 | ≤ 0.40 |
+| **F:KS** | Kolmogorov-Smirnov statistic | Lower = better | ≤ 0.15 | ≥ 0.40 |
+| **F:KL** | KL divergence | Lower = better | ≤ 0.20 | ≥ 1.00 |
+| **F:Corr_Sim** | Pearson correlation of association matrices | Higher = better | ≥ 0.80 | ≤ 0.50 |
+| **F:WD** | Wasserstein distance (per-column normalized) | Lower = better | ≤ 0.10 | ≥ 0.30 |
+| **F:Detection_AUC** | Real-vs-synthetic classifier AUC (0.5 = indistinguishable) | Lower = better | ≤ 0.60 | ≥ 0.80 |
+| **U:TSTR_Acc_RF** | Accuracy: train on synthetic, test on real (RF) | Higher = better | ≥ 0.75 | ≤ 0.55 |
+| **U:TSTR_F1_RF** | Macro F1: train on synthetic, test on real (RF) | Higher = better | ≥ 0.70 | ≤ 0.45 |
+| **U:ML_Efficacy** | Mean TSTR accuracy across classifiers | Higher = better | ≥ 0.75 | ≤ 0.55 |
+| **U:SRA** | Spearman rank agreement of model rankings | Higher = better | ≥ 0.50 | ≤ 0.00 |
+| **Fr:Dem_Parity** | \|P(Y=1\|A=0) − P(Y=1\|A=1)\| | Lower = better | ≤ 0.10 | ≥ 0.30 |
+| **Fr:Eq_Odds** | max(\|TPR diff\|, \|FPR diff\|) | Lower = better | ≤ 0.10 | ≥ 0.30 |
+| **Fr:Disp_Impact** | min(rate) / max(rate) across groups | Higher = better | ≥ 0.80 | ≤ 0.50 |
+| **X:Feat_Imp_Corr** | Pearson correlation of RF feature importances | Higher = better | ≥ 0.70 | ≤ 0.35 |
+| **X:SHAP_Dist** | Cosine distance of SHAP value vectors | Lower = better | ≤ 0.15 | ≥ 0.50 |
+
+Values between the green and red thresholds appear **yellow** (between).
 
 #### `privacy_dashboard.png`
 
