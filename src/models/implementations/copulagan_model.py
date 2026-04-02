@@ -354,24 +354,11 @@ class CopulaGANModel(SyntheticDataModel):
             model_params['epochs'] = kwargs.get('epochs', self.model_config.get('epochs', epochs))
             model_params['batch_size'] = kwargs.get('batch_size', self.model_config.get('batch_size', batch_size))
 
-            # Learning rates
+            # Learning rates (SDV CopulaGAN parameters)
             if 'generator_lr' in kwargs or 'generator_lr' in self.model_config:
                 model_params['generator_lr'] = kwargs.get('generator_lr', self.model_config.get('generator_lr'))
             if 'discriminator_lr' in kwargs or 'discriminator_lr' in self.model_config:
                 model_params['discriminator_lr'] = kwargs.get('discriminator_lr', self.model_config.get('discriminator_lr'))
-
-            # Network dimensions (check kwargs first for Optuna-passed values)
-            if 'generator_dim' in kwargs or 'generator_dim' in self.model_config:
-                model_params['generator_dim'] = kwargs.get('generator_dim', self.model_config.get('generator_dim'))
-            if 'discriminator_dim' in kwargs or 'discriminator_dim' in self.model_config:
-                model_params['discriminator_dim'] = kwargs.get('discriminator_dim', self.model_config.get('discriminator_dim'))
-            if 'discriminator_steps' in kwargs or 'discriminator_steps' in self.model_config:
-                model_params['discriminator_steps'] = kwargs.get('discriminator_steps', self.model_config.get('discriminator_steps'))
-
-            # Additional parameters
-            for param in ['pac', 'generator_decay', 'discriminator_decay']:
-                if param in kwargs or param in self.model_config:
-                    model_params[param] = kwargs.get(param, self.model_config.get(param))
 
             # Enable GPU acceleration if device is CUDA
             model_params['cuda'] = self.device if self.device != "cpu" else False
@@ -395,7 +382,12 @@ class CopulaGANModel(SyntheticDataModel):
 
             except Exception as fit_error:
                 error_str = str(fit_error)
-                logger.error(f"[COPULAGAN] Model fit failed: {error_str}")
+                error_type = type(fit_error).__name__
+                # Capture full traceback for debugging
+                import traceback
+                error_traceback = traceback.format_exc()
+                logger.error(f"[COPULAGAN] Model fit failed: {error_type}: {error_str}")
+                logger.debug(f"[COPULAGAN] Full traceback:\n{error_traceback}")
 
                 # Specific handling for beta distribution errors
                 if "beta distribution" in error_str and "near-zero range" in error_str:

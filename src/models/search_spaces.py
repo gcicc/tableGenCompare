@@ -450,32 +450,17 @@ def _get_copulagan_search_space(
         batch_size = trial.suggest_categorical("batch_size", bounds["batch_choices"])
         generator_lr = trial.suggest_float("generator_lr", 1e-5, 1e-3, log=True)
         discriminator_lr = trial.suggest_float("discriminator_lr", 1e-5, 1e-3, log=True)
-        generator_decay = trial.suggest_float("generator_decay", 1e-8, 1e-4, log=True)
-        discriminator_decay = trial.suggest_float("discriminator_decay", 1e-8, 1e-4, log=True)
-        generator_dim = trial.suggest_categorical("generator_dim", bounds["dim_options"][:3])
-        discriminator_dim = trial.suggest_categorical("discriminator_dim", bounds["dim_options"][:3])
-        discriminator_steps = trial.suggest_int("discriminator_steps", 1, 2)
     else:  # full mode
         epochs = trial.suggest_int("epochs", bounds["min_epochs"], bounds["max_epochs"], step=50)
         batch_size = trial.suggest_categorical("batch_size", bounds["batch_choices"])
         generator_lr = trial.suggest_float("generator_lr", 5e-6, 5e-3, log=True)
         discriminator_lr = trial.suggest_float("discriminator_lr", 5e-6, 5e-3, log=True)
-        generator_decay = trial.suggest_float("generator_decay", 1e-8, 1e-3, log=True)
-        discriminator_decay = trial.suggest_float("discriminator_decay", 1e-8, 1e-3, log=True)
-        generator_dim = trial.suggest_categorical("generator_dim", bounds["dim_options"])
-        discriminator_dim = trial.suggest_categorical("discriminator_dim", bounds["dim_options"])
-        discriminator_steps = trial.suggest_int("discriminator_steps", 1, 3)
 
     return {
         "epochs": epochs,
         "batch_size": batch_size,
         "generator_lr": generator_lr,
         "discriminator_lr": discriminator_lr,
-        "generator_decay": generator_decay,
-        "discriminator_decay": discriminator_decay,
-        "generator_dim": generator_dim,
-        "discriminator_dim": discriminator_dim,
-        "discriminator_steps": discriminator_steps
     }
 
 
