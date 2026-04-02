@@ -275,7 +275,8 @@ def _create_model_objective(
                 model_name,
                 trial,
                 run_mode,
-                data_size=len(data)
+                data_size=len(data),
+                n_cols=data.shape[1]
             )
 
             # Create and configure model
@@ -375,7 +376,12 @@ def _get_train_kwargs(
             "categorical_columns": categorical_columns,
             "target_col": target_column,
             "test_ratio": params.get("test_ratio", 0.2),
+            "class_dim": params.get("class_dim"),
+            "random_dim": params.get("random_dim"),
         })
+        if model_name == "ctabganplus":
+            kwargs["num_channels"] = params.get("num_channels")
+        kwargs = {k: v for k, v in kwargs.items() if v is not None}
 
     elif model_name == "ganeraid":
         kwargs.update({
@@ -399,6 +405,9 @@ def _get_train_kwargs(
             "discriminator_lr": params.get("discriminator_lr"),
             "generator_decay": params.get("generator_decay"),
             "discriminator_decay": params.get("discriminator_decay"),
+            "generator_dim": params.get("generator_dim"),
+            "discriminator_dim": params.get("discriminator_dim"),
+            "discriminator_steps": params.get("discriminator_steps"),
         })
         kwargs = {k: v for k, v in kwargs.items() if v is not None}
 
@@ -420,6 +429,8 @@ def _get_train_kwargs(
             "discriminator_lr": params.get("discriminator_lr"),
             "generator_dim": params.get("generator_dim"),
             "discriminator_dim": params.get("discriminator_dim"),
+            "generator_decay": params.get("generator_decay"),
+            "discriminator_decay": params.get("discriminator_decay"),
             "num_teachers": params.get("num_teachers"),
             "noise_multiplier": params.get("noise_multiplier"),
             "target_epsilon": params.get("target_epsilon"),
@@ -436,6 +447,7 @@ def _get_train_kwargs(
             "generator_lr": params.get("generator_lr"),
             "discriminator_lr": params.get("discriminator_lr"),
             "l2_reg": params.get("l2_reg"),
+            "dropout": params.get("dropout"),
             "autoencoder_dim": params.get("autoencoder_dim"),
             "generator_dim": params.get("generator_dim"),
             "discriminator_dim": params.get("discriminator_dim"),
