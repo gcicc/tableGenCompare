@@ -20,7 +20,8 @@ def create_correlation_heatmap(*args, **kwargs):
 
 def create_mixed_association_heatmap(association_matrix, results_path,
                                      filename='mixed_association_heatmap.png',
-                                     verbose=True):
+                                     verbose=True,
+                                     flagged_columns=None):
     """
     Create mixed-association heatmap with dynamic font sizing.
 
@@ -34,6 +35,10 @@ def create_mixed_association_heatmap(association_matrix, results_path,
         Output filename (default: 'mixed_association_heatmap.png')
     verbose : bool
         Print progress messages
+    flagged_columns : set[str] | None
+        Column names whose tick labels (x and y) should render in red to
+        highlight that they are involved in a collinearity-reduction
+        decision. Unflagged columns stay black.
 
     Returns:
     --------
@@ -58,12 +63,27 @@ def create_mixed_association_heatmap(association_matrix, results_path,
                 linewidths=0.5,
                 ax=ax)
 
+    # Highlight flagged columns on x/y tick labels.
+    if flagged_columns:
+        flagged_set = set(flagged_columns)
+        for lbl in ax.get_xticklabels():
+            if lbl.get_text() in flagged_set:
+                lbl.set_color('red')
+                lbl.set_fontweight('bold')
+        for lbl in ax.get_yticklabels():
+            if lbl.get_text() in flagged_set:
+                lbl.set_color('red')
+                lbl.set_fontweight('bold')
+
     ax.set_title('Feature Mixed-Association Matrix', fontsize=14, fontweight='bold')
 
     # Footnote explaining metric types and ranges
-    fig.text(0.5, -0.02,
-             'Pearson (num\u2013num): [\u22121, 1]  |  Cram\u00e9r\u2019s V (cat\u2013cat): [0, 1]  |  '
-             'Correlation ratio \u03b7 (num\u2013cat): [0, 1]',
+    footnote = ('Pearson (num\u2013num): [\u22121, 1]  |  '
+                'Cram\u00e9r\u2019s V (cat\u2013cat): [0, 1]  |  '
+                'Correlation ratio \u03b7 (num\u2013cat): [0, 1]')
+    if flagged_columns:
+        footnote += '   \u2022   red labels: collinearity-treated pairs'
+    fig.text(0.5, -0.02, footnote,
              ha='center', va='top', fontsize=9, style='italic', color='0.4')
 
     plt.tight_layout()

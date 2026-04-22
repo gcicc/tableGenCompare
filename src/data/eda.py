@@ -13,6 +13,7 @@ import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
 import seaborn as sns
+from scipy import stats
 
 from src.utils.paths import get_results_path
 from src.visualization.section2 import (
@@ -21,13 +22,76 @@ from src.visualization.section2 import (
 )
 
 
+# ---- association primitives ----
+# Copied verbatim from multi-table-gen-compare/src/data/eda.py (keep in sync).
+
+def _cramers_v(x: pd.Series, y: pd.Series) -> float:
+    """Cramér's V for two categorical series."""
+    ct = pd.crosstab(x, y)
+    if ct.size == 0:
+        return np.nan
+    chi2 = stats.chi2_contingency(ct, correction=False).statistic
+    n = ct.values.sum()
+    r, c = ct.shape
+    denom = n * (min(r, c) - 1)
+    return float(np.sqrt(chi2 / denom)) if denom > 0 else np.nan
+
+
+def _eta(num: pd.Series, cat: pd.Series) -> float:
+    """Correlation ratio η between numeric and categorical series."""
+    df = pd.DataFrame({"n": num, "c": cat}).dropna()
+    if df.empty or df["c"].nunique() < 2:
+        return np.nan
+    overall_mean = df["n"].mean()
+    grp = df.groupby("c")["n"]
+    ss_between = float(((grp.mean() - overall_mean) ** 2 * grp.count()).sum())
+    ss_total = float(((df["n"] - overall_mean) ** 2).sum())
+    return float(np.sqrt(ss_between / ss_total)) if ss_total > 0 else np.nan
+
+
+def mixed_association_matrix(df: pd.DataFrame) -> pd.DataFrame:
+    """Pairwise mixed-association matrix.
+
+    Pearson for numeric×numeric (signed, [-1, 1]).
+    Cramér's V for categorical×categorical (unsigned, [0, 1]).
+    Correlation ratio η for numeric×categorical (unsigned, [0, 1]).
+
+    Note: this is the sibling-aligned implementation, distinct from
+    ``src.evaluation.association.compute_mixed_association_matrix`` (which
+    wraps dython). Both coexist; use this one when you need parity with
+    multi-table-gen-compare's fidelity metrics.
+    """
+    num_cols = df.select_dtypes(include=np.number).columns.tolist()
+    cat_cols = df.select_dtypes(
+        include=["object", "category", "string"],
+    ).columns.tolist()
+    cols = num_cols + cat_cols
+    out = pd.DataFrame(np.nan, index=cols, columns=cols, dtype=float)
+
+    for a in cols:
+        for b in cols:
+            if a == b:
+                out.loc[a, b] = 1.0
+                continue
+            if a in num_cols and b in num_cols:
+                out.loc[a, b] = float(df[a].corr(df[b]))
+            elif a in cat_cols and b in cat_cols:
+                out.loc[a, b] = _cramers_v(df[a], df[b])
+            else:
+                num_s = df[a] if a in num_cols else df[b]
+                cat_s = df[b] if a in num_cols else df[a]
+                out.loc[a, b] = _eta(num_s, cat_s)
+    return out
+
+
 def run_comprehensive_eda(
     data: pd.DataFrame,
     target_column: str,
     dataset_identifier: str,
     dataset_name: str = None,
     categorical_columns: list = None,
-    verbose: bool = True
+    verbose: bool = True,
+    flagged_columns: set = None,
 ) -> dict:
     """
     Run comprehensive EDA on a dataset, consolidating all Section 2 EDA chunks.
@@ -267,7 +331,8 @@ def run_comprehensive_eda(
             association_matrix=correlation_matrix,
             results_path=results_path,
             filename='mixed_association_heatmap.png',
-            verbose=False
+            verbose=False,
+            flagged_columns=flagged_columns,
         )
         files_generated.append(heatmap_path)
 

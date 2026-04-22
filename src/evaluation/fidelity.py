@@ -14,6 +14,8 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import cross_val_score
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 
+from src.data.eda import mixed_association_matrix
+
 
 def compute_ks_statistic(real_df, synth_df, target_col=None):
     """
@@ -261,3 +263,56 @@ def compute_contingency_similarity(real_df, synth_df, target_col=None):
         'Contingency_Sim_Mean': np.mean(valid) if valid else np.nan,
         'Contingency_Per_Column': sim_scores
     }
+
+
+# ---- association preservation (table-level bivariate) ---------------------
+# Copied verbatim from multi-table-gen-compare/src/evaluation/fidelity.py:175
+# (keep in sync — paired-PR rule).
+
+def association_preservation(
+    real: pd.DataFrame,
+    synth: pd.DataFrame,
+    *,
+    sample_rows: int = 5_000,
+    random_state: int = 42,
+    signal_threshold: float = 0.3,
+) -> float:
+    """1 - mean |A_real - A_synth| over pairs where |A_real| > signal_threshold.
+
+    Restricting to real-signal pairs (default > 0.3) prevents the metric
+    from being dominated by noise-level off-diagonal cells where the real
+    association is ~0 and any synth jitter reads as "preservation loss" —
+    which rewarded marginal-independent samplers artificially. Now we only
+    measure preservation on pairs where there's actually something to
+    preserve.
+
+    Bounded in [0, 1]; 1 = identical association strength across all
+    above-threshold pairs. NaN if no pair clears ``signal_threshold``.
+    """
+    if real.shape[0] < 10 or synth.shape[0] < 10:
+        return float("nan")
+    common = [c for c in real.columns if c in synth.columns]
+    if len(common) < 2:
+        return float("nan")
+    r = real[common]
+    s = synth[common]
+    if len(r) > sample_rows:
+        r = r.sample(sample_rows, random_state=random_state)
+    if len(s) > sample_rows:
+        s = s.sample(sample_rows, random_state=random_state)
+    try:
+        A_r = mixed_association_matrix(r).reindex(index=common, columns=common)
+        A_s = mixed_association_matrix(s).reindex(index=common, columns=common)
+    except Exception:  # noqa: BLE001
+        return float("nan")
+    mask = ~np.eye(len(common), dtype=bool)
+    abs_real = np.abs(A_r.to_numpy())
+    abs_synth = np.abs(A_s.to_numpy())
+    signal_mask = mask & (abs_real > signal_threshold) & np.isfinite(abs_real)
+    if not signal_mask.any():
+        return float("nan")
+    diffs = np.abs(abs_real[signal_mask] - abs_synth[signal_mask])
+    diffs = diffs[np.isfinite(diffs)]
+    if diffs.size == 0:
+        return float("nan")
+    return float(1.0 - diffs.mean())

@@ -991,6 +991,9 @@ def create_sdac_radar_chart(sdac_df, results_dir, dataset_name="Dataset",
         corr_val = row.get('Fidelity_Corr_Sim', np.nan)
         if not np.isnan(corr_val):
             fid_components.append(corr_val)
+        assoc_val = row.get('Fidelity_Assoc_Preservation', np.nan)
+        if not np.isnan(assoc_val):
+            fid_components.append(assoc_val)
         fidelity = np.mean(fid_components) if fid_components else np.nan
 
         # Utility: ML_Efficacy (0-1 accuracy-like)

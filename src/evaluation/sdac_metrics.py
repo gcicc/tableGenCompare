@@ -18,6 +18,7 @@ from .fidelity import (
     compute_wasserstein_mean,
     compute_detection_auc,
     compute_contingency_similarity,
+    association_preservation,
 )
 from .fairness import compute_fairness_metrics
 from .xai_metrics import (
@@ -334,6 +335,17 @@ def compute_sdac_tabular_metrics(real_df, synthetic_df, target_col,
     # Contingency Similarity
     cont = compute_contingency_similarity(real_df, synthetic_df, target_col)
     row['Fidelity_Contingency_Sim'] = cont['Contingency_Sim_Mean']
+
+    # Association Preservation (mixed-association matrix, signal-masked)
+    try:
+        assoc_pres = association_preservation(real_df, synthetic_df)
+    except Exception:  # noqa: BLE001
+        assoc_pres = np.nan
+    row['Fidelity_Assoc_Preservation'] = assoc_pres
+    if verbose:
+        print(f"   [FIDELITY] Association Preservation: {assoc_pres:.4f}"
+              if not np.isnan(assoc_pres)
+              else "   [FIDELITY] Association Preservation: N/A")
 
     # ===== UTILITY =====
     if verbose:
