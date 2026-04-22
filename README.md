@@ -147,25 +147,30 @@ The STG-Driver notebook follows a standardized 5-section pipeline:
 - Comprehensive dataset overview and statistics
 - Missing value analysis and MICE imputation
 - Categorical encoding and feature preparation
+- **§2.2b Collinearity reduction** — residual re-parameterization of near-deterministic column pairs (e.g., `perimeter`/`radius`/`area`). Decisions table is surfaced for human review before §3/§4/§5 run on the reduced schema. See [docs/collinearity-reduction.md](docs/collinearity-reduction.md).
+- EDA heatmap highlights collinearity-treated columns in red
 
-### Section 3: Model Configuration
-- Model factory setup and configuration management
-- Hyperparameter space definitions for all 8 models
+### Section 3: Demo Model Training
+- Train all 8 models with default parameters
+- Batch evaluation with synthetic data restored to the full real schema before scoring
+- Emits `restoration_health.csv` — per-pair residual-preservation diagnostic
 
-### Section 4: Hyperparameter Optimization
+### Section 4: Staged Hyperparameter Optimization
 - Optuna-based Bayesian optimization for each model
-- Performance evaluation using enhanced objective functions
-- Batch training with comprehensive logging
+- Three-stage: smoke (10 trials) → pilot (diminishing-returns analysis) → full
+- HPO tunes on the reduced schema so the residual is the actual training signal
 
-### Section 5: Model Evaluation and Comparison (SDAC Framework)
-- Synthetic data generation using best parameters
+### Section 5: Final Model Comparison (SDAC Framework)
+- Retrain with best parameters on the reduced schema
+- Restore dropped columns on synthetic output before evaluation (metrics are computed on the full real schema)
 - **SDAC-aligned evaluation** across 5 dimensions: Privacy, Fidelity, Utility, Fairness, XAI
 - Privacy risk assessment (DCR, NNDR, MIA, memorization, re-identification)
-- Fidelity analysis (JSD, KS, KL, Wasserstein, Detection AUC, Mixed-Association Similarity)
+- Fidelity analysis (JSD, KS, KL, Wasserstein, Detection AUC, Mixed-Association Similarity, **Association Preservation**)
 - Utility preservation (TSTR with XGBoost/RF/LR, ML Efficacy, SRA)
 - Fairness metrics (Demographic Parity, Equalized Odds, Disparate Impact)
 - XAI metrics (Feature Importance Correlation, SHAP Distance)
 - Cross-model comparison via SDAC radar chart and heatmap
+- Emits `restoration_health.csv` per optimized model
 
 ---
 
@@ -190,11 +195,15 @@ tableGenCompare/
 │   ├── config.py         # Session management
 │   ├── models/           # Model implementations
 │   ├── data/             # Data preprocessing
+│   │   ├── eda.py             # run_comprehensive_eda, association primitives
+│   │   ├── preprocessing.py   # config-driven cleaning / encoding
+│   │   ├── collinearity.py    # residual reparam engine (synced w/ sibling)
+│   │   └── target_integrity.py
 │   ├── evaluation/       # SDAC evaluation framework
 │   │   ├── sdac_metrics.py  # Unified SDAC orchestrator
-│   │   ├── association.py   # Mixed-association matrix
+│   │   ├── association.py   # Mixed-association matrix (dython-wrapped)
 │   │   ├── quality.py       # Statistical fidelity
-│   │   ├── fidelity.py      # KS, KL, WD, Detection AUC
+│   │   ├── fidelity.py      # KS, KL, WD, Detection AUC, Assoc_Preservation
 │   │   ├── trts.py          # TRTS framework (XGBoost primary)
 │   │   ├── privacy.py       # DCR, NNDR, MIA, memorization
 │   │   ├── fairness.py      # Demographic parity, equalized odds
@@ -220,8 +229,10 @@ All notebooks use `from setup import *` without changes - the thin re-export lay
 
 - **SDAC Framework:** Evaluation aligned to the SEARCH Consortium's Synthetic Data Anonymity and Credibility (SDAC) taxonomy across 5 dimensions — Privacy, Fidelity, Utility, Fairness, XAI
 - **Unified SDAC output:** Single `sdac_evaluation_summary.csv` with all metrics organized by SDAC category
+- **Collinearity reducer:** Residual re-parameterization of near-deterministic pairs so generators preserve physical relationships (perimeter/radius, label/code) end-to-end. Surfaces a human-reviewable decisions table and a per-pair `restoration_health.csv` diagnostic. Byte-identical to the engine in sibling project `multi-table-gen-compare`. See [docs/collinearity-reduction.md](docs/collinearity-reduction.md).
 - **XGBoost-primary classifiers:** XGBoost as default classifier across TSTR and utility evaluation, with RF and LR as secondary
 - **30+ evaluation metrics:** Comprehensive TRTS analysis with statistical fidelity, utility, and privacy metrics
+- **Association Preservation metric:** Scorecard axis measuring how well generators preserve strong real-data pairwise associations (`|A_real| > 0.3`), computed via mixed-association matrix (Pearson / Cramér's V / eta)
 - **Automated batch training:** Single function call handles multi-model hyperparameter optimization
 - **Privacy dashboard:** DCR, NNDR, MIA AUC, memorization risk, and re-identification assessment
 - **Advanced visualizations:** SDAC radar chart, SDAC heatmap, ROC curves, PR curves, calibration plots, PCA comparisons
@@ -289,11 +300,27 @@ This allows SageMaker notebook instances to run AWS CLI commands without manual 
 
 ---
 
+## Documentation
+
+Topic-focused references in `docs/`:
+
+- [workflow.md](docs/workflow.md) — shortest happy path from fresh clone to completed smoke run
+- [datasets.md](docs/datasets.md) — the four benchmarks: schema, source, intended use
+- [models.md](docs/models.md) — all 8 generators + planned additions (TabDDPM, GReaT)
+- [evaluation.md](docs/evaluation.md) — SDAC axes, metrics, and composite scoring
+- [collinearity-reduction.md](docs/collinearity-reduction.md) — residual re-parameterization (§2.2b feature)
+- [applications.md](docs/applications.md) — five use cases for synthetic tabular clinical data
+- [decisions.md](docs/decisions.md) — architectural decisions log (ADR-style)
+- [glossary.md](docs/glossary.md) — terminology (SDAC, TRTS, etc.)
+- [experiment_log.md](docs/experiment_log.md) — running log of notable runs and refactors
+- [USER-GUIDE.md](docs/USER-GUIDE.md) — long-form per-section user guide
+
+Also: [Project-Evolution-Timeline.md](docs/Project-Evolution-Timeline.md) for
+the historical development timeline.
+
 ## Contributing
 
 This framework follows a systematic approach to synthetic data generation research, emphasizing reproducibility, comprehensive evaluation, and practical applicability to healthcare data challenges.
-
-For project evolution and development history, see `docs/Project-Evolution-Timeline.md`.
 
 
 

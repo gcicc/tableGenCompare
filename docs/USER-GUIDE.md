@@ -89,7 +89,9 @@ Section 2 loads the clinical dataset, runs `run_comprehensive_eda()`, and prepar
 - Missing value analysis and MICE imputation
 - Categorical encoding (one-hot or label)
 - Target variable distribution and class balance assessment
-- Mixed-association heatmaps (Pearson, Cramer's V, correlation ratio) and feature distribution plots
+- **§2.2b Collinearity reduction** — near-deterministic column pairs (`|association| ≥ 0.975` by default) get residual-reparam treated; dropped columns are reconstructed on synthetic output before §3.2/§5.2 evaluation. See [collinearity-reduction.md](collinearity-reduction.md).
+- Mixed-association heatmaps (Pearson, Cramer's V, correlation ratio) — columns involved in a collinearity decision are highlighted in **red bold** on the heatmap axes
+- Feature distribution plots
 
 ### Output Files
 
@@ -100,6 +102,7 @@ Section 2 loads the clinical dataset, runs `run_comprehensive_eda()`, and prepar
 | `target_balance_metrics.csv` | Class balance ratio and imbalance category | A `Class_Balance_Ratio` below 0.5 flags the dataset as "Highly Imbalanced." This warns you that GAN-based generators may struggle with the minority class and that evaluation metrics sensitive to imbalance (F1, balanced accuracy) should be preferred over raw accuracy. |
 | `target_associations.csv` | Association strength of each feature with the target (Pearson for numeric, correlation ratio for categorical) | Identifies the features most predictive of the outcome. Features with high association should remain strongly associated in synthetic data; check this against the Section 3/5 association comparison plots. |
 | `association_matrix.csv` | Full pairwise mixed-association matrix (Pearson for num-num, Cramer's V for cat-cat, correlation ratio for num-cat) | Numerical companion to the heatmap below. Use it for precise values when the heatmap color scale is ambiguous. |
+| Collinearity decisions table (displayed inline in §2.2b output) | One row per detected pair with `col_a`, `col_b`, `kind`, `score`, `strategy`, `dropped`, `kept`, `residual_col`, `note` | Review before continuing. To override a decision, edit `NOTEBOOK_CONFIG['collinearity_overrides']` in §2.1 and re-run. |
 
 ### Graphics
 
@@ -112,6 +115,7 @@ A color-coded matrix of pairwise mixed associations across all features (numeric
 - **Color scale:** Fixed range [-1, +1]. Dark red = strong positive association (+1), dark blue = strong negative association (-1), white = near zero. A footnote on the figure indicates which metrics live in [0, 1] (Cramer's V, eta) vs. [-1, 1] (Pearson).
 - **Diagonal:** Always +1 (each feature associated with itself).
 - **Annotations:** Cell values are shown only when there are 6 or fewer features; for larger matrices annotations are suppressed for readability.
+- **Red bold tick labels:** Columns involved in a collinearity-reduction decision (`kept` or `dropped` in §2.2b) are highlighted on the x/y axes. A footnote legend appears when any columns are flagged.
 - **Look for:** Clusters of warm colors indicating groups of co-varying features. Strong off-diagonal associations represent relationships that the generative models must preserve. Compare this heatmap to the per-model association comparison plots in Sections 3 and 5 to assess how well each model captured these relationships.
 
 #### `feature_distributions_part1.png` / `feature_distributions_part2.png`
@@ -184,6 +188,7 @@ Section 3 trains all 8 generative models using their **default (library-provided
 | `sdac_radar_chart.png` | Radar (spider) plot with one polygon per model, axes = SDAC dimension composite scores | See graphic interpretation below. |
 | `sdac_composite_scores.csv` | Per-model SDAC composite scores, polygon area, and % of maximum | Rank models by `Polygon_Area` for a single overall quality number. `Pct_of_Max` normalizes to [0-100%] so you can compare across datasets with different numbers of active SDAC dimensions. A model at 50% is not "half as good" — area scales quadratically, so 50% of max area represents a balanced model with scores around 0.7 on each axis. |
 | `sdac_heatmap.png` | Color-coded grid: rows = models, columns = individual metrics, grouped by SDAC category | See graphic interpretation below. |
+| `restoration_health.csv` | One row per (model, collinearity-treated pair): `dropped`, `partner`, `strategy`, `real_assoc`, `synth_assoc`, `delta`, `model` | Produced only when §2.2b's collinearity reducer had ops to apply. A small `delta` (< ~0.01 typical for a well-trained generator) means the residual re-parameterization survived synthesis. A large `delta` flags that the model didn't preserve the residual as designed — check per-column fidelity on the `__resid` column. See [collinearity-reduction.md](collinearity-reduction.md). |
 
 #### Per-Model Files (one folder per model, e.g., `CTGAN/`, `TVAE/`)
 
@@ -423,6 +428,7 @@ Section 5 produces the same file types as Section 3. Refer to the [Section 3 out
 | `sdac_radar_chart.png` | Radar chart of SDAC composite scores | Polygons should generally be larger than in Section 3. Any dimension that shrank after optimization warrants investigation. |
 | `sdac_composite_scores.csv` | Composite scores and polygon area per model | Compare `Polygon_Area` between Section 3 and Section 5 to quantify the net impact of hyperparameter tuning across all SDAC dimensions simultaneously. |
 | `sdac_heatmap.png` | Full metrics heatmap | Look for shifts from red to green (improvement) or green to red (regression) compared to Section 3. |
+| `restoration_health.csv` | Per-(model, collinearity-treated pair) diagnostic — same format as Section 3 | Compare `delta` values to Section 3's `restoration_health.csv`. Optimized models should preserve residualized pairs at least as well as the default-param models. A regression here (larger `delta` in §5 than §3) means HPO pushed the model away from the residual distribution — review the search space or the per-column fidelity of the `__resid` column. |
 
 #### Per-Model Files (same structure as Section 3)
 
@@ -644,6 +650,17 @@ Fidelity metrics measure how closely the synthetic data matches the statistical 
 | **Interpretation** | 1.0 = identical category co-occurrence patterns. Low values indicate the model is not capturing interactions between categorical variables. |
 | **Source** | `src/evaluation/fidelity.py` |
 
+#### Association Preservation (`Fidelity_Assoc_Preservation`)
+
+| | |
+|---|---|
+| **What it measures** | How well the synthetic data preserves the *strength* of strong real-data pairwise associations |
+| **Plain language** | For the column pairs that were strongly associated in the real data (Pearson / Cramer's V / eta > 0.3), does the synthetic data preserve that same strength of association? |
+| **Mathematical definition** | Let $A_{\text{real}}$ and $A_{\text{synth}}$ be the mixed-association matrices. Let $M$ be the off-diagonal mask restricted to pairs where $\lvert A_{\text{real}} \rvert > 0.3$ (the "signal" filter). Then $\text{Assoc\_Preservation} = 1 - \mathrm{mean}(\lvert A_{\text{real}}[M] \rvert - \lvert A_{\text{synth}}[M] \rvert \rvert)$. |
+| **Range** | 0 to 1 (higher = better), NaN when no pair clears the 0.3 signal filter |
+| **Interpretation** | 1.0 = the model preserved the strength of every strongly-associated pair. Distinct from Correlation Similarity: this one is signal-masked, so it cannot be spuriously "won" by marginal-independent samplers whose associations are mostly near-zero. Wired into the Fidelity composite of the SDAC radar chart. |
+| **Source** | `src/evaluation/fidelity.py::association_preservation` (byte-identical to the sibling `multi-table-gen-compare` project). See [collinearity-reduction.md](collinearity-reduction.md). |
+
 ---
 
 ### 7.3 Utility Metrics
@@ -835,13 +852,15 @@ tableGenCompare/
 │   │   └── implementations/    # Per-model wrappers
 │   ├── data/
 │   │   ├── preprocessing.py    # MICE imputation, encoding
-│   │   ├── eda.py              # run_comprehensive_eda()
+│   │   ├── eda.py              # run_comprehensive_eda(), _cramers_v, _eta, mixed_association_matrix
+│   │   ├── collinearity.py     # Residual reparam engine (sync w/ multi-table-gen-compare)
+│   │   ├── target_integrity.py # Post-generation target sanitization
 │   │   └── summary.py          # Data summaries
 │   ├── evaluation/
 │   │   ├── sdac_metrics.py     # Unified SDAC orchestrator
-│   │   ├── association.py      # Mixed-association matrix (Pearson/Cramer's V/eta)
+│   │   ├── association.py      # Mixed-association matrix (dython-wrapped)
 │   │   ├── quality.py          # JSD, association, ML utility
-│   │   ├── fidelity.py         # KS, KL, WD, Detection AUC
+│   │   ├── fidelity.py         # KS, KL, WD, Detection AUC, association_preservation
 │   │   ├── trts.py             # 4-scenario TRTS (XGBoost primary)
 │   │   ├── privacy.py          # DCR, NNDR, MIA, memorization
 │   │   ├── fairness.py         # Demographic parity, equalized odds
