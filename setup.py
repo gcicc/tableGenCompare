@@ -12,6 +12,14 @@ Migrated to src/ modules in Phase 4, Task 4.3 - reducing setup.py to <100 lines.
 import os
 
 # ============================================================================
+# RUNTIME COMPAT SHIM - must run before any third-party package loads that
+# depends on the old dython API. tab_gan_metrics (required by GANerAid) uses
+# names that were removed/renamed in dython >=0.7.12. The shim re-installs
+# the missing symbols on dython.nominal at import time. See src/_compat_dython.py.
+# ============================================================================
+import src._compat_dython  # noqa: F401  (side-effect import)
+
+# ============================================================================
 # ESSENTIAL IMPORTS FROM SRC - Available globally when using 'from setup import *'
 # ============================================================================
 
