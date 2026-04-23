@@ -354,16 +354,16 @@ def get_tuning_config(config: Dict[str, Any]) -> Dict[str, Any]:
 
     Returns:
         Dictionary with tuning parameters:
-            - n_trials_smoke: Pilot / smoke trial count
+            - n_trials_pilot: Pilot / smoke trial count
             - timeout_seconds: Timeout per study (or None)
             - tuning_mode: "smoke" or "full"
     """
     tuning_mode = config.get("tuning_mode", "smoke")
-    n_trials_smoke = config.get("n_trials_smoke", 5)
+    n_trials_pilot = config.get("n_trials_pilot", 5)
     timeout_seconds = config.get("timeout_seconds", None)
 
     return {
-        "n_trials_smoke": n_trials_smoke,
+        "n_trials_pilot": n_trials_pilot,
         "timeout_seconds": timeout_seconds,
         "tuning_mode": tuning_mode,
     }
@@ -371,15 +371,15 @@ def get_tuning_config(config: Dict[str, Any]) -> Dict[str, Any]:
 
 def get_n_trials(config: Dict[str, Any]) -> int:
     """
-    Get the smoke/pilot trial count from config.
+    Get the pilot trial count from config.
 
     Args:
         config: Notebook configuration dictionary
 
     Returns:
-        Number of trials (n_trials_smoke)
+        Number of trials (n_trials_pilot)
     """
-    return config.get("n_trials_smoke", 5)
+    return config.get("n_trials_pilot", 5)
 
 
 print("[OK] Model registry loaded from src/models/registry.py")

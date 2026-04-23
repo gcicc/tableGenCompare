@@ -38,7 +38,7 @@ NOTEBOOK_CONFIG = {
 
     # ========== OPTIONAL: Tuning Configuration ==========
     "tuning_mode": "smoke",                       # "smoke" (5 trials) | "full" (50 trials)
-    "n_trials_smoke": 5,                          # Trials for smoke testing
+    "n_trials_pilot": 5,                          # Trials for pilot / smoke phase
     "n_trials_full": 50,                          # Trials for full optimization
     "timeout_seconds": None,                      # Optional timeout per study
 }

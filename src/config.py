@@ -50,7 +50,7 @@ NOTEBOOK_CONFIG_DEFAULTS: Dict[str, Any] = {
 
     # Tuning
     "tuning_mode": "smoke",                 # smoke | full
-    "n_trials_smoke": 5,                    # trials for smoke testing
+    "n_trials_pilot": 5,                    # trials for pilot / smoke phase
     "timeout_seconds": None,                # optional timeout per study
 }
 
@@ -156,13 +156,13 @@ def validate_config(config: Dict[str, Any], strict: bool = False) -> Dict[str, A
             warnings_list.append(msg + ". Using 500.")
             validated["sample_n"] = 500
 
-    if not isinstance(validated["n_trials_smoke"], int) or validated["n_trials_smoke"] <= 0:
-        msg = "'n_trials_smoke' must be a positive integer"
+    if not isinstance(validated["n_trials_pilot"], int) or validated["n_trials_pilot"] <= 0:
+        msg = "'n_trials_pilot' must be a positive integer"
         if strict:
             errors.append(msg)
         else:
             warnings_list.append(msg + ". Using 5.")
-            validated["n_trials_smoke"] = 5
+            validated["n_trials_pilot"] = 5
 
     # Validate timeout_seconds if provided
     if validated["timeout_seconds"] is not None:
