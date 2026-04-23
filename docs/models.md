@@ -1,6 +1,6 @@
 # Models
 
-Eight single-table generators wrapped in this repo; all implement the same
+Ten single-table generators wrapped in this repo; all implement the same
 interface (`src/models/base_model.py::SyntheticDataModel`):
 
 ```python
@@ -46,8 +46,10 @@ placement rationale.
 | PATE-GAN | DP-GAN | ydata-synthetic / custom | `pategan_model.py` | Differentially private; fewer HPO knobs |
 | MEDGAN | GAN | custom | `medgan_model.py` | Autoencoder + GAN; designed for medical records |
 | GANerAid | GAN | GANerAid submodule | `ganeraid_model.py` | Clinical-data-specialized GAN; patched for device awareness |
+| TabDiffusion | Diffusion | HuggingFace `diffusers` | `tabdiffusion_model.py` | DDPM for tabular data; custom denoising network with sinusoidal time embeddings |
+| GReaT | LLM-based | [`kathrinse/be_great`](https://github.com/kathrinse/be_great) | `great_model.py` | Fine-tunes GPT-2 / distilgpt2 on serialized rows |
 
-All eight are enabled by default in every driver's
+All ten are enabled by default in every driver's
 `NOTEBOOK_CONFIG["models_to_run"]` list. To run a subset, edit that list.
 
 ---
@@ -59,15 +61,14 @@ wrapped yet:
 
 | Model | Family | Upstream | Why it's wanted |
 |-------|--------|----------|-----------------|
-| **TabDDPM / Tab-DDPM** | Diffusion | [`rotot0/tab-ddpm`](https://github.com/rotot0/tab-ddpm) | Denoising diffusion on tabular data; strong fidelity on mixed schemas in recent benchmarks. Baseline for the diffusion family. |
-| **TabDiff / TabDiffusion** | Diffusion | Follow-up diffusion architectures (various) | Alternative diffusion parameterization; useful to separate "diffusion helps" from "this specific diffusion model helps." |
-| **GReaT (be_great)** | LLM-based | [`kathrinse/be_great`](https://github.com/kathrinse/be_great) | Fine-tunes a language model on serialized rows. Different generation paradigm — worth including for comparison against the GAN/VAE/diffusion lineup. |
+| **TabDDPM (synthcity)** | Diffusion | [`rotot0/tab-ddpm`](https://github.com/rotot0/tab-ddpm) | The reference TabDDPM implementation. Not wired up because `synthcity` pins `torch<2.3`, which conflicts with this env. Our diffusion coverage currently comes from the custom **TabDiffusion** wrapper (HF `diffusers`). |
+| **TabDiff** | Diffusion | Follow-up diffusion architectures (various) | Alternative diffusion parameterization; useful to separate "diffusion helps" from "this specific diffusion model helps." |
 
 Implementation checklist for each: new `src/models/implementations/<name>_model.py`
 subclassing `SyntheticDataModel`; registration in `src/models/registry.py`; HPO
 search space in `src/models/search_spaces.py`; add to each driver's
 `models_to_run` default; smoke-test on breast-cancer. See [decisions.md](decisions.md)
-§5 for why the current 8 are registered by default.
+§5 for why the current 10 are registered by default.
 
 ---
 

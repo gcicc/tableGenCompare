@@ -306,7 +306,7 @@ Topic-focused references in `docs/`:
 
 - [workflow.md](docs/workflow.md) — shortest happy path from fresh clone to completed smoke run
 - [datasets.md](docs/datasets.md) — the four benchmarks: schema, source, intended use
-- [models.md](docs/models.md) — all 8 generators + planned additions (TabDDPM, GReaT)
+- [models.md](docs/models.md) — all 10 generators (incl. TabDiffusion + GReaT) + remaining planned additions
 - [evaluation.md](docs/evaluation.md) — SDAC axes, metrics, and composite scoring
 - [collinearity-reduction.md](docs/collinearity-reduction.md) — residual re-parameterization (§2.2b feature)
 - [applications.md](docs/applications.md) — five use cases for synthetic tabular clinical data

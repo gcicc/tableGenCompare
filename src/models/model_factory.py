@@ -68,6 +68,25 @@ except ImportError:
     MEDGAN_AVAILABLE = False
     MEDGANModel = None
 
+# New generators (Phase 5 - April 2026)
+try:
+    from .implementations.tabdiffusion_model import TabDiffusionModel
+    from .implementations.tabdiffusion_model import TABDIFFUSION_AVAILABLE
+except Exception as e:
+    TABDIFFUSION_AVAILABLE = False
+    TabDiffusionModel = None
+    import sys
+    print(f"[WARNING] Failed to import TabDiffusion: {type(e).__name__}: {e}", file=sys.stderr)
+
+try:
+    from .implementations.great_model import GReaTModel
+    from .implementations.great_model import GREAT_AVAILABLE
+except Exception as e:
+    GREAT_AVAILABLE = False
+    GReaTModel = None
+    import sys
+    print(f"[WARNING] Failed to import GReaT: {type(e).__name__}: {e}", file=sys.stderr)
+
 # TableGAN removed
 TABLEGAN_AVAILABLE = False
 
@@ -138,6 +157,23 @@ class ModelFactory:
             cls._model_availability["medgan"] = True
         else:
             cls._model_availability["medgan"] = False
+
+        # New generators (Phase 5 - April 2026)
+        if TABDIFFUSION_AVAILABLE:
+            cls._model_registry["tabdiffusion"] = TabDiffusionModel
+            cls._model_availability["tabdiffusion"] = True
+            logger.info("[OK] TabDiffusion registered successfully")
+        else:
+            cls._model_availability["tabdiffusion"] = False
+            logger.warning("[SKIP] TabDiffusion NOT available - check dependencies (diffusers, torch)")
+
+        if GREAT_AVAILABLE:
+            cls._model_registry["great"] = GReaTModel
+            cls._model_availability["great"] = True
+            logger.info("[OK] GReaT registered successfully")
+        else:
+            cls._model_availability["great"] = False
+            logger.warning("[SKIP] GReaT NOT available - check dependencies (be_great)")
 
         # TableGAN removed
         cls._model_availability["tablegan"] = False

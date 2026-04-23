@@ -56,4 +56,9 @@ graphviz>=0.21
 # Then apply patches from patches/ to fix the GANerAid device bug
 # and the tab-gan-metrics dython import incompatibility.
 GANerAid==1.8
+
+# New synthetic data generators (Phase 5 - April 2026)
+diffusers>=0.30.0         # TabDiffusion: diffusion models for tabular data
+be_great>=0.0.13          # GReaT: LLM-based tabular generation (downloads HF model on first run)
+
 Faker>=40.0.0

@@ -77,6 +77,21 @@ AVAILABLE_MODELS: Dict[str, Dict[str, Any]] = {
         "class_name": "MEDGANModel",
         "requires": ["torch"],
     },
+    # New generators (Phase 5 - April 2026)
+    "tabdiffusion": {
+        "display_name": "TabDiffusion",
+        "description": "Diffusion model for tabular data via Hugging Face diffusers",
+        "module": "src.models.implementations.tabdiffusion_model",
+        "class_name": "TabDiffusionModel",
+        "requires": ["diffusers", "torch"],
+    },
+    "great": {
+        "display_name": "GReaT",
+        "description": "LLM-based tabular generator via be_great",
+        "module": "src.models.implementations.great_model",
+        "class_name": "GReaTModel",
+        "requires": ["be_great"],
+    },
 }
 
 # Aliases for common variations
@@ -96,6 +111,12 @@ MODEL_ALIASES: Dict[str, str] = {
     "pate_gan": "pategan",
     "med-gan": "medgan",
     "med_gan": "medgan",
+    # Phase 5 - April 2026
+    "tab-diffusion": "tabdiffusion",
+    "tab_diffusion": "tabdiffusion",
+    "tabddpm": "tabdiffusion",     # Backward compat alias
+    "gr-eat": "great",
+    "be_great": "great",
 }
 
 

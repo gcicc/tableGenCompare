@@ -80,6 +80,10 @@ def get_search_space(
         return _get_pategan_search_space(trial, run_mode)
     elif model_name == "medgan":
         return _get_medgan_search_space(trial, run_mode)
+    elif model_name == "tabdiffusion":
+        return _get_tabdiffusion_search_space(trial, run_mode)
+    elif model_name == "great":
+        return _get_great_search_space(trial, run_mode, data_size)
     else:
         raise ValueError(f"No search space defined for model: {model_name}")
 
@@ -458,6 +462,100 @@ def _get_medgan_search_space(trial: 'optuna.Trial', run_mode: str) -> Dict[str, 
     }
 
 
+def _get_tabdiffusion_search_space(
+    trial: 'optuna.Trial', run_mode: str
+) -> Dict[str, Any]:
+    """
+    TabDiffusion search space.
+
+    Diffusion model tuned for small-to-medium tabular datasets (500-5000 rows).
+    Focuses on training epochs, learning rate, diffusion steps, and denoising
+    network architecture. Dropout + weight_decay provide regularization for
+    small-data regimes where bigger architectures overfit.
+    """
+    if run_mode == "debug":
+        epochs = trial.suggest_int("epochs", 50, 100, step=10)
+        batch_size = trial.suggest_categorical("batch_size", [32, 64])
+        learning_rate = trial.suggest_float("learning_rate", 1e-4, 1e-3, log=True)
+        num_diffusion_steps = trial.suggest_categorical("num_diffusion_steps", [500, 1000])
+        hidden_dim = trial.suggest_categorical("hidden_dim", [64, 128])
+        num_layers = trial.suggest_int("num_layers", 2, 3)
+        dropout = trial.suggest_float("dropout", 0.1, 0.2)
+        weight_decay = trial.suggest_float("weight_decay", 1e-5, 1e-4, log=True)
+    else:  # full mode
+        epochs = trial.suggest_int("epochs", 50, 150, step=10)
+        batch_size = trial.suggest_categorical("batch_size", [32, 64, 128])
+        learning_rate = trial.suggest_float("learning_rate", 1e-4, 5e-3, log=True)
+        num_diffusion_steps = trial.suggest_categorical("num_diffusion_steps", [500, 1000, 1500])
+        hidden_dim = trial.suggest_categorical("hidden_dim", [64, 128])
+        num_layers = trial.suggest_int("num_layers", 2, 4, step=1)
+        dropout = trial.suggest_float("dropout", 0.1, 0.3)
+        weight_decay = trial.suggest_float("weight_decay", 1e-5, 1e-3, log=True)
+
+    return {
+        "epochs": epochs,
+        "batch_size": batch_size,
+        "learning_rate": learning_rate,
+        "num_diffusion_steps": num_diffusion_steps,
+        "hidden_dim": hidden_dim,
+        "num_layers": num_layers,
+        "dropout": dropout,
+        "weight_decay": weight_decay,
+    }
+
+
+def _get_great_search_space(
+    trial: 'optuna.Trial', run_mode: str, data_size: int = None
+) -> Dict[str, Any]:
+    """
+    GReaT search space.
+
+    LLM-based tabular generator with tunable LLM choice, batch size, epochs,
+    learning rate, and warmup steps. LLM choice is data-aware: distilgpt2 for
+    <2000 rows, both options for >=2000 rows. Warmup steps scale to 5% of
+    dataset size (capped at 300).
+    """
+    if data_size is None:
+        data_size = 2000
+
+    if run_mode == "debug":
+        llm = trial.suggest_categorical("llm", ["distilgpt2"])
+        batch_size = trial.suggest_categorical("batch_size", [32])
+        epochs = trial.suggest_int("epochs", 10, 20, step=5)
+        lr = trial.suggest_float("lr", 1e-4, 1e-3, log=True)
+        warmup_steps = trial.suggest_categorical("warmup_steps", [0, 50, 100])
+        weight_decay = trial.suggest_float("weight_decay", 1e-5, 1e-4, log=True)
+        dropout = 0.0
+    else:  # full mode
+        if data_size < 2000:
+            llm = "distilgpt2"
+        else:
+            llm = trial.suggest_categorical("llm", ["distilgpt2", "gpt2"])
+
+        batch_size = trial.suggest_categorical("batch_size", [32, 64, 128])
+        epochs = trial.suggest_int("epochs", 10, 40, step=5)
+        lr = trial.suggest_float("lr", 1e-5, 1e-3, log=True)
+
+        max_warmup = min(300, max(50, data_size // 20))
+        warmup_steps = trial.suggest_int("warmup_steps", 0, max_warmup, step=25)
+        weight_decay = trial.suggest_float("weight_decay", 1e-5, 1e-3, log=True)
+
+        if isinstance(llm, str) and llm == "gpt2":
+            dropout = trial.suggest_float("dropout", 0.1, 0.3)
+        else:
+            dropout = 0.0
+
+    return {
+        "llm": llm,
+        "batch_size": batch_size,
+        "epochs": epochs,
+        "lr": lr,
+        "warmup_steps": warmup_steps,
+        "weight_decay": weight_decay,
+        "dropout": dropout,
+    }
+
+
 # Registry of supported models
 SUPPORTED_MODELS = [
     "ctgan",
@@ -467,7 +565,9 @@ SUPPORTED_MODELS = [
     "copulagan",
     "tvae",
     "pategan",
-    "medgan"
+    "medgan",
+    "tabdiffusion",
+    "great",
 ]
 
 
