@@ -43,3 +43,10 @@ model_tests.log
 
 # Processed data cache
 data/*_processed.csvnul
+
+# Training artifacts
+trainer_great/
+**/checkpoint-*/
+**/*.safetensors
+**/*.pt
+**/*.pth
