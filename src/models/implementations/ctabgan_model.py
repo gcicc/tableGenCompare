@@ -123,9 +123,23 @@ class CTABGANModel(SyntheticDataModel):
             temp_csv_path = "temp_ctabgan_data.csv"
             data.to_csv(temp_csv_path, index=False)
             
-            # Determine a reasonable target column for CTAB-GAN
-            # Use the last column as target (common ML convention), ensure it's categorical for stratification
-            target_column = data.columns[-1]
+            # Resolve target column: prefer the explicit target_col kwarg (passed by
+            # batch_training / batch_optimization / staged_optimization), fall back to
+            # the last column only if the caller didn't provide one. Using the last
+            # column blindly breaks after collinearity reduction, where the trailing
+            # column is typically a residual (continuous) — CTAB-GAN's internal
+            # stratified split then dies with "least populated class has only 1 member".
+            target_column = kwargs.get("target_col") or kwargs.get("target_column")
+            if target_column is None:
+                target_column = data.columns[-1]
+                logger.warning(
+                    f"[CTABGAN] No target_col provided; falling back to last column '{target_column}'. "
+                    f"This is error-prone after collinearity reduction."
+                )
+            elif target_column not in data.columns:
+                raise ValueError(
+                    f"[CTABGAN] target_col '{target_column}' not in data columns: {list(data.columns)}"
+                )
             
             # Ensure target column is in categorical columns for proper handling
             if target_column not in categorical_columns:
