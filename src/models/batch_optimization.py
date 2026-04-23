@@ -104,6 +104,14 @@ def optimize_models_batch(
     # Resolve model names
     resolved_models = resolve_models(models_to_run)
 
+    # Filter by dataset size (e.g., remove GReaT for small datasets)
+    from .registry import filter_models_by_dataset_size
+    resolved_models = filter_models_by_dataset_size(
+        resolved_models,
+        data_size=len(data),
+        verbose=verbose,
+    )
+
     if verbose:
         print(f"\n{'='*60}")
         print("BATCH HYPERPARAMETER OPTIMIZATION")

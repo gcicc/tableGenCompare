@@ -426,6 +426,14 @@ class StagedOptimizationManager:
 
         self._models_to_run = resolve_models(models_to_run)
 
+        # Filter by dataset size (e.g., remove GReaT for small datasets)
+        from .registry import filter_models_by_dataset_size
+        self._models_to_run = filter_models_by_dataset_size(
+            self._models_to_run,
+            data_size=len(self.data),
+            verbose=True,
+        )
+
         print(f"\n{'='*60}")
         print("STAGED OPTIMIZATION - PILOT PHASE")
         print(f"{'='*60}")

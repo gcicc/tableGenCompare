@@ -228,6 +228,51 @@ def resolve_models(models_to_run: Union[str, List[str]]) -> List[str]:
     return resolved
 
 
+def filter_models_by_dataset_size(
+    models: List[str],
+    data_size: int,
+    verbose: bool = True,
+) -> List[str]:
+    """
+    Filter models based on dataset size and known stability constraints.
+
+    GReaT is a large language model that tends to fail during the
+    generation phase on small datasets (mode collapse to invalid token
+    sequences). This function removes GReaT below a practical threshold.
+
+    Parameters:
+    -----------
+    models : List[str]
+        List of model names to filter
+    data_size : int
+        Number of rows in the dataset
+    verbose : bool
+        Log filtering decisions (default: True)
+
+    Decision Logic:
+    - data_size < 1000: Remove GReaT (unstable generation)
+    - data_size >= 1000: Keep all requested models
+    """
+    filtered = []
+    removed = []
+
+    for model in models:
+        if model.lower() == "great" and data_size < 1000:
+            removed.append(model)
+            if verbose:
+                logger.info(
+                    f"Removed GReaT: dataset too small ({data_size} rows < 1000). "
+                    f"GReaT requires larger datasets for stable generation."
+                )
+        else:
+            filtered.append(model)
+
+    if verbose and removed:
+        logger.info(f"Filtered {len(removed)} model(s): {removed}")
+
+    return filtered
+
+
 def get_models_to_run(config: Dict[str, Any]) -> List[str]:
     """
     Get list of models to run based on notebook configuration.
