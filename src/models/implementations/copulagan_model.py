@@ -345,10 +345,6 @@ class CopulaGANModel(SyntheticDataModel):
             try:
                 self._metadata.detect_from_dataframe(training_data)
                 logger.info(f"Detected {len(self._metadata.columns)} columns in metadata")
-
-                # Log column types detected (debug only)
-                for col_name, col_info in self._metadata.columns.items():
-                    logger.debug(f"  Column '{col_name}': {col_info.sdtype}")
             except Exception as metadata_error:
                 logger.error(f"[COPULAGAN] Metadata detection failed: {metadata_error}")
                 raise
