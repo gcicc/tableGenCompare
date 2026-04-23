@@ -354,11 +354,10 @@ class CopulaGANModel(SyntheticDataModel):
             model_params['epochs'] = kwargs.get('epochs', self.model_config.get('epochs', epochs))
             model_params['batch_size'] = kwargs.get('batch_size', self.model_config.get('batch_size', batch_size))
 
-            # Learning rates
-            if 'generator_lr' in self.model_config:
-                model_params['generator_lr'] = self.model_config['generator_lr']
-            if 'discriminator_lr' in self.model_config:
-                model_params['discriminator_lr'] = self.model_config['discriminator_lr']
+            # Learning rates (accept from kwargs or config)
+            for param in ['generator_lr', 'discriminator_lr']:
+                if param in kwargs or param in self.model_config:
+                    model_params[param] = kwargs.get(param, self.model_config.get(param))
 
             # Network dimensions
             if 'generator_dim' in self.model_config:
@@ -366,10 +365,10 @@ class CopulaGANModel(SyntheticDataModel):
             if 'discriminator_dim' in self.model_config:
                 model_params['discriminator_dim'] = self.model_config['discriminator_dim']
 
-            # Additional parameters
+            # Additional parameters (accept from kwargs or config)
             for param in ['pac', 'generator_decay', 'discriminator_decay']:
-                if param in self.model_config:
-                    model_params[param] = self.model_config[param]
+                if param in kwargs or param in self.model_config:
+                    model_params[param] = kwargs.get(param, self.model_config.get(param))
 
             # Enable GPU acceleration if device is CUDA
             model_params['cuda'] = self.device if self.device != "cpu" else False

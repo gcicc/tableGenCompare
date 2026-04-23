@@ -403,6 +403,7 @@ def _get_train_kwargs(
     elif model_name == "copulagan":
         kwargs.update({
             "discrete_columns": categorical_columns,
+            "pac": params.get("pac"),
             "generator_lr": params.get("generator_lr"),
             "discriminator_lr": params.get("discriminator_lr"),
             "generator_decay": params.get("generator_decay"),

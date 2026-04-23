@@ -314,10 +314,13 @@ def _compute_ganeraid_feasible_triples(
 def _get_copulagan_search_space(trial: 'optuna.Trial', run_mode: str) -> Dict[str, Any]:
     """
     CopulaGAN search space from Cell 62.
+
+    Constraint: batch_size % pac == 0 (CopulaGAN wraps CTGAN, which requires it).
     """
     if run_mode == "debug":
         epochs = trial.suggest_int("epochs", 100, 300, step=50)
         batch_size = trial.suggest_categorical("batch_size", [100, 200, 500])
+        pac = trial.suggest_categorical("pac", [1, 2])
         generator_lr = trial.suggest_float("generator_lr", 1e-5, 1e-3, log=True)
         discriminator_lr = trial.suggest_float("discriminator_lr", 1e-5, 1e-3, log=True)
         generator_decay = trial.suggest_float("generator_decay", 1e-8, 1e-4, log=True)
@@ -325,14 +328,20 @@ def _get_copulagan_search_space(trial: 'optuna.Trial', run_mode: str) -> Dict[st
     else:  # full mode
         epochs = trial.suggest_int("epochs", 100, 800, step=50)
         batch_size = trial.suggest_categorical("batch_size", [100, 200, 500, 1000])
+        pac = trial.suggest_categorical("pac", [1, 2, 4])
         generator_lr = trial.suggest_float("generator_lr", 5e-6, 5e-3, log=True)
         discriminator_lr = trial.suggest_float("discriminator_lr", 5e-6, 5e-3, log=True)
         generator_decay = trial.suggest_float("generator_decay", 1e-8, 1e-3, log=True)
         discriminator_decay = trial.suggest_float("discriminator_decay", 1e-8, 1e-3, log=True)
 
+    # CopulaGAN constraint: batch_size must be divisible by pac
+    if batch_size % pac != 0:
+        raise optuna.TrialPruned()
+
     return {
         "epochs": epochs,
         "batch_size": batch_size,
+        "pac": pac,
         "generator_lr": generator_lr,
         "discriminator_lr": discriminator_lr,
         "generator_decay": generator_decay,
