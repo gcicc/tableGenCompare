@@ -708,7 +708,8 @@ class StagedOptimizationManager:
                     model_name,
                     trial,
                     self.config.run_mode,
-                    data_size=len(self.data)
+                    data_size=len(self.data),
+                    n_cols=self.data.shape[1],
                 )
 
                 # Create and configure model
@@ -837,6 +838,8 @@ class StagedOptimizationManager:
                 "discriminator_lr": params.get("discriminator_lr"),
                 "generator_dim": params.get("generator_dim"),
                 "discriminator_dim": params.get("discriminator_dim"),
+                "generator_decay": params.get("generator_decay"),
+                "discriminator_decay": params.get("discriminator_decay"),
                 "num_teachers": params.get("num_teachers"),
                 "noise_multiplier": params.get("noise_multiplier"),
                 "target_epsilon": params.get("target_epsilon"),
@@ -853,6 +856,7 @@ class StagedOptimizationManager:
                 "generator_lr": params.get("generator_lr"),
                 "discriminator_lr": params.get("discriminator_lr"),
                 "l2_reg": params.get("l2_reg"),
+                "dropout": params.get("dropout"),
                 "autoencoder_dim": params.get("autoencoder_dim"),
                 "generator_dim": params.get("generator_dim"),
                 "discriminator_dim": params.get("discriminator_dim"),
