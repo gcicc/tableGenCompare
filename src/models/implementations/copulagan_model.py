@@ -342,10 +342,16 @@ class CopulaGANModel(SyntheticDataModel):
 
             # Create metadata
             self._metadata = SingleTableMetadata()
-            self._metadata.detect_from_dataframe(training_data)
-            
-            # Update metadata with any additional information
-            logger.info(f"Detected {len(self._metadata.columns)} columns in metadata")
+            try:
+                self._metadata.detect_from_dataframe(training_data)
+                logger.info(f"Detected {len(self._metadata.columns)} columns in metadata")
+
+                # Log column types detected (debug only)
+                for col_name, col_info in self._metadata.columns.items():
+                    logger.debug(f"  Column '{col_name}': {col_info.sdtype}")
+            except Exception as metadata_error:
+                logger.error(f"[COPULAGAN] Metadata detection failed: {metadata_error}")
+                raise
             
             # Extract hyperparameters from config and kwargs (simplified approach like main branch)
             model_params = {}
@@ -373,16 +379,25 @@ class CopulaGANModel(SyntheticDataModel):
             # Enable GPU acceleration if device is CUDA
             model_params['cuda'] = self.device if self.device != "cpu" else False
 
-            # Create CopulaGAN model (like main branch)
-            self._copulagan_model = CopulaGANSynthesizer(
-                metadata=self._metadata,
-                enforce_min_max_values=True,
-                enforce_rounding=True,
-                **model_params
-            )
+            # Strip Nones so we don't forward them to SDV
+            model_params = {k: v for k, v in model_params.items() if v is not None}
 
             if verbose:
                 logger.info(f"Training CopulaGAN with parameters: {model_params}")
+
+            # Create CopulaGAN model
+            try:
+                self._copulagan_model = CopulaGANSynthesizer(
+                    metadata=self._metadata,
+                    enforce_min_max_values=True,
+                    enforce_rounding=True,
+                    **model_params
+                )
+                logger.info(f"[COPULAGAN] Synthesizer created successfully")
+            except Exception as synth_error:
+                logger.error(f"[COPULAGAN] Failed to create synthesizer: {synth_error}")
+                logger.error(f"[COPULAGAN] Attempted params: {model_params}")
+                raise
 
             # Train the model with enhanced error handling for beta distribution issues
             try:
@@ -392,7 +407,12 @@ class CopulaGANModel(SyntheticDataModel):
 
             except Exception as fit_error:
                 error_str = str(fit_error)
-                logger.error(f"[COPULAGAN] Model fit failed: {error_str}")
+                error_type = type(fit_error).__name__
+                import traceback
+                error_traceback = traceback.format_exc()
+                logger.error(f"[COPULAGAN] Model fit failed: {error_type}: {error_str}")
+                logger.error(f"[COPULAGAN] Full traceback:\n{error_traceback}")
+                logger.error(f"[COPULAGAN] Training data shape: {training_data.shape}")
 
                 # Specific handling for beta distribution errors
                 if "beta distribution" in error_str and "near-zero range" in error_str:
