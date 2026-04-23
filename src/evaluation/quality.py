@@ -158,9 +158,10 @@ def calculate_mutual_information(real_data, synthetic_data, target_column,
         }
 
 
-def evaluate_synthetic_data_quality(real_data, synthetic_data, model_name, target_column, 
-                                  section_number, dataset_identifier=None, 
-                                  save_files=True, display_plots=False, verbose=True):
+def evaluate_synthetic_data_quality(real_data, synthetic_data, model_name, target_column,
+                                  section_number, dataset_identifier=None,
+                                  save_files=True, display_plots=False, verbose=True,
+                                  collin_ctx=None):
     """
     Enhanced comprehensive evaluation of synthetic data quality with PCA analysis and file output.
     
@@ -443,58 +444,77 @@ def evaluate_synthetic_data_quality(real_data, synthetic_data, model_name, targe
     try:
         from src.evaluation.association import compute_mixed_association_matrix
 
-        # Use all common columns (not just numeric) for mixed-association
-        common_cols = [c for c in real_data.columns if c in synthetic_data.columns]
-        real_corr = compute_mixed_association_matrix(real_data[common_cols])
-        synth_corr = compute_mixed_association_matrix(synthetic_data[common_cols])
+        def _association_comparison(real_df, synth_df, filename, title_suffix=""):
+            """Build real-vs-synthetic heatmap pair and return preservation score."""
+            common = [c for c in real_df.columns if c in synth_df.columns]
+            r_corr = compute_mixed_association_matrix(real_df[common])
+            s_corr = compute_mixed_association_matrix(synth_df[common])
 
-        # Calculate association preservation
-        real_flat = real_corr.values.flatten()
-        synth_flat = synth_corr.values.flatten()
-        mask = ~(np.isnan(real_flat) | np.isnan(synth_flat))
-        if mask.sum() > 1:
-            corr_preservation = stats.pearsonr(real_flat[mask], synth_flat[mask])[0]
+            r_flat = r_corr.values.flatten()
+            s_flat = s_corr.values.flatten()
+            m = ~(np.isnan(r_flat) | np.isnan(s_flat))
+            score = max(0, stats.pearsonr(r_flat[m], s_flat[m])[0]) if m.sum() > 1 else 0
+
+            if save_files or display_plots:
+                fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+                show_annot = len(r_corr.columns) <= 6
+                sns.heatmap(r_corr, annot=show_annot, cmap='RdBu_r', center=0,
+                            vmin=-1, vmax=1, square=True, ax=axes[0], fmt='.2f')
+                axes[0].set_title(f'Real Data - Association Matrix{title_suffix}')
+                sns.heatmap(s_corr, annot=show_annot, cmap='RdBu_r', center=0,
+                            vmin=-1, vmax=1, square=True, ax=axes[1], fmt='.2f')
+                axes[1].set_title(
+                    f'Synthetic Data - Association Matrix{title_suffix}\n'
+                    f'Preservation Score: {score:.3f}'
+                )
+                fig.text(0.5, -0.02,
+                         'Pearson (num\u2013num): [\u22121, 1]  |  Cram\u00e9r\u2019s V (cat\u2013cat): [0, 1]  |  '
+                         'Correlation ratio \u03b7 (num\u2013cat): [0, 1]',
+                         ha='center', va='top', fontsize=9, style='italic', color='0.4')
+                plt.tight_layout()
+                if save_files and results_dir:
+                    out = results_dir / filename
+                    plt.savefig(out, dpi=300, bbox_inches='tight')
+                    results['files_generated'].append(str(out))
+                if display_plots:
+                    plt.show()
+                else:
+                    plt.close()
+            return score
+
+        # When collin_ctx is provided, emit two standalone files (full + reduced).
+        # Otherwise, emit the single legacy file on the schema as passed in.
+        if collin_ctx is not None and getattr(collin_ctx, 'ops', None):
+            from src.data.collinearity import apply_reducer
+            corr_preservation = _association_comparison(
+                real_data, synthetic_data,
+                filename='association_comparison_full.png',
+                title_suffix=' (full)',
+            )
+            real_reduced = apply_reducer(real_data, collin_ctx)
+            synth_reduced = apply_reducer(synthetic_data, collin_ctx)
+            corr_preservation_reduced = _association_comparison(
+                real_reduced, synth_reduced,
+                filename='association_comparison_reduced.png',
+                title_suffix=' (reduced)',
+            )
+            results['correlation_preservation_reduced'] = corr_preservation_reduced
         else:
-            corr_preservation = 0
-        corr_preservation = max(0, corr_preservation)
+            corr_preservation = _association_comparison(
+                real_data, synthetic_data,
+                filename='association_comparison.png',
+            )
+
         results['correlation_preservation'] = corr_preservation
 
-        # Create association heatmap comparison
-        if save_files or display_plots:
-            fig, axes = plt.subplots(1, 2, figsize=(16, 6))
-            show_annot = len(real_corr.columns) <= 6
-
-            # Real data association matrix
-            sns.heatmap(real_corr, annot=show_annot, cmap='RdBu_r', center=0,
-                       vmin=-1, vmax=1, square=True, ax=axes[0], fmt='.2f')
-            axes[0].set_title('Real Data - Association Matrix')
-
-            # Synthetic data association matrix
-            sns.heatmap(synth_corr, annot=show_annot, cmap='RdBu_r', center=0,
-                       vmin=-1, vmax=1, square=True, ax=axes[1], fmt='.2f')
-            axes[1].set_title(f'Synthetic Data - Association Matrix\nPreservation Score: {corr_preservation:.3f}')
-
-            # Footnote explaining metric types and ranges
-            fig.text(0.5, -0.02,
-                     'Pearson (num\u2013num): [\u22121, 1]  |  Cram\u00e9r\u2019s V (cat\u2013cat): [0, 1]  |  '
-                     'Correlation ratio \u03b7 (num\u2013cat): [0, 1]',
-                     ha='center', va='top', fontsize=9, style='italic', color='0.4')
-            
-            plt.tight_layout()
-            
-            if save_files and results_dir:
-                corr_plot_file = results_dir / 'association_comparison.png'
-                plt.savefig(corr_plot_file, dpi=300, bbox_inches='tight')
-                results['files_generated'].append(str(corr_plot_file))
-            
-            if display_plots:
-                plt.show()
-            else:
-                plt.close()
-        
         if verbose:
             print(f"   [CHART] Correlation Structure Preservation: {corr_preservation:.3f}")
-            
+            if 'correlation_preservation_reduced' in results:
+                print(
+                    f"   [CHART] Correlation Structure Preservation (reduced): "
+                    f"{results['correlation_preservation_reduced']:.3f}"
+                )
+
     except Exception as e:
         if verbose:
             print(f"   [ERROR] Correlation analysis failed: {e}")

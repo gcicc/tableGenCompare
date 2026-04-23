@@ -92,6 +92,7 @@ def run_comprehensive_eda(
     categorical_columns: list = None,
     verbose: bool = True,
     flagged_columns: set = None,
+    full_data: pd.DataFrame = None,
 ) -> dict:
     """
     Run comprehensive EDA on a dataset, consolidating all Section 2 EDA chunks.
@@ -326,26 +327,60 @@ def run_comprehensive_eda(
 
         correlation_matrix = compute_mixed_association_matrix(data[cols_for_corr])
 
-        # Save mixed-association heatmap
+        # When full_data is provided, emit two standalone heatmaps: full (pre-
+        # collinearity-reduction) and reduced (post). Otherwise emit the single
+        # heatmap under the legacy filename to stay backward compatible.
+        if full_data is not None:
+            reduced_filename = 'mixed_association_heatmap_reduced.png'
+            reduced_csv = 'association_matrix_reduced.csv'
+        else:
+            reduced_filename = 'mixed_association_heatmap.png'
+            reduced_csv = 'association_matrix.csv'
+
         heatmap_path = create_mixed_association_heatmap(
             association_matrix=correlation_matrix,
             results_path=results_path,
-            filename='mixed_association_heatmap.png',
+            filename=reduced_filename,
             verbose=False,
             flagged_columns=flagged_columns,
         )
         files_generated.append(heatmap_path)
 
-        # Save association matrix to CSV
-        corr_matrix_file = os.path.join(results_path, 'association_matrix.csv')
+        corr_matrix_file = os.path.join(results_path, reduced_csv)
         correlation_matrix.to_csv(corr_matrix_file)
         files_generated.append(corr_matrix_file)
 
         results['correlation_matrix'] = correlation_matrix
 
         if verbose:
-            print(f"   Saved: mixed_association_heatmap.png")
-            print(f"   Saved: association_matrix.csv")
+            print(f"   Saved: {reduced_filename}")
+            print(f"   Saved: {reduced_csv}")
+
+        # Full (pre-reduction) view for side-by-side diagnosis.
+        if full_data is not None:
+            full_cols = [c for c in full_data.columns if c != target_column]
+            if target_column in full_data.columns:
+                full_cols.append(target_column)
+            full_matrix = compute_mixed_association_matrix(full_data[full_cols])
+
+            full_heatmap = create_mixed_association_heatmap(
+                association_matrix=full_matrix,
+                results_path=results_path,
+                filename='mixed_association_heatmap_full.png',
+                verbose=False,
+                flagged_columns=flagged_columns,
+            )
+            files_generated.append(full_heatmap)
+
+            full_csv = os.path.join(results_path, 'association_matrix_full.csv')
+            full_matrix.to_csv(full_csv)
+            files_generated.append(full_csv)
+
+            results['correlation_matrix_full'] = full_matrix
+
+            if verbose:
+                print(f"   Saved: mixed_association_heatmap_full.png")
+                print(f"   Saved: association_matrix_full.csv")
 
         # Target correlation analysis
         if target_column in correlation_matrix.columns:

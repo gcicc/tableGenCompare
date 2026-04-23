@@ -144,7 +144,11 @@ def evaluate_trained_models(section_number, variable_pattern, scope=None, models
                 verbose=False
             )
 
-            # Use the comprehensive evaluation function for per-model plots
+            # Use the comprehensive evaluation function for per-model plots.
+            # Pluck COLLIN_CTX out of the notebook scope (set in §2.2b) so the
+            # evaluator can emit the reduced-schema association heatmap alongside
+            # the full-schema one.
+            collin_ctx = scope.get('COLLIN_CTX')
             results = evaluate_synthetic_data_quality(
                 real_data=real_data,
                 synthetic_data=sanitized_synthetic,
@@ -154,7 +158,8 @@ def evaluate_trained_models(section_number, variable_pattern, scope=None, models
                 dataset_identifier=dataset_id,
                 save_files=True,
                 display_plots=False,
-                verbose=True
+                verbose=True,
+                collin_ctx=collin_ctx,
             )
 
             # Compute SDAC metrics for this model
