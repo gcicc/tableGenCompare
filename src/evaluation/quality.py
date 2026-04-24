@@ -161,7 +161,7 @@ def calculate_mutual_information(real_data, synthetic_data, target_column,
 def evaluate_synthetic_data_quality(real_data, synthetic_data, model_name, target_column,
                                   section_number, dataset_identifier=None,
                                   save_files=True, display_plots=False, verbose=True,
-                                  collin_ctx=None):
+                                  collin_ctx=None, real_data_full=None):
     """
     Enhanced comprehensive evaluation of synthetic data quality with PCA analysis and file output.
     
@@ -446,7 +446,12 @@ def evaluate_synthetic_data_quality(real_data, synthetic_data, model_name, targe
 
         def _association_comparison(real_df, synth_df, filename, title_suffix=""):
             """Build real-vs-synthetic heatmap pair and return preservation score."""
-            common = [c for c in real_df.columns if c in synth_df.columns]
+            # Match §2 EDA ordering: features first (in real_df column order),
+            # target last. Keeps §5 heatmap axes aligned with §2's heatmap.
+            common = [c for c in real_df.columns
+                      if c in synth_df.columns and c != target_column]
+            if target_column in real_df.columns and target_column in synth_df.columns:
+                common.append(target_column)
             r_corr = compute_mixed_association_matrix(real_df[common])
             s_corr = compute_mixed_association_matrix(synth_df[common])
 
@@ -485,9 +490,15 @@ def evaluate_synthetic_data_quality(real_data, synthetic_data, model_name, targe
         # When collin_ctx is provided, emit two standalone files (full + reduced).
         # Otherwise, emit the single legacy file on the schema as passed in.
         if collin_ctx is not None and getattr(collin_ctx, 'ops', None):
-            from src.data.collinearity import apply_reducer
+            from src.data.collinearity import apply_reducer, restore_dropped
+            # Full view: real_data_full (pre-reduction snapshot from §2.2b) vs
+            # restore_dropped(synthetic) — reconstructs dropped columns on the
+            # synthetic reduced frame so both sides carry the original schema.
+            # Fall back to real_data if the caller didn't pass a full snapshot.
+            real_full = real_data_full if real_data_full is not None else real_data
+            synth_full = restore_dropped(synthetic_data, collin_ctx)
             corr_preservation = _association_comparison(
-                real_data, synthetic_data,
+                real_full, synth_full,
                 filename='association_comparison_full.png',
                 title_suffix=' (full)',
             )
