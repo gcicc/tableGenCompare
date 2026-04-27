@@ -43,16 +43,39 @@ SYNTH_COLOR = '#f5a623'     # Amber/orange
 
 # ============================================================================
 # SDAC category colors (for heatmap headers, radar chart grouping)
+#
+# Hues are deliberately picked OUTSIDE the RdYlGn cell colormap used by the
+# heatmap (red → yellow → green) so the legend swatches cannot be confused
+# with score colors. All five sit in the cool / blue–purple–magenta region.
 # ============================================================================
 SDAC_CATEGORY_COLORS = {
-    'Privacy': '#e74c3c',    # Red
-    'Fidelity': '#3498db',   # Blue
-    'Utility': '#2ecc71',    # Green
-    'Fairness': '#f39c12',   # Orange
-    'XAI': '#9b59b6',        # Purple
+    'Privacy':  '#1a237e',   # Deep Indigo
+    'Fidelity': '#00838f',   # Cyan
+    'Utility':  '#6a1b9a',   # Purple
+    'Fairness': '#ad1457',   # Magenta-Pink
+    'XAI':      '#37474f',   # Slate
 }
 
-SDAC_CATEGORY_FALLBACK = '#95a5a6'  # Gray
+SDAC_CATEGORY_FALLBACK = '#90a4ae'  # Blue-Grey (also outside RdYlGn)
+
+# ============================================================================
+# SDMetrics category colors — same RdYlGn-avoidance principle as SDAC, with
+# enough hue separation across 8 categories to keep the legend readable.
+# Palette is intentionally distinct from SDAC so the two heatmap color
+# strips also read as separate evaluations at a glance.
+# ============================================================================
+SDMETRICS_CATEGORY_COLORS = {
+    'Coverage':    '#0097a7',  # Cyan-Teal
+    'Validity':    '#1976d2',  # Blue
+    'Shapes':      '#283593',  # Indigo
+    'Pair-Trends': '#7b1fa2',  # Purple
+    'Detection':   '#c2185b',  # Pink
+    'Privacy':     '#5e35b1',  # Deep Purple
+    'ML-Efficacy': '#455a64',  # Blue-Grey
+    'Aggregate':   '#212121',  # Near Black
+}
+
+SDMETRICS_CATEGORY_FALLBACK = '#9e9e9e'  # Mid Grey
 
 # ============================================================================
 # TRTS scenario colors (for grouped bar charts)

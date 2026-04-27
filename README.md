@@ -170,6 +170,7 @@ The STG-Driver notebook follows a standardized 5-section pipeline:
 - Fairness metrics (Demographic Parity, Equalized Odds, Disparate Impact)
 - XAI metrics (Feature Importance Correlation, SHAP Distance)
 - Cross-model comparison via SDAC radar chart and heatmap
+- **Independent SDMetrics cross-check** — every §3 / §5 run also emits `sdmetrics_evaluation_summary.csv`, `sdmetrics_metric_catalog.csv`, `sdmetrics_radar_chart.png`, and `sdmetrics_heatmap.png` from the public [SDMetrics library](https://docs.sdv.dev/sdmetrics). All SDMetrics outputs are clearly captioned `Source: SDMetrics (sdv.dev)`, and overlapping columns are marked with `†`. The SDAC suite remains the primary scorecard; SDMetrics is a third-party sanity check and does not feed composite scoring.
 - Emits `restoration_health.csv` per optimized model
 
 ---

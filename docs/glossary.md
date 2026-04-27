@@ -78,6 +78,70 @@ classifier easily tells them apart (bad for fidelity).
 between two distributions. Bounded in [0, 1]; lower is better. We report
 `1 - JSD` as a similarity score.
 
+## SDMetrics cross-check (sdv.dev)
+
+**SDMetrics** — public synthetic-data metrics library from the SDV team
+([docs](https://docs.sdv.dev/sdmetrics)). In this repo it is run alongside
+SDAC in §5 as an independent third-party cross-check. All SDMetrics outputs
+are clearly labelled `Source: SDMetrics (sdv.dev)`; results are not folded
+into the SDAC composite scoring.
+
+**`Coverage_Range`** *(SDMetrics)* — fraction of the real numeric range
+covered by synth values, per column, averaged. Higher is better.
+
+**`Coverage_Category`** *(SDMetrics)* — fraction of real categorical
+values that appear in synth, per column, averaged. Higher is better.
+
+**`Validity_Boundary`** *(SDMetrics, BoundaryAdherence)* — fraction of
+synth numeric values that fall inside the real min/max range. 1 means no
+out-of-range synth values.
+
+**`Validity_CategoryAdherence`** *(SDMetrics)* — fraction of synth
+categorical values that exist in the real category set.
+
+**`Validity_MissingValueSim`** *(SDMetrics)* — similarity of missing-rate
+between real and synth, per column.
+
+**`Shape_KSComplement`** *(SDMetrics)* — `1 − KS statistic` per numeric
+column, averaged. Independent re-implementation of SDAC `Fidelity_KS`.
+
+**`Shape_TVComplement`** *(SDMetrics)* — `1 − total variation distance`
+per categorical column. Closest SDMetrics analogue to SDAC `Fidelity_JSD`
+on categoricals.
+
+**`Pair_CorrelationSim`** *(SDMetrics)* — Pearson correlation similarity
+across numeric column pairs. Independent re-implementation of SDAC
+`Fidelity_Corr_Sim`.
+
+**`Pair_ContingencySim`** *(SDMetrics)* — contingency-table similarity
+across categorical column pairs. Independent re-implementation of SDAC
+`Fidelity_Contingency_Sim`.
+
+**`Detection_Logistic` / `Detection_SVC`** *(SDMetrics)* — SDV-implemented
+real-vs-synth detection AUC using LogReg or SVC. Logistic is the
+independent counterpart of SDAC `Fidelity_Detection_AUC`.
+
+**`Privacy_NewRowSynthesis`** *(SDMetrics)* — fraction of synth rows that
+are *not* exact duplicates of real rows (modulo a numeric tolerance).
+
+**`Privacy_DCRBaseline` / `Privacy_DCROverfitting`** *(SDMetrics)* —
+DCR-style protection scores. Baseline compares synth to real; Overfitting
+compares against a held-out real validation split.
+
+**`Privacy_Disclosure`** *(SDMetrics, DisclosureProtection)* — score for
+how well synth resists revealing a sensitive column given known features.
+
+**`Privacy_CategoricalCAP` / `Privacy_NumericalLR`** *(SDMetrics)* —
+correct-attribution-probability attackers for categorical / numerical
+sensitive fields, respectively.
+
+**`MLEff_BinaryDT` / `MLEff_BinaryLR` / `MLEff_BinaryAdaBoost`**
+*(SDMetrics)* — Train-Synth / Test-Real accuracy for three binary
+classifiers. Closest SDMetrics analogue to SDAC `Utility_TSTR_*`.
+
+**`Quality_Overall` / `Diagnostic_Overall`** *(SDMetrics)* — single 0–1
+aggregates from SDV's packaged `QualityReport` and `DiagnosticReport`.
+
 ## Fairness
 
 **Demographic Parity Difference** — absolute difference in positive

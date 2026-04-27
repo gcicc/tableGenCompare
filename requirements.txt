@@ -22,6 +22,7 @@ torch>=2.2.0
 
 # Synthetic data
 sdv==1.32.1
+sdmetrics>=0.18         # Independent third-party evaluation alongside SDAC suite
 ctgan==0.11.1
 copulas==0.14.0
 rdt==1.19.0

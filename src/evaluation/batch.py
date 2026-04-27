@@ -130,6 +130,8 @@ def evaluate_trained_models(section_number, variable_pattern, scope=None, models
     # Evaluate each available model using comprehensive evaluation
     evaluation_results = {}
     sdac_rows = []  # Collect SDAC rows for unified CSV
+    sdmetrics_rows = []  # Parallel SDMetrics (sdv.dev) cross-check rows
+    sdmetrics_unavailable = False  # Flag set if sdmetrics package not importable
 
     for model_name, synthetic_data in available_models.items():
         print(f"\n{'='*20} EVALUATING {model_name} {'='*20}")
@@ -180,6 +182,28 @@ def evaluate_trained_models(section_number, variable_pattern, scope=None, models
             sdac_rows.append(sdac_row)
 
             results['sdac_metrics'] = sdac_row
+
+            # Parallel SDMetrics (sdv.dev) cross-check — does not modify SDAC numbers.
+            if not sdmetrics_unavailable:
+                try:
+                    from src.evaluation.sdmetrics_report import compute_sdmetrics_tabular_report
+                    print(f"\n[SDMetrics] Computing SDMetrics cross-check for {model_name}...")
+                    sdm_row = compute_sdmetrics_tabular_report(
+                        real_df=real_data,
+                        synthetic_df=sanitized_synthetic,
+                        target_col=target_col,
+                        protected_col=protected_col,
+                        verbose=True,
+                    )
+                    sdm_row['Model'] = model_name
+                    sdmetrics_rows.append(sdm_row)
+                    results['sdmetrics_report'] = sdm_row
+                except ImportError:
+                    sdmetrics_unavailable = True
+                    print("[SDMetrics] sdmetrics package unavailable; skipping cross-check table")
+                except Exception as e:
+                    print(f"[WARNING] SDMetrics computation failed for {model_name}: {e}")
+
             evaluation_results[model_name] = results
             print(f"[OK] {model_name} evaluation completed successfully!")
 
@@ -217,6 +241,7 @@ def evaluate_trained_models(section_number, variable_pattern, scope=None, models
 
             # Print SDAC summary table
             print(f"\n{'='*25} SDAC METRICS SUMMARY {'='*25}")
+            print("Source: SDAC custom metric suite")
             # Show key metrics per category
             key_cols = ['Model', 'Privacy_Score', 'Fidelity_JSD', 'Fidelity_Detection_AUC',
                        'Utility_ML_Efficacy', 'XAI_Feat_Imp_Corr']
@@ -226,6 +251,46 @@ def evaluate_trained_models(section_number, variable_pattern, scope=None, models
 
         except Exception as e:
             print(f"[WARNING] Could not save SDAC summary: {e}")
+
+    # Parallel SDMetrics (sdv.dev) summary — independent third-party cross-check.
+    if sdmetrics_rows:
+        try:
+            from src.evaluation.sdmetrics_report import get_sdmetrics_catalog_df
+
+            sdm_df = pd.DataFrame(sdmetrics_rows)
+            sdm_cols = ['Model'] + [c for c in sdm_df.columns if c != 'Model']
+            sdm_df = sdm_df[sdm_cols]
+
+            summary_path = get_results_path(dataset_id, section_number)
+            os.makedirs(summary_path, exist_ok=True)
+            sdm_file = f"{summary_path}/sdmetrics_evaluation_summary.csv"
+            sdm_df.to_csv(sdm_file, index=False)
+            print(f"\n[SDMetrics] SDMetrics summary saved to: {sdm_file}")
+
+            catalog_df = get_sdmetrics_catalog_df()
+            catalog_file = f"{summary_path}/sdmetrics_metric_catalog.csv"
+            catalog_df.to_csv(catalog_file, index=False)
+            print(f"[SDMetrics] SDMetrics metric catalog saved to: {catalog_file}")
+
+            print(f"\n{'='*22} SDMETRICS METRICS SUMMARY {'='*22}")
+            print("Source: SDMetrics (sdv.dev) \u2014 independent evaluation")
+            print("Columns marked \u2020 also exist (different implementation) in the SDAC table above")
+
+            overlap_lookup = dict(zip(catalog_df['metric'], catalog_df['sdac_overlap']))
+            sdm_display_cols = ['Model', 'Quality_Overall', 'Diagnostic_Overall',
+                                'Coverage_Range', 'Coverage_Category',
+                                'Shape_KSComplement', 'Pair_CorrelationSim',
+                                'Detection_Logistic', 'Privacy_NewRowSynthesis',
+                                'MLEff_BinaryDT']
+            display_cols = [c for c in sdm_display_cols if c in sdm_df.columns]
+            if display_cols:
+                print_df = sdm_df[display_cols].copy()
+                rename_map = {c: f"{c}\u2020" if overlap_lookup.get(c) else c
+                              for c in display_cols if c != 'Model'}
+                print_df = print_df.rename(columns=rename_map)
+                print(print_df.to_string(index=False, float_format='%.4f'))
+        except Exception as e:
+            print(f"[WARNING] Could not save SDMetrics summary: {e}")
 
     # SECTION 4 OPTUNA VISUALIZATIONS
     # Automatically detect and visualize Optuna studies if present
@@ -488,6 +553,40 @@ def evaluate_trained_models(section_number, variable_pattern, scope=None, models
                                     evaluation_results[model_name]['files_generated'].append(p)
                 except Exception as e:
                     print(f"[WARNING] SDAC visualizations failed: {e}")
+
+                # SDMetrics Visualizations (radar + heatmap, parallel to SDAC)
+                if sdmetrics_rows:
+                    try:
+                        from src.visualization.section5 import (
+                            create_sdmetrics_radar_chart,
+                            create_sdmetrics_heatmap,
+                        )
+
+                        sdm_viz_df = pd.DataFrame(sdmetrics_rows)
+                        sdm_radar = create_sdmetrics_radar_chart(
+                            sdm_df=sdm_viz_df,
+                            results_dir=results_dir,
+                            dataset_name=f"{dataset_display_name}{suffix}",
+                            save_files=True,
+                            display_plots=False,
+                            verbose=True,
+                        )
+                        sdm_heat = create_sdmetrics_heatmap(
+                            sdm_df=sdm_viz_df,
+                            results_dir=results_dir,
+                            dataset_name=f"{dataset_display_name}{suffix}",
+                            save_files=True,
+                            display_plots=False,
+                            verbose=True,
+                        )
+                        for p in [sdm_radar, sdm_heat]:
+                            if p:
+                                for model_name in evaluation_results:
+                                    if 'files_generated' not in evaluation_results[model_name]:
+                                        evaluation_results[model_name]['files_generated'] = []
+                                    evaluation_results[model_name]['files_generated'].append(p)
+                    except Exception as e:
+                        print(f"[WARNING] SDMetrics visualizations failed: {e}")
 
             except Exception as e:
                 print(f"[ERROR] TRTS visualization failed: {e}")

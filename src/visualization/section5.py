@@ -17,6 +17,7 @@ from sklearn.calibration import calibration_curve
 from src.visualization.colors import (
     MODEL_COLORS, get_model_color as _get_model_color,
     SDAC_CATEGORY_COLORS, SDAC_CATEGORY_FALLBACK,
+    SDMETRICS_CATEGORY_COLORS, SDMETRICS_CATEGORY_FALLBACK,
     TRTS_SCENARIO_COLORS,
 )
 
@@ -1079,6 +1080,9 @@ def create_sdac_radar_chart(sdac_df, results_dir, dataset_name="Dataset",
     ax.set_title(f'{dataset_name}\nSDAC Category Composite Scores', fontsize=14,
                 fontweight='bold', pad=20)
 
+    fig.text(0.5, -0.02, 'Source: SDAC custom metric suite',
+             ha='center', va='top', fontsize=9, style='italic', color='0.4')
+
     output_path = None
     if save_files:
         results_path = Path(results_dir)
@@ -1232,6 +1236,9 @@ def create_sdac_heatmap(sdac_df, results_dir, dataset_name="Dataset",
                 fontweight='bold', pad=20)
     plt.tight_layout(rect=[0, 0.06, 1, 1])  # leave room at bottom for legend
 
+    fig.text(0.5, 0.005, 'Source: SDAC custom metric suite',
+             ha='center', va='bottom', fontsize=9, style='italic', color='0.4')
+
     output_path = None
     if save_files:
         results_path = Path(results_dir)
@@ -1240,6 +1247,227 @@ def create_sdac_heatmap(sdac_df, results_dir, dataset_name="Dataset",
         plt.savefig(output_path, dpi=300, bbox_inches='tight')
         if verbose:
             print(f"[VIZ] Saved: sdac_heatmap.png")
+
+    if display_plots:
+        plt.show()
+    else:
+        plt.close()
+
+    return output_path
+
+
+# ============================================================
+# SDMetrics Visualizations (independent third-party evaluation)
+# ============================================================
+
+def _sdmetrics_category_for(metric_name, catalog_lookup):
+    return catalog_lookup.get(metric_name, {}).get('category', 'Aggregate')
+
+
+def create_sdmetrics_radar_chart(sdm_df, results_dir, dataset_name="Dataset",
+                                 save_files=True, display_plots=False, verbose=True):
+    """SDMetrics radar chart: one axis per SDMetrics category, one trace per model.
+
+    All SDMetrics scores are already on a 0-1, higher-is-better scale (except
+    NewRowSynthesis which we leave as-is since closer to 1 = more new rows =
+    better privacy outcome). Composite per category = mean of populated metrics
+    in that category.
+    """
+    if sdm_df is None or len(sdm_df) == 0:
+        return None
+
+    if verbose:
+        print("\n[VIZ] Generating SDMetrics radar chart...")
+
+    from src.evaluation.sdmetrics_report import SDMETRICS_CATALOG
+    catalog_lookup = {entry['metric']: entry for entry in SDMETRICS_CATALOG}
+
+    categories_order = ['Coverage', 'Validity', 'Shapes', 'Pair-Trends',
+                        'Detection', 'Privacy', 'ML-Efficacy']
+
+    composites = []
+    for _, row in sdm_df.iterrows():
+        model = row.get('Model', 'Unknown')
+        comp = {'Model': model}
+        for cat in categories_order:
+            cat_metrics = [m['metric'] for m in SDMETRICS_CATALOG if m['category'] == cat]
+            vals = []
+            for m in cat_metrics:
+                if m in row.index:
+                    v = row[m]
+                    if isinstance(v, float) and not np.isnan(v):
+                        vals.append(v)
+            comp[cat] = float(np.mean(vals)) if vals else np.nan
+        composites.append(comp)
+
+    comp_df = pd.DataFrame(composites)
+    active_cats = [c for c in categories_order if comp_df[c].notna().any()]
+    if len(active_cats) < 3:
+        if verbose:
+            print("[VIZ] Not enough SDMetrics categories with data for radar chart (need >= 3)")
+        return None
+
+    N = len(active_cats)
+    angles = np.linspace(0, 2 * np.pi, N, endpoint=False).tolist()
+    angles += angles[:1]
+
+    fig, ax = plt.subplots(figsize=(8, 8), subplot_kw=dict(polar=True))
+    ax.set_theta_offset(np.pi / 2)
+    ax.set_theta_direction(-1)
+    ax.set_xticks(angles[:-1])
+    ax.set_xticklabels(active_cats, fontsize=11, fontweight='bold')
+    ax.set_ylim(0, 1)
+
+    for _, row in comp_df.iterrows():
+        values = [row[c] if not np.isnan(row[c]) else 0 for c in active_cats]
+        values += values[:1]
+        color = _get_model_color(row['Model'])
+        ax.plot(angles, values, 'o-', linewidth=2, label=row['Model'], color=color)
+        ax.fill(angles, values, alpha=0.1, color=color)
+
+    ax.legend(loc='upper right', bbox_to_anchor=(1.3, 1.1))
+    ax.set_title(f'{dataset_name}\nSDMetrics Category Composite Scores',
+                 fontsize=14, fontweight='bold', pad=20)
+
+    fig.text(0.5, -0.02,
+             'Source: SDMetrics (sdv.dev) — independent evaluation',
+             ha='center', va='top', fontsize=9, style='italic', color='0.4')
+
+    output_path = None
+    if save_files:
+        results_path = Path(results_dir)
+        results_path.mkdir(parents=True, exist_ok=True)
+        output_path = str(results_path / 'sdmetrics_radar_chart.png')
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        if verbose:
+            print(f"[VIZ] Saved: sdmetrics_radar_chart.png")
+
+    if display_plots:
+        plt.show()
+    else:
+        plt.close()
+
+    return output_path
+
+
+def create_sdmetrics_heatmap(sdm_df, results_dir, dataset_name="Dataset",
+                             save_files=True, display_plots=False, verbose=True):
+    """SDMetrics heatmap: models × metrics, color strip by SDMetrics category.
+
+    Columns whose metric overlaps with an SDAC counterpart are suffixed with
+    a dagger (†). The figure footer notes the source and the dagger meaning.
+    """
+    if sdm_df is None or len(sdm_df) == 0:
+        return None
+
+    if verbose:
+        print("[VIZ] Generating SDMetrics heatmap...")
+
+    from src.evaluation.sdmetrics_report import SDMETRICS_CATALOG
+    catalog_lookup = {entry['metric']: entry for entry in SDMETRICS_CATALOG}
+
+    metric_order = [entry['metric'] for entry in SDMETRICS_CATALOG]
+    available_metrics = [m for m in metric_order if m in sdm_df.columns]
+    if not available_metrics:
+        if verbose:
+            print("[VIZ] No SDMetrics metrics available for heatmap")
+        return None
+
+    models = sdm_df['Model'].tolist()
+    heat_data = sdm_df.set_index('Model')[available_metrics]
+
+    col_colors = []
+    for m in available_metrics:
+        cat = _sdmetrics_category_for(m, catalog_lookup)
+        col_colors.append(SDMETRICS_CATEGORY_COLORS.get(cat, SDMETRICS_CATEGORY_FALLBACK))
+
+    fig_width = max(14, len(available_metrics) * 0.55)
+    fig_height = max(5, len(models) * 0.9 + 4)
+
+    fig, ax = plt.subplots(figsize=(fig_width, fig_height))
+
+    display_data = heat_data.copy()
+    normalized_data = heat_data.copy()
+    for col in normalized_data.columns:
+        col_vals = normalized_data[col].dropna()
+        if len(col_vals) > 0:
+            cmin, cmax = col_vals.min(), col_vals.max()
+            if cmax > cmin:
+                normalized_data[col] = (normalized_data[col] - cmin) / (cmax - cmin)
+            else:
+                normalized_data[col] = 0.5
+        else:
+            normalized_data[col] = np.nan
+
+    im = ax.imshow(normalized_data.values, aspect='auto', cmap='RdYlGn', vmin=0, vmax=1)
+
+    ax.tick_params(top=False, bottom=True, labeltop=False, labelbottom=True)
+    ax.set_xticks(np.arange(len(available_metrics)))
+    ax.set_yticks(np.arange(len(models)))
+
+    short_labels = []
+    for m in available_metrics:
+        label = m
+        for prefix, abbrev in (('Coverage_', 'Cov:'), ('Validity_', 'Val:'),
+                                ('Shape_', 'Sh:'), ('Pair_', 'Pr:'),
+                                ('Detection_', 'Det:'), ('Privacy_', 'Pv:'),
+                                ('MLEff_', 'ML:'), ('Quality_', 'Q:'),
+                                ('Diagnostic_', 'D:')):
+            if label.startswith(prefix):
+                label = label.replace(prefix, abbrev)
+                break
+        if catalog_lookup.get(m, {}).get('sdac_overlap'):
+            label = label + ' \u2020'
+        short_labels.append(label)
+    ax.set_xticklabels(short_labels, rotation=45, ha='right', fontsize=8)
+    ax.set_yticklabels(models, fontsize=11)
+
+    for i in range(len(models)):
+        for j in range(len(available_metrics)):
+            val = display_data.iloc[i, j]
+            norm_val = normalized_data.iloc[i, j]
+            if not np.isnan(val):
+                text_color = ('white' if (not np.isnan(norm_val)
+                              and (norm_val < 0.3 or norm_val > 0.8)) else 'black')
+                ax.text(j, i, f'{val:.3f}', ha='center', va='center',
+                        fontsize=6, color=text_color)
+            else:
+                ax.text(j, i, 'N/A', ha='center', va='center',
+                        fontsize=6, color='gray')
+
+    strip_y = -0.6
+    strip_h = 0.15
+    for j, color in enumerate(col_colors):
+        ax.add_patch(plt.Rectangle((j - 0.5, strip_y - strip_h), 1, strip_h,
+                                   color=color, clip_on=False))
+
+    from matplotlib.patches import Patch
+    legend_elements = [Patch(facecolor=c, label=cat)
+                       for cat, c in SDMETRICS_CATEGORY_COLORS.items()]
+    ax.legend(handles=legend_elements, loc='upper center',
+              bbox_to_anchor=(0.5, -0.18), ncol=4,
+              title='SDMetrics Category', fontsize=9, frameon=True)
+
+    cbar = plt.colorbar(im, ax=ax, shrink=0.8)
+    cbar.set_label('Relative Score (per-column normalized)', fontsize=9)
+
+    ax.set_title(f'{dataset_name} - SDMetrics Heatmap', fontsize=14,
+                 fontweight='bold', pad=20)
+    plt.tight_layout(rect=[0, 0.06, 1, 1])
+
+    fig.text(0.5, 0.005,
+             'Source: SDMetrics (sdv.dev). \u2020 columns also exist in SDAC suite '
+             '(different implementations).',
+             ha='center', va='bottom', fontsize=9, style='italic', color='0.4')
+
+    output_path = None
+    if save_files:
+        results_path = Path(results_dir)
+        results_path.mkdir(parents=True, exist_ok=True)
+        output_path = str(results_path / 'sdmetrics_heatmap.png')
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        if verbose:
+            print(f"[VIZ] Saved: sdmetrics_heatmap.png")
 
     if display_plots:
         plt.show()
